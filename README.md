@@ -1,4 +1,4 @@
-# cco — Claude Code Orchestrator
+# cco - claude code o11y
 
 Launch and monitor multiple [Claude Code](https://claude.ai/code) agents from a single terminal.
 
@@ -49,12 +49,16 @@ Finished agents remain visible for 5 minutes after exit.
 
 ```
 ~/.cco/
-├── cco.sock          # Unix domain socket (daemon IPC)
-├── state.json        # Agent state snapshot
-└── agents/
-    └── <id>/
-        └── output.log
+├── cco.sock              # Unix domain socket (daemon IPC)
+├── state.json            # Agent state snapshot
+├── agents/
+│   └── <id>/
+│       └── output.log    # Claude output log for each agent
+└── worktrees/
+    └── <repo>-<id>/      # Git worktree per agent (branch: cco/<id>)
 ```
+
+When `cco agent` is run inside a git repository, a dedicated worktree is automatically created at `~/.cco/worktrees/<repo>-<id>/` on a new branch `cco/<id>` branched from `HEAD`. Claude Code runs inside this isolated worktree so each agent's changes stay separate from the main working tree.
 
 ## License
 
