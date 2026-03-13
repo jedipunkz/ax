@@ -1,4 +1,4 @@
-# cco — Claude Code Orchestrator
+# cco - claude code o11y
 
 Launch and monitor multiple [Claude Code](https://claude.ai/code) agents from a single terminal.
 
