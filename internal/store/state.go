@@ -28,6 +28,11 @@ type AgentState struct {
 	WorktreeBranch string `json:"worktree_branch,omitempty"` // git worktree branch name, if any
 }
 
+// IsTerminal returns true if the status is a terminal (non-running) state.
+func (s Status) IsTerminal() bool {
+	return s == StatusKilled || s == StatusSuccess || s == StatusFailed
+}
+
 // Message is the JSON-lines protocol message used over the Unix socket.
 type Message struct {
 	Type   string       `json:"type"`

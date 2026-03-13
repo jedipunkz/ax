@@ -121,6 +121,18 @@ func (m *manager) handleConn(conn net.Conn) {
 				continue
 			}
 			m.mu.Lock()
+			if existing, exists := m.agents[msg.Agent.ID]; exists {
+				// StatusKilled is final: user explicitly terminated the agent.
+				if existing.Status == StatusKilled {
+					m.mu.Unlock()
+					continue
+				}
+				// Don't allow a terminal state to regress to running.
+				if existing.Status.IsTerminal() && msg.Agent.Status == StatusRunning {
+					m.mu.Unlock()
+					continue
+				}
+			}
 			m.agents[msg.Agent.ID] = *msg.Agent
 			m.persistState()
 			broadcastMsg := Message{Type: "update", Agent: msg.Agent}
