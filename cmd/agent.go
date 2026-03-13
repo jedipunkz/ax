@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -64,7 +65,13 @@ func getSocketPath() (string, error) {
 func ensureDaemon(socketPath string) error {
 	// Check if socket exists and is connectable
 	if isSocketAlive(socketPath) {
-		return nil
+		// Restart daemon if binary has been updated since daemon started
+		if isBinaryNewerThanSocket(socketPath) {
+			killDaemon(socketPath)
+			// Fall through to start a new daemon
+		} else {
+			return nil
+		}
 	}
 
 	// Fork daemon process
@@ -94,6 +101,40 @@ func ensureDaemon(socketPath string) error {
 	}
 
 	return fmt.Errorf("daemon did not start within 3 seconds")
+}
+
+// isBinaryNewerThanSocket returns true if the current executable was modified
+// after the socket file was created, indicating the daemon is stale.
+func isBinaryNewerThanSocket(socketPath string) bool {
+	exe, err := os.Executable()
+	if err != nil {
+		return false
+	}
+	exeInfo, err := os.Stat(exe)
+	if err != nil {
+		return false
+	}
+	sockInfo, err := os.Stat(socketPath)
+	if err != nil {
+		return false
+	}
+	return exeInfo.ModTime().After(sockInfo.ModTime())
+}
+
+// killDaemon kills the running daemon process using the PID file and removes the socket.
+func killDaemon(socketPath string) {
+	home, err := os.UserHomeDir()
+	if err == nil {
+		pidFile := filepath.Join(home, ".cco", "daemon.pid")
+		if data, err := os.ReadFile(pidFile); err == nil {
+			if pid, err := strconv.Atoi(strings.TrimSpace(string(data))); err == nil {
+				_ = syscall.Kill(pid, syscall.SIGTERM)
+			}
+		}
+	}
+	_ = os.Remove(socketPath)
+	// Give the old daemon a moment to exit
+	time.Sleep(200 * time.Millisecond)
 }
 
 func isSocketAlive(socketPath string) bool {
