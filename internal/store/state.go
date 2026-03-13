@@ -15,6 +15,7 @@ const (
 // AgentState holds all information about a running or completed agent.
 type AgentState struct {
 	ID          string     `json:"id"`
+	Name        string     `json:"name,omitempty"`            // optional human-readable name
 	PID         int        `json:"pid"`
 	Args        []string   `json:"args"`
 	WorkDir     string     `json:"work_dir"`

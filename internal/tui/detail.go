@@ -56,9 +56,16 @@ func detailView(m Model) string {
 
 	argsStr := strings.Join(agent.Args, " ")
 
+	header := agent.ID
+	if agent.Name != "" {
+		header = agent.Name + " (" + agent.ID + ")"
+	}
 	var lines []string
-	lines = append(lines, fr("╭─ "+agent.ID+" "+strings.Repeat("─", max(0, innerWidth-lipgloss.Width(agent.ID)-2))+"╮"))
+	lines = append(lines, fr("╭─ "+header+" "+strings.Repeat("─", max(0, innerWidth-lipgloss.Width(header)-2))+"╮"))
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Status : %s", statusStr), innerWidth)+fr(" │"))
+	if agent.Name != "" {
+		lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Name   : %s", agent.Name), innerWidth)+fr(" │"))
+	}
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("PID    : %d", agent.PID), innerWidth)+fr(" │"))
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Dir    : %s", agent.WorkDir), innerWidth)+fr(" │"))
 	if agent.WorktreeBranch != "" {

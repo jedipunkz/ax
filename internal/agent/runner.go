@@ -27,7 +27,7 @@ const waitingUserThreshold = 2 * time.Second
 
 // Run starts an interactive Claude Code session with all permissions allowed,
 // and reports agent lifecycle state to the store daemon.
-func Run(args []string, socketPath string) error {
+func Run(args []string, socketPath string, name string) error {
 	id := generateID()
 
 	home, err := os.UserHomeDir()
@@ -82,6 +82,7 @@ func Run(args []string, socketPath string) error {
 	now := time.Now()
 	state := store.AgentState{
 		ID:             id,
+		Name:           name,
 		Args:           claudeArgs,
 		WorkDir:        workDir,
 		Status:         store.StatusRunning,

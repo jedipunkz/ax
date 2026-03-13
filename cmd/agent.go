@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 )
 
 var agentCmd = &cobra.Command{
-	Use:                "agent [-- <claude-args>...]",
+	Use:                "agent [-n <name>] [-- <claude-args>...]",
 	Short:              "Start a Claude Code agent",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -27,8 +28,29 @@ var agentCmd = &cobra.Command{
 			return fmt.Errorf("could not start daemon: %w", err)
 		}
 
-		return agent.Run(args, socketPath)
+		name, rest := parseNameFlag(args)
+		return agent.Run(rest, socketPath, name)
 	},
+}
+
+// parseNameFlag extracts -n / --name from args (before any -- separator).
+func parseNameFlag(args []string) (name string, rest []string) {
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--" {
+			break
+		}
+		if (args[i] == "-n" || args[i] == "--name") && i+1 < len(args) {
+			name = args[i+1]
+			rest = append(append([]string{}, args[:i]...), args[i+2:]...)
+			return
+		}
+		if strings.HasPrefix(args[i], "--name=") {
+			name = strings.TrimPrefix(args[i], "--name=")
+			rest = append(append([]string{}, args[:i]...), args[i+1:]...)
+			return
+		}
+	}
+	return "", args
 }
 
 func getSocketPath() (string, error) {

@@ -88,8 +88,12 @@ func listView(m Model) string {
 			elapsedWidth = 9
 			fixedTotal   = 2 + idWidth + 1 + statusWidth + 1 + elapsedWidth
 		)
+		label := agent.ID
+		if agent.Name != "" {
+			label = agent.Name
+		}
 		row := cursor +
-			padRight(truncate(agent.ID, idWidth), idWidth) + " " +
+			padRight(truncate(label, idWidth), idWidth) + " " +
 			padRight(formatStatus(agent, m), statusWidth) + " " +
 			padRight(formatElapsed(agent), elapsedWidth)
 
