@@ -81,9 +81,10 @@ func listView(m Model) string {
 			cursor = "▶ "
 		}
 
-		// Fixed columns: cursor(2) id(15+1) status(16+1) elapsed(9)
+		// Fixed columns: cursor(2) id(17+1) status(16+1) elapsed(9)
+		// ID format: "cco-{unix_minutes}-{4hex}" = 17 chars
 		const (
-			idWidth      = 15
+			idWidth      = 17
 			statusWidth  = 16
 			elapsedWidth = 9
 			fixedTotal   = 2 + idWidth + 1 + statusWidth + 1 + elapsedWidth
