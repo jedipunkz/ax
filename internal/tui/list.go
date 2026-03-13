@@ -80,12 +80,23 @@ func listView(m Model) string {
 		if idx == m.cursor {
 			cursor = "▶ "
 		}
-		row := fmt.Sprintf("%s%-20s %-18s %-10s",
-			cursor,
-			agent.ID,
-			formatStatus(agent, m),
-			formatElapsed(agent),
+
+		// Fixed columns: cursor(2) id(15+1) status(16+1) elapsed(9)
+		const (
+			idWidth      = 15
+			statusWidth  = 16
+			elapsedWidth = 9
+			fixedTotal   = 2 + idWidth + 1 + statusWidth + 1 + elapsedWidth
 		)
+		row := cursor +
+			padRight(truncate(agent.ID, idWidth), idWidth) + " " +
+			padRight(formatStatus(agent, m), statusWidth) + " " +
+			padRight(formatElapsed(agent), elapsedWidth)
+
+		if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 && agent.LastOutput != "" {
+			row += "  " + truncate(agent.LastOutput, remaining)
+		}
+
 		if idx == m.cursor {
 			return SelectedItemStyle.Render(row)
 		}

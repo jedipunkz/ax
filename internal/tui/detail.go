@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -13,11 +14,31 @@ import (
 // ansiRe matches ANSI/VT escape sequences produced by PTY output.
 var ansiRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z\\^_@]|\][^\x07\x1b]*(?:\x07|\x1b\\))`)
 
-func stripANSI(s string) string {
-	s = ansiRe.ReplaceAllString(s, "")
+// cleanLog strips ANSI codes, normalizes line endings, and keeps only
+// lines that contain readable text (at least 4 alphanumeric characters).
+func cleanLog(data []byte) string {
+	s := ansiRe.ReplaceAllString(string(data), "")
 	s = strings.ReplaceAll(s, "\r\n", "\n")
 	s = strings.ReplaceAll(s, "\r", "")
-	return s
+
+	lines := strings.Split(s, "\n")
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		alpha := 0
+		for _, r := range []rune(trimmed) {
+			if unicode.IsLetter(r) || unicode.IsDigit(r) {
+				alpha++
+			}
+		}
+		if alpha >= 4 {
+			out = append(out, line)
+		}
+	}
+	if len(out) == 0 {
+		return "(no readable output yet)"
+	}
+	return strings.Join(out, "\n")
 }
 
 func detailView(m Model) string {
@@ -43,7 +64,10 @@ func detailView(m Model) string {
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Args   : %s", truncate(argsStr, innerWidth-9)), innerWidth)+fr(" │"))
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Started: %s", agent.StartedAt.Format("2006-01-02 15:04:05")), innerWidth)+fr(" │"))
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Elapsed: %s", elapsed), innerWidth)+fr(" │"))
-	lines = append(lines, fr("│ ")+padRight("── Recent Output ──", innerWidth)+fr(" │"))
+	if agent.LastOutput != "" {
+		lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Last   : %s", truncate(agent.LastOutput, innerWidth-9)), innerWidth)+fr(" │"))
+	}
+	lines = append(lines, fr("│ ")+padRight("── Activity Log ──", innerWidth)+fr(" │"))
 
 	// Viewport content
 	vpLines := strings.Split(m.viewport.View(), "\n")
@@ -53,7 +77,7 @@ func detailView(m Model) string {
 
 	lines = append(lines, fr("╰"+strings.Repeat("─", innerWidth+2)+"╯"))
 
-	help := NormalItemStyle.Render("[esc] back  [K] kill")
+	help := NormalItemStyle.Render("[esc] back  [K] kill  [↑↓/jk/pgup/pgdn] scroll")
 	lines = append(lines, help)
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
@@ -66,6 +90,6 @@ func loadLog(path string) tea.Cmd {
 		if err != nil {
 			return logLoadedMsg{content: fmt.Sprintf("(could not read log: %v)", err)}
 		}
-		return logLoadedMsg{content: stripANSI(string(data))}
+		return logLoadedMsg{content: cleanLog(data)}
 	}
 }

@@ -9,9 +9,12 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
+	"unicode"
 
 	"github.com/creack/pty"
 	"github.com/thirai/cco/internal/store"
@@ -177,6 +180,19 @@ func Run(args []string, socketPath string) error {
 				mu.Unlock()
 			}
 			_, _ = out.Write(buf[:n])
+
+			if line := lastMeaningfulLine(buf[:n]); line != "" {
+				mu.Lock()
+				changed := state.LastOutput != line
+				if changed {
+					state.LastOutput = line
+				}
+				s := state
+				mu.Unlock()
+				if changed {
+					_ = client.SendUpdate(s)
+				}
+			}
 		}
 		if readErr != nil {
 			break
@@ -218,6 +234,29 @@ func Run(args []string, socketPath string) error {
 	}
 
 	return nil
+}
+
+var outputCleanRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z\\^_@]|\][^\x07\x1b]*(?:\x07|\x1b\\))`)
+
+// lastMeaningfulLine extracts the last readable text line from a raw PTY output chunk.
+func lastMeaningfulLine(chunk []byte) string {
+	s := outputCleanRe.ReplaceAllString(string(chunk), "")
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+	lines := strings.Split(s, "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
+		alpha := 0
+		for _, r := range []rune(line) {
+			if unicode.IsLetter(r) || unicode.IsDigit(r) {
+				alpha++
+			}
+		}
+		if alpha >= 4 {
+			return line
+		}
+	}
+	return ""
 }
 
 func generateID() string {

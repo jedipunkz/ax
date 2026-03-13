@@ -107,7 +107,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.view == viewList && len(visible) > 0 && m.cursor < len(visible) {
 				m.view = viewDetail
 				agent := visible[m.cursor]
-				m.viewport = viewport.New(m.width-4, m.height-12)
+				m.viewport = viewport.New(m.width-4, m.height-13)
 				cmds = append(cmds, loadLog(agent.LogFile))
 			}
 
@@ -180,7 +180,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		if m.view == viewDetail {
-			m.viewport = viewport.New(m.width-4, m.height-12)
+			m.viewport = viewport.New(m.width-4, m.height-13)
 			m.viewport.SetContent(m.logContent)
 			m.viewport.GotoBottom()
 		}
