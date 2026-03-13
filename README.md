@@ -30,20 +30,6 @@ cco status
 
 Run `cco agent` in as many terminals as you like, then open `cco status` in another pane to monitor them all.
 
-## TUI
-
-```
-╭─ cco status ─────────────────────────────────── 2 running ─╮
-│ RUNNING                                                      │
-│  ▶ cco-29514-a3f1   ⏳ waiting you   0:02:31   Fix auth...  │
-│    cco-29514-c8e2   ⠋ running        0:01:05   Writing te…  │
-├──────────────────────────────────────────────────────────────┤
-│ SUCCESS (recent)                                             │
-│    cco-29514-b1d0   ✓ success        0:05:10                 │
-╰──────────────────────────────────────────────────────────────╯
-```
-
-Press `space` to open the detail view for a selected agent (PID, working dir, activity log, etc.).
 
 ### Key bindings
 
