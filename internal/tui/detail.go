@@ -61,6 +61,9 @@ func detailView(m Model) string {
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Status : %s", statusStr), innerWidth)+fr(" │"))
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("PID    : %d", agent.PID), innerWidth)+fr(" │"))
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Dir    : %s", agent.WorkDir), innerWidth)+fr(" │"))
+	if agent.WorktreeBranch != "" {
+		lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Branch : %s", agent.WorktreeBranch), innerWidth)+fr(" │"))
+	}
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Args   : %s", truncate(argsStr, innerWidth-9)), innerWidth)+fr(" │"))
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Started: %s", agent.StartedAt.Format("2006-01-02 15:04:05")), innerWidth)+fr(" │"))
 	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Elapsed: %s", elapsed), innerWidth)+fr(" │"))

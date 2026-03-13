@@ -47,6 +47,19 @@ func Run(args []string, socketPath string) error {
 		workDir = ""
 	}
 
+	var worktreeBranch string
+	if workDir != "" {
+		if repoRoot, ok := detectGitRepo(workDir); ok {
+			wt, branch, wtErr := setupWorktree(id, repoRoot)
+			if wtErr != nil {
+				fmt.Fprintf(os.Stderr, "warning: could not create worktree: %v\n", wtErr)
+			} else {
+				workDir = wt
+				worktreeBranch = branch
+			}
+		}
+	}
+
 	// Connect to store
 	var client store.Client
 	if err := client.Connect(socketPath); err != nil {
@@ -68,13 +81,14 @@ func Run(args []string, socketPath string) error {
 
 	now := time.Now()
 	state := store.AgentState{
-		ID:         id,
-		Args:       claudeArgs,
-		WorkDir:    workDir,
-		Status:     store.StatusRunning,
-		StartedAt:  now,
-		LastOutput: "interactive session",
-		LogFile:    logPath,
+		ID:             id,
+		Args:           claudeArgs,
+		WorkDir:        workDir,
+		Status:         store.StatusRunning,
+		StartedAt:      now,
+		LastOutput:     "interactive session",
+		LogFile:        logPath,
+		WorktreeBranch: worktreeBranch,
 	}
 
 	// Start claude inside a PTY so it sees a real terminal while we can also

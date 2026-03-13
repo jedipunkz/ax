@@ -24,7 +24,8 @@ type AgentState struct {
 	ExitCode    *int       `json:"exit_code,omitempty"`
 	LastOutput  string     `json:"last_output"`
 	LogFile     string     `json:"log_file"`
-	WaitingUser bool       `json:"waiting_user,omitempty"` // true when Claude is waiting for user input
+	WaitingUser    bool   `json:"waiting_user,omitempty"`    // true when Claude is waiting for user input
+	WorktreeBranch string `json:"worktree_branch,omitempty"` // git worktree branch name, if any
 }
 
 // Message is the JSON-lines protocol message used over the Unix socket.
