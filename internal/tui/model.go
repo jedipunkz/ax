@@ -109,12 +109,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 
 		case " ":
-			visible := visibleAgents(m.agents, m.showExpired)
-			if m.view == viewList && len(visible) > 0 && m.cursor < len(visible) {
-				m.view = viewDetail
-				agent := visible[m.cursor]
-				m.viewport = viewport.New(m.width-4, m.height-13)
-				cmds = append(cmds, loadLog(agent.LogFile))
+			if m.view == viewDetail {
+				m.view = viewList
+			} else {
+				visible := visibleAgents(m.agents, m.showExpired)
+				if len(visible) > 0 && m.cursor < len(visible) {
+					m.view = viewDetail
+					agent := visible[m.cursor]
+					m.viewport = viewport.New(m.width-4, m.height-13)
+					cmds = append(cmds, loadLog(agent.LogFile))
+				}
 			}
 
 		case "o":
