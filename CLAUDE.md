@@ -17,9 +17,17 @@ All PRs must be written in English and include the following sections in the bod
 ## Summary
 <High-level overview of what this PR does>
 
-## What I've done
+## What I Did
 <Bulleted list of specific changes made>
 ```
+
+## Workflow After Task Completion
+
+After completing any implementation task, automatically perform the following steps without waiting for user instruction:
+
+1. **Commit** — Stage the relevant changed files and create a descriptive commit message in English.
+2. **Push** — Push the branch to the remote repository.
+3. **Create a Pull Request** — Open a PR against the main branch using `gh pr create`, following the PR format defined in the Pull Requests section above.
 
 ## Security Policy
 
