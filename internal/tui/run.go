@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/thirai/cco/internal/store"
+	"github.com/jedipunkz/ax/internal/store"
 )
 
 // Run connects to the store daemon, subscribes for updates, and starts the TUI.

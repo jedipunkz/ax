@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/thirai/cco/internal/agent"
+	"github.com/jedipunkz/ax/internal/agent"
 )
 
 var agentCmd = &cobra.Command{
@@ -58,7 +58,7 @@ func getSocketPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not determine home directory: %w", err)
 	}
-	return filepath.Join(home, ".cco", "cco.sock"), nil
+	return filepath.Join(home, ".ax", "ax.sock"), nil
 }
 
 func ensureDaemon(socketPath string) error {
@@ -122,7 +122,7 @@ func isBinaryNewerThanSocket(socketPath string) bool {
 func killDaemon(socketPath string) {
 	home, err := os.UserHomeDir()
 	if err == nil {
-		pidFile := filepath.Join(home, ".cco", "daemon.pid")
+		pidFile := filepath.Join(home, ".ax", "daemon.pid")
 		if data, err := os.ReadFile(pidFile); err == nil {
 			if pid, err := strconv.Atoi(strings.TrimSpace(string(data))); err == nil {
 				killPID(pid)

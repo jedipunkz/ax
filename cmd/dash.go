@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/thirai/cco/internal/tui"
+	"github.com/jedipunkz/ax/internal/tui"
 )
 
 var dashCmd = &cobra.Command{

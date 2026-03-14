@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/thirai/cco/internal/store"
+	"github.com/jedipunkz/ax/internal/store"
 )
 
 // ViewMode represents which view is active.
@@ -33,7 +33,7 @@ type logLoadedMsg struct {
 // clearStatusMsg clears the status message after a short delay.
 type clearStatusMsg struct{}
 
-// Model is the main bubbletea model for cco status.
+// Model is the main bubbletea model for ax status.
 type Model struct {
 	agents       []store.AgentState
 	cursor       int

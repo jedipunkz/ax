@@ -1,4 +1,4 @@
-module github.com/thirai/cco
+module github.com/jedipunkz/ax
 
 go 1.25.0
 

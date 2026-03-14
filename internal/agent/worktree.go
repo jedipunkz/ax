@@ -17,7 +17,7 @@ func detectGitRepo(dir string) (repoRoot string, ok bool) {
 	return strings.TrimSpace(string(out)), true
 }
 
-// setupWorktree creates a git worktree for the given agent under ~/.cco/worktrees/.
+// setupWorktree creates a git worktree for the given agent under ~/.ax/worktrees/.
 // Returns the worktree path and branch name on success.
 func setupWorktree(agentID, repoRoot string) (worktreePath, branchName string, err error) {
 	home, err := os.UserHomeDir()
@@ -26,8 +26,8 @@ func setupWorktree(agentID, repoRoot string) (worktreePath, branchName string, e
 	}
 
 	repoName := filepath.Base(repoRoot)
-	worktreePath = filepath.Join(home, ".cco", "worktrees", repoName+"-"+agentID)
-	branchName = "cco/" + agentID
+	worktreePath = filepath.Join(home, ".ax", "worktrees", repoName+"-"+agentID)
+	branchName = "ax/" + agentID
 
 	if err := os.MkdirAll(filepath.Dir(worktreePath), 0755); err != nil {
 		return "", "", fmt.Errorf("could not create worktrees dir: %w", err)
