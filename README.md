@@ -1,4 +1,4 @@
-# ax - claude code o11y
+# ax - Agent Cross
 
 Launch and monitor multiple [Claude Code](https://claude.ai/code) agents from a single terminal.
 
