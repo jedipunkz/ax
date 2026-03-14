@@ -1,11 +1,11 @@
-# cco - claude code o11y
+# ax - claude code o11y
 
 Launch and monitor multiple [Claude Code](https://claude.ai/code) agents from a single terminal.
 
 ## Installation
 
 ```bash
-go install github.com/jedipunkz/cco@latest
+go install github.com/jedipunkz/ax@latest
 ```
 
 **Requirements**: `claude` CLI must be on your `$PATH`.
@@ -15,12 +15,12 @@ go install github.com/jedipunkz/cco@latest
 Open TUI Dashboard
 
 ```bash
-cco dash
+ax dash
 ```
 
 Start an interactive agent
 ```bash
-cco agent
+ax agent
 ```
 
 ### Key bindings
@@ -50,17 +50,17 @@ Finished agents are visible for 24 hours after exit. Press `h` to show the full 
 ## Runtime files
 
 ```
-~/.cco/
-├── cco.sock              # Unix domain socket (daemon IPC)
+~/.ax/
+├── ax.sock              # Unix domain socket (daemon IPC)
 ├── state.json            # Agent state snapshot
 ├── agents/
 │   └── <id>/
 │       └── output.log    # Claude output log for each agent
 └── worktrees/
-    └── <repo>-<id>/      # Git worktree per agent (branch: cco/<id>)
+    └── <repo>-<id>/      # Git worktree per agent (branch: ax/<id>)
 ```
 
-When `cco agent` is run inside a git repository, a dedicated worktree is automatically created at `~/.cco/worktrees/<repo>-<id>/` on a new branch `cco/<id>` branched from `HEAD`. Claude Code runs inside this isolated worktree so each agent's changes stay separate from the main working tree.
+When `ax agent` is run inside a git repository, a dedicated worktree is automatically created at `~/.ax/worktrees/<repo>-<id>/` on a new branch `ax/<id>` branched from `HEAD`. Claude Code runs inside this isolated worktree so each agent's changes stay separate from the main working tree.
 
 ## License
 

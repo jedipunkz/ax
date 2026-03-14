@@ -7,7 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/thirai/cco/internal/store"
+	"github.com/jedipunkz/ax/internal/store"
 )
 
 // recentThreshold returns the cutoff time for "recent" finished agents (24 hours ago).
@@ -81,8 +81,8 @@ func listView(m Model) string {
 
 	// Title line
 	agentCount := fmt.Sprintf("%d running", len(running))
-	title := TitleStyle.Render("cco dash")
-	titleLine := title + " " + strings.Repeat("─", max(0, innerWidth-utf8.RuneCountInString("cco dash")-utf8.RuneCountInString(agentCount)-3)) + " " + agentCount
+	title := TitleStyle.Render("ax dash")
+	titleLine := title + " " + strings.Repeat("─", max(0, innerWidth-utf8.RuneCountInString("ax dash")-utf8.RuneCountInString(agentCount)-3)) + " " + agentCount
 
 	topBorder := fr("╭─ ") + titleLine + fr("─╮")
 
@@ -92,7 +92,7 @@ func listView(m Model) string {
 	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
 
 	// Fixed column widths: cursor(2) id(17) sp(1) status(16) sp(1) elapsed(9) sp(1) ended(5)
-	// ID format: "cco-{unix_minutes}-{4hex}" = 17 chars
+	// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars
 	const (
 		idWidth      = 17
 		statusWidth  = 11

@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/spf13/cobra"
-	"github.com/thirai/cco/internal/store"
+	"github.com/jedipunkz/ax/internal/store"
 )
 
 var daemonCmd = &cobra.Command{
@@ -20,12 +20,12 @@ var daemonCmd = &cobra.Command{
 			return fmt.Errorf("could not determine home directory: %w", err)
 		}
 
-		ccoDir := filepath.Join(home, ".cco")
+		ccoDir := filepath.Join(home, ".ax")
 		if err := os.MkdirAll(ccoDir, 0755); err != nil {
-			return fmt.Errorf("could not create ~/.cco dir: %w", err)
+			return fmt.Errorf("could not create ~/.ax dir: %w", err)
 		}
 
-		socketPath := filepath.Join(ccoDir, "cco.sock")
+		socketPath := filepath.Join(ccoDir, "ax.sock")
 		stateFilePath := filepath.Join(ccoDir, "state.json")
 		pidFilePath := filepath.Join(ccoDir, "daemon.pid")
 

@@ -70,7 +70,7 @@ jobs:
           for platform in "${platforms[@]}"; do
             os="${platform%/*}"
             arch="${platform#*/}"
-            output="dist/cco_${tag}_${os}_${arch}"
+            output="dist/ax_${tag}_${os}_${arch}"
             [ "$os" = "windows" ] && output="${output}.exe"
             GOOS="$os" GOARCH="$arch" go build -trimpath -ldflags="-s -w -X main.version=${tag}" -o "$output" .
           done

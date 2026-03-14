@@ -16,7 +16,7 @@ import (
 	"unicode"
 
 	"github.com/creack/pty"
-	"github.com/thirai/cco/internal/store"
+	"github.com/jedipunkz/ax/internal/store"
 	"golang.org/x/term"
 )
 
@@ -34,7 +34,7 @@ func Run(args []string, socketPath string, name string) error {
 		return fmt.Errorf("could not determine home directory: %w", err)
 	}
 
-	agentDir := filepath.Join(home, ".cco", "agents", id)
+	agentDir := filepath.Join(home, ".ax", "agents", id)
 	if err := os.MkdirAll(agentDir, 0755); err != nil {
 		return fmt.Errorf("could not create agent dir: %w", err)
 	}
@@ -265,5 +265,5 @@ func generateID() string {
 	if _, err := rand.Read(b); err != nil {
 		b = []byte{0, 0}
 	}
-	return fmt.Sprintf("cco-%d-%s", ts, hex.EncodeToString(b))
+	return fmt.Sprintf("ax-%d-%s", ts, hex.EncodeToString(b))
 }
