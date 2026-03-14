@@ -26,7 +26,7 @@ func cleanLog(data []byte) string {
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		alpha := 0
-		for _, r := range []rune(trimmed) {
+		for _, r := range trimmed {
 			if unicode.IsLetter(r) || unicode.IsDigit(r) {
 				alpha++
 			}

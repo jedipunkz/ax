@@ -19,8 +19,6 @@ const (
 	viewDetail ViewMode = iota
 )
 
-// tickMsg is sent on each spinner tick.
-type tickMsg struct{}
 
 // agentUpdateMsg wraps a store.Message received from the socket.
 type agentUpdateMsg struct {
