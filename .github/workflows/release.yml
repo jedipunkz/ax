@@ -64,14 +64,12 @@ jobs:
             "linux/arm64"
             "darwin/amd64"
             "darwin/arm64"
-            "windows/amd64"
           )
 
           for platform in "${platforms[@]}"; do
             os="${platform%/*}"
             arch="${platform#*/}"
             output="dist/ax_${tag}_${os}_${arch}"
-            [ "$os" = "windows" ] && output="${output}.exe"
             GOOS="$os" GOARCH="$arch" go build -trimpath -ldflags="-s -w -X main.version=${tag}" -o "$output" .
           done
 
