@@ -125,12 +125,12 @@ func Run(args []string, socketPath string, name string) error {
 	if term.IsTerminal(int(os.Stdin.Fd())) {
 		oldState, rawErr := term.MakeRaw(int(os.Stdin.Fd()))
 		if rawErr == nil {
-			defer term.Restore(int(os.Stdin.Fd()), oldState)
+			defer func() { _ = term.Restore(int(os.Stdin.Fd()), oldState) }()
 		}
 	}
 
 	// Forward our stdin to the PTY (user keystrokes → Claude).
-	go io.Copy(ptmx, os.Stdin)
+	go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
 
 	state.PID = cmd.Process.Pid
 	if err := client.SendUpdate(state); err != nil {
@@ -262,7 +262,7 @@ func lastMeaningfulLine(chunk []byte) string {
 	for i := len(lines) - 1; i >= 0; i-- {
 		line := strings.TrimSpace(lines[i])
 		alpha := 0
-		for _, r := range []rune(line) {
+		for _, r := range line {
 			if unicode.IsLetter(r) || unicode.IsDigit(r) {
 				alpha++
 			}
