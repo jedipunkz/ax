@@ -42,7 +42,7 @@ func cleanLog(data []byte) string {
 }
 
 func detailView(m Model) string {
-	visible := visibleAgents(m.agents)
+	visible := visibleAgents(m.agents, m.showExpired)
 	if len(visible) == 0 || m.cursor >= len(visible) {
 		return "No agent selected."
 	}

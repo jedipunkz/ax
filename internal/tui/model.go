@@ -34,16 +34,17 @@ type logLoadedMsg struct {
 
 // Model is the main bubbletea model for cco status.
 type Model struct {
-	agents     []store.AgentState
-	cursor     int
-	view       ViewMode
-	client     *store.Client
-	sub        chan store.Message
-	spinner    spinner.Model
-	viewport   viewport.Model
-	width      int
-	height     int
-	logContent string
+	agents      []store.AgentState
+	cursor      int
+	view        ViewMode
+	client      *store.Client
+	sub         chan store.Message
+	spinner     spinner.Model
+	viewport    viewport.Model
+	width       int
+	height      int
+	logContent  string
+	showExpired bool
 }
 
 func newModel(client *store.Client, sub chan store.Message) Model {
@@ -97,13 +98,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "down", "j":
-			visible := visibleAgents(m.agents)
+			visible := visibleAgents(m.agents, m.showExpired)
 			if m.cursor < len(visible)-1 {
 				m.cursor++
 			}
 
 		case " ":
-			visible := visibleAgents(m.agents)
+			visible := visibleAgents(m.agents, m.showExpired)
 			if m.view == viewList && len(visible) > 0 && m.cursor < len(visible) {
 				m.view = viewDetail
 				agent := visible[m.cursor]
@@ -111,8 +112,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, loadLog(agent.LogFile))
 			}
 
+		case "o":
+			m.showExpired = !m.showExpired
+			// Clamp cursor after toggling visibility
+			visible := visibleAgents(m.agents, m.showExpired)
+			if m.cursor >= len(visible) && len(visible) > 0 {
+				m.cursor = len(visible) - 1
+			}
+
 		case "K":
-			visible := visibleAgents(m.agents)
+			visible := visibleAgents(m.agents, m.showExpired)
 			if len(visible) > 0 && m.cursor < len(visible) {
 				ag := visible[m.cursor]
 				if ag.PID > 0 && ag.Status == store.StatusRunning {
@@ -156,7 +165,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		// Clamp cursor to visible agents
-		visible := visibleAgents(m.agents)
+		visible := visibleAgents(m.agents, m.showExpired)
 		if m.cursor >= len(visible) && len(visible) > 0 {
 			m.cursor = len(visible) - 1
 		}

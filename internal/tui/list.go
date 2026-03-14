@@ -15,8 +15,9 @@ func recentThreshold() time.Time {
 	return time.Now().Add(-5 * time.Minute)
 }
 
-// visibleAgents returns the agents to display, in order: running (all), then recent success, then recent killed.
-func visibleAgents(agents []store.AgentState) []store.AgentState {
+// visibleAgents returns the agents to display, in order: running (all), then success, then killed.
+// When showExpired is true, all finished agents are included regardless of age.
+func visibleAgents(agents []store.AgentState, showExpired bool) []store.AgentState {
 	threshold := recentThreshold()
 	var running, success, killed []store.AgentState
 	for _, a := range agents {
@@ -24,11 +25,15 @@ func visibleAgents(agents []store.AgentState) []store.AgentState {
 		case store.StatusRunning:
 			running = append(running, a)
 		case store.StatusSuccess:
-			if a.FinishedAt != nil && a.FinishedAt.After(threshold) {
+			if showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
 				success = append(success, a)
 			}
 		case store.StatusKilled:
-			if a.FinishedAt != nil && a.FinishedAt.After(threshold) {
+			if showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
+				killed = append(killed, a)
+			}
+		case store.StatusFailed:
+			if showExpired {
 				killed = append(killed, a)
 			}
 		}
@@ -53,14 +58,25 @@ func listView(m Model) string {
 		case store.StatusRunning:
 			running = append(running, a)
 		case store.StatusSuccess:
-			if a.FinishedAt != nil && a.FinishedAt.After(threshold) {
+			if m.showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
 				success = append(success, a)
 			}
 		case store.StatusKilled:
-			if a.FinishedAt != nil && a.FinishedAt.After(threshold) {
+			if m.showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
+				killed = append(killed, a)
+			}
+		case store.StatusFailed:
+			if m.showExpired {
 				killed = append(killed, a)
 			}
 		}
+	}
+
+	successTitle := "SUCCESS (recent)"
+	killedTitle := "KILLED (recent)"
+	if m.showExpired {
+		successTitle = "SUCCESS (all)"
+		killedTitle = "KILLED / FAILED (all)"
 	}
 
 	// Title line
@@ -126,9 +142,9 @@ func listView(m Model) string {
 	idx := 0
 	idx = renderSection("RUNNING", RunningHeaderStyle, running, idx)
 	lines = append(lines, divider)
-	idx = renderSection("SUCCESS (recent)", SuccessHeaderStyle, success, idx)
+	idx = renderSection(successTitle, SuccessHeaderStyle, success, idx)
 	lines = append(lines, divider)
-	renderSection("KILLED (recent)", KilledHeaderStyle, killed, idx)
+	renderSection(killedTitle, KilledHeaderStyle, killed, idx)
 
 	// Fill remaining height with blank lines (divider + help + bottom = 3 lines)
 	for len(lines) < height-3 {
@@ -137,7 +153,11 @@ func listView(m Model) string {
 
 	// Help line at bottom
 	lines = append(lines, divider)
-	help := NormalItemStyle.Render("[↑↓/jk] select  [space] detail  [K] kill  [q] quit")
+	historyLabel := "[o] show history"
+	if m.showExpired {
+		historyLabel = "[o] hide history"
+	}
+	help := NormalItemStyle.Render("[↑↓/jk] select  [space] detail  [K] kill  " + historyLabel + "  [q] quit")
 	lines = append(lines, fr("│ ")+padRight(help, innerWidth)+fr(" │"))
 	lines = append(lines, fr("╰"+strings.Repeat("─", innerWidth+2)+"╯"))
 
