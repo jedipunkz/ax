@@ -157,7 +157,11 @@ func listView(m Model) string {
 	if m.showExpired {
 		historyLabel = "[o] hide history"
 	}
-	help := NormalItemStyle.Render("[↑↓/jk] select  [space] detail  [K] kill  " + historyLabel + "  [q] quit")
+	helpText := "[↑↓/jk] select  [space] detail  [y] yank  [K] kill  " + historyLabel + "  [q] quit"
+	if m.statusMsg != "" {
+		helpText = m.statusMsg
+	}
+	help := NormalItemStyle.Render(helpText)
 	lines = append(lines, fr("│ ")+padRight(help, innerWidth)+fr(" │"))
 	lines = append(lines, fr("╰"+strings.Repeat("─", innerWidth+2)+"╯"))
 

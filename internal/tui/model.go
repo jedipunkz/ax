@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -29,6 +30,9 @@ type logLoadedMsg struct {
 	content string
 }
 
+// clearStatusMsg clears the status message after a short delay.
+type clearStatusMsg struct{}
+
 // Model is the main bubbletea model for cco status.
 type Model struct {
 	agents      []store.AgentState
@@ -42,6 +46,7 @@ type Model struct {
 	height      int
 	logContent  string
 	showExpired bool
+	statusMsg   string
 }
 
 func newModel(client *store.Client, sub chan store.Message) Model {
@@ -137,6 +142,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					_ = m.client.SendUpdate(ag) // persist to daemon (best-effort)
 				}
 			}
+
+		case "y":
+			visible := visibleAgents(m.agents, m.showExpired)
+			if m.view == viewList && len(visible) > 0 && m.cursor < len(visible) {
+				ag := visible[m.cursor]
+				if ag.WorkDir != "" {
+					cdCmd := fmt.Sprintf("cd %s", ag.WorkDir)
+					if err := copyToClipboard(cdCmd); err != nil {
+						m.statusMsg = fmt.Sprintf("clipboard error: %v", err)
+					} else {
+						m.statusMsg = fmt.Sprintf("yanked: %s", cdCmd)
+					}
+					cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+						return clearStatusMsg{}
+					}))
+				}
+			}
 		}
 
 	case agentUpdateMsg:
@@ -170,6 +192,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, loadLog(visible[m.cursor].LogFile))
 		}
 		cmds = append(cmds, waitForMsg(m.sub))
+
+	case clearStatusMsg:
+		m.statusMsg = ""
 
 	case logLoadedMsg:
 		m.logContent = msg.content
