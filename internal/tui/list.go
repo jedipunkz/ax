@@ -10,9 +10,9 @@ import (
 	"github.com/thirai/cco/internal/store"
 )
 
-// recentThreshold returns the cutoff time for "recent" finished agents (5 minutes ago).
+// recentThreshold returns the cutoff time for "recent" finished agents (24 hours ago).
 func recentThreshold() time.Time {
-	return time.Now().Add(-5 * time.Minute)
+	return time.Now().Add(-24 * time.Hour)
 }
 
 // visibleAgents returns the agents to display, in order: running (all), then success, then killed.
@@ -33,7 +33,7 @@ func visibleAgents(agents []store.AgentState, showExpired bool) []store.AgentSta
 				killed = append(killed, a)
 			}
 		case store.StatusFailed:
-			if showExpired {
+			if showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
 				killed = append(killed, a)
 			}
 		}
@@ -66,14 +66,14 @@ func listView(m Model) string {
 				killed = append(killed, a)
 			}
 		case store.StatusFailed:
-			if m.showExpired {
+			if m.showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
 				killed = append(killed, a)
 			}
 		}
 	}
 
-	successTitle := "SUCCESS (recent)"
-	killedTitle := "KILLED (recent)"
+	successTitle := "SUCCESS (24h)"
+	killedTitle := "KILLED (24h)"
 	if m.showExpired {
 		successTitle = "SUCCESS (all)"
 		killedTitle = "KILLED / FAILED (all)"
@@ -124,15 +124,48 @@ func listView(m Model) string {
 		return NormalItemStyle.Render(row)
 	}
 
-	// renderSection renders a section header + agent rows into the outer frame.
-	// Returns the next available visible index.
-	renderSection := func(title string, headerStyle lipgloss.Style, agents []store.AgentState, startIdx int) int {
+	// Priority-based row allocation: RUNNING > SUCCESS > KILLED.
+	// Fixed frame lines: topBorder + 3 section headers + 2 section dividers + bottom divider + help + bottomBorder = 9.
+	const fixedFrameLines = 9
+	availableRows := height - fixedFrameLines
+	if availableRows < 0 {
+		availableRows = 0
+	}
+	runningNeed := len(running)
+	if runningNeed == 0 {
+		runningNeed = 1 // "(none)" line
+	}
+	runningAlloc := min(runningNeed, availableRows)
+	availableRows -= runningAlloc
+
+	successNeed := len(success)
+	if successNeed == 0 {
+		successNeed = 1 // "(none)" line
+	}
+	successAlloc := min(successNeed, availableRows)
+	availableRows -= successAlloc
+
+	killedNeed := len(killed)
+	if killedNeed == 0 {
+		killedNeed = 1 // "(none)" line
+	}
+	killedAlloc := min(killedNeed, availableRows)
+
+	// renderSection renders a section header + agent rows into the outer frame,
+	// showing at most maxRows data lines. Returns the next available visible index.
+	renderSection := func(title string, headerStyle lipgloss.Style, agents []store.AgentState, startIdx int, maxRows int) int {
 		lines = append(lines, fr("│ ")+padRight(headerStyle.Render(title), innerWidth)+fr(" │"))
 		if len(agents) == 0 {
-			lines = append(lines, fr("│ ")+padRight(NormalItemStyle.Render("  (none)"), innerWidth)+fr(" │"))
+			if maxRows > 0 {
+				lines = append(lines, fr("│ ")+padRight(NormalItemStyle.Render("  (none)"), innerWidth)+fr(" │"))
+			}
 			return startIdx
 		}
-		for _, agent := range agents {
+		shown := agents
+		if maxRows >= 0 && len(shown) > maxRows {
+			shown = shown[:maxRows]
+		}
+		for _, agent := range shown {
 			lines = append(lines, fr("│ ")+padRight(renderRow(agent, startIdx), innerWidth)+fr(" │"))
 			startIdx++
 		}
@@ -140,11 +173,11 @@ func listView(m Model) string {
 	}
 
 	idx := 0
-	idx = renderSection("RUNNING", RunningHeaderStyle, running, idx)
+	idx = renderSection("RUNNING", RunningHeaderStyle, running, idx, runningAlloc)
 	lines = append(lines, divider)
-	idx = renderSection(successTitle, SuccessHeaderStyle, success, idx)
+	idx = renderSection(successTitle, SuccessHeaderStyle, success, idx, successAlloc)
 	lines = append(lines, divider)
-	renderSection(killedTitle, KilledHeaderStyle, killed, idx)
+	renderSection(killedTitle, KilledHeaderStyle, killed, idx, killedAlloc)
 
 	// Fill remaining height with blank lines (divider + help + bottom = 3 lines)
 	for len(lines) < height-3 {
@@ -153,9 +186,9 @@ func listView(m Model) string {
 
 	// Help line at bottom
 	lines = append(lines, divider)
-	historyLabel := "[o] show history"
+	historyLabel := "[h] show history"
 	if m.showExpired {
-		historyLabel = "[o] hide history"
+		historyLabel = "[h] hide history"
 	}
 	helpText := "[↑↓/jk] select  [space] detail  [y] yank  [K] kill  " + historyLabel + "  [q] quit"
 	if m.statusMsg != "" {
@@ -221,6 +254,13 @@ func padRight(s string, width int) string {
 
 func max(a, b int) int {
 	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
 		return a
 	}
 	return b

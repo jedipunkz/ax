@@ -114,7 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, loadLog(agent.LogFile))
 			}
 
-		case "o":
+		case "h":
 			m.showExpired = !m.showExpired
 			// Clamp cursor after toggling visibility
 			visible := visibleAgents(m.agents, m.showExpired)

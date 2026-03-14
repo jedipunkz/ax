@@ -33,7 +33,7 @@ cco agent
 | `esc` / `q` | Back to list or quit |
 | `y` | Yank — copy `cd <worktree-path>` to clipboard |
 | `K` | Kill selected agent (SIGTERM) |
-| `o` | Toggle showing expired agents |
+| `h` | Toggle showing full agent history |
 
 ### Status indicators
 
@@ -45,7 +45,7 @@ cco agent
 | `failed` | Exited with non-zero code |
 | `killed` | Terminated by signal |
 
-Finished agents remain visible for 5 minutes after exit.
+Finished agents are visible for 24 hours after exit. Press `h` to show the full history.
 
 ## Runtime files
 
