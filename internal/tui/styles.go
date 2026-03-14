@@ -57,6 +57,9 @@ var (
 	KilledHeaderStyle = lipgloss.NewStyle().
 				Bold(true).
 				Foreground(lipgloss.Color("#565f89"))
+
+	ColHeaderStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#545c7e"))
 )
 
 func fr(s string) string { return FrameStyle.Render(s) }

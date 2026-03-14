@@ -91,28 +91,46 @@ func listView(m Model) string {
 
 	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
 
+	// Fixed column widths: cursor(2) id(17) sp(1) status(16) sp(1) elapsed(9) sp(1) ended(5)
+	// ID format: "cco-{unix_minutes}-{4hex}" = 17 chars
+	const (
+		idWidth      = 17
+		statusWidth  = 11
+		elapsedWidth = 9
+		endedWidth   = 5
+		fixedTotal   = 2 + idWidth + 1 + statusWidth + 1 + elapsedWidth + 1 + endedWidth
+	)
+
+	// Column header row
+	colHeader := "  " +
+		padRight("NAME/ID", idWidth) + " " +
+		padRight("STATUS", statusWidth) + " " +
+		padRight("ELAPSED", elapsedWidth) + " " +
+		padRight("ENDED", endedWidth)
+	if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 {
+		colHeader += "  " + "LAST OUTPUT"
+	}
+	lines = append(lines, fr("│ ")+padRight(ColHeaderStyle.Render(colHeader), innerWidth)+fr(" │"))
+
 	renderRow := func(agent store.AgentState, idx int) string {
 		cursor := "  "
 		if idx == m.cursor {
 			cursor = "▶ "
 		}
 
-		// Fixed columns: cursor(2) id(17+1) status(16+1) elapsed(9)
-		// ID format: "cco-{unix_minutes}-{4hex}" = 17 chars
-		const (
-			idWidth      = 17
-			statusWidth  = 16
-			elapsedWidth = 9
-			fixedTotal   = 2 + idWidth + 1 + statusWidth + 1 + elapsedWidth
-		)
 		label := agent.ID
 		if agent.Name != "" {
 			label = agent.Name
 		}
+		endedAt := "     "
+		if agent.FinishedAt != nil {
+			endedAt = agent.FinishedAt.Format("15:04")
+		}
 		row := cursor +
 			padRight(truncate(label, idWidth), idWidth) + " " +
 			padRight(formatStatus(agent, m), statusWidth) + " " +
-			padRight(formatElapsed(agent), elapsedWidth)
+			padRight(formatElapsed(agent), elapsedWidth) + " " +
+			endedAt
 
 		if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 && agent.LastOutput != "" {
 			row += "  " + truncate(agent.LastOutput, remaining)
@@ -125,8 +143,8 @@ func listView(m Model) string {
 	}
 
 	// Priority-based row allocation: RUNNING > SUCCESS > KILLED.
-	// Fixed frame lines: topBorder + 3 section headers + 2 section dividers + bottom divider + help + bottomBorder = 9.
-	const fixedFrameLines = 9
+	// Fixed frame lines: topBorder + colHeader + 3 section headers + 2 section dividers + bottom divider + help + bottomBorder = 10.
+	const fixedFrameLines = 10
 	availableRows := height - fixedFrameLines
 	if availableRows < 0 {
 		availableRows = 0
@@ -209,11 +227,11 @@ func formatStatus(agent store.AgentState, m Model) string {
 		}
 		return StatusRunningStyle.Render(m.spinner.View() + " running")
 	case store.StatusSuccess:
-		return StatusSuccessStyle.Render("✓ success")
+		return StatusSuccessStyle.Render("success")
 	case store.StatusFailed:
-		return StatusFailedStyle.Render("✗ failed")
+		return StatusFailedStyle.Render("failed")
 	case store.StatusKilled:
-		return StatusKilledStyle.Render("✕ killed")
+		return StatusKilledStyle.Render("killed")
 	default:
 		return string(agent.Status)
 	}
