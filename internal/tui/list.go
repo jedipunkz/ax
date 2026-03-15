@@ -129,11 +129,11 @@ func listView(m Model) string {
 		row := cursor +
 			padRight(truncate(label, idWidth), idWidth) + " " +
 			padRight(formatStatus(agent, m), statusWidth) + " " +
-			padRight(formatElapsed(agent), elapsedWidth) + " " +
-			endedAt
+			padRight(ElapsedStyle.Render(formatElapsed(agent)), elapsedWidth) + " " +
+			EndedStyle.Render(endedAt)
 
 		if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 && agent.LastOutput != "" {
-			row += "  " + truncate(agent.LastOutput, remaining)
+			row += "  " + LastOutputStyle.Render(truncate(agent.LastOutput, remaining))
 		}
 
 		if idx == m.cursor {
