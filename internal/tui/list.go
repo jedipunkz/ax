@@ -91,10 +91,10 @@ func listView(m Model) string {
 
 	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
 
-	// Fixed column widths: cursor(2) id(17) sp(1) status(16) sp(1) elapsed(9) sp(1) ended(5)
-	// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars
+	// Fixed column widths: cursor(2) id(24) sp(1) status(11) sp(1) elapsed(9) sp(1) ended(11)
+	// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars; name can be longer so give extra room
 	const (
-		idWidth      = 17
+		idWidth      = 24
 		statusWidth  = 11
 		elapsedWidth = 9
 		endedWidth   = 11
