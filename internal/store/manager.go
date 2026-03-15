@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"time"
 )
 
 type subscriber struct {
@@ -26,6 +27,18 @@ func RunManager(socketPath, stateFilePath string) error {
 	if err := mgr.loadState(); err != nil && !os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "warning: could not load state: %v\n", err)
 	}
+
+	// Mark any running agents whose PIDs are no longer alive as failed.
+	mgr.reconcileStaleRunning()
+
+	// Periodically recheck running agent PIDs to catch abrupt terminations.
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			mgr.reconcileStaleRunning()
+		}
+	}()
 
 	ln, err := net.Listen("unix", socketPath)
 	if err != nil {
@@ -78,6 +91,29 @@ func (m *manager) persistState() {
 	}
 	if err := os.Rename(tmp, m.stateFilePath); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not rename state file: %v\n", err)
+	}
+}
+
+// reconcileStaleRunning marks running agents whose PIDs are no longer alive as failed.
+func (m *manager) reconcileStaleRunning() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	now := time.Now()
+	changed := false
+	for id, a := range m.agents {
+		if a.Status == StatusRunning && !isPIDAlive(a.PID) {
+			a.Status = StatusFailed
+			a.FinishedAt = &now
+			a.WaitingUser = false
+			m.agents[id] = a
+			changed = true
+			broadcastMsg := Message{Type: "update", Agent: &a}
+			m.broadcast(broadcastMsg)
+		}
+	}
+	if changed {
+		m.persistState()
 	}
 }
 
