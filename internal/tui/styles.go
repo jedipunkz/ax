@@ -60,6 +60,15 @@ var (
 
 	ColHeaderStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#545c7e"))
+
+	ElapsedStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7dcfff"))
+
+	EndedStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#e0af68"))
+
+	LastOutputStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#a9b1d6"))
 )
 
 func fr(s string) string { return FrameStyle.Render(s) }
