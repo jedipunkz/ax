@@ -68,7 +68,7 @@ var (
 			Foreground(lipgloss.Color("#e0af68"))
 
 	LastOutputStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#ff9e64"))
+			Foreground(lipgloss.Color("#565f89"))
 )
 
 func fr(s string) string { return FrameStyle.Render(s) }
