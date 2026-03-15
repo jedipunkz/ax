@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -48,6 +49,8 @@ type Model struct {
 	logContent   string
 	showExpired  bool
 	statusMsg    string
+	searchMode   bool
+	searchQuery  string
 }
 
 func newModel(client *store.Client, sub chan store.Message) Model {
@@ -81,6 +84,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// In search mode, handle text input specially
+		if m.searchMode {
+			switch msg.String() {
+			case "esc":
+				m.searchMode = false
+				m.searchQuery = ""
+				m.cursor = 0
+				m.scrollOffset = 0
+			case "enter":
+				m.searchMode = false
+			case "backspace", "ctrl+h":
+				if len(m.searchQuery) > 0 {
+					runes := []rune(m.searchQuery)
+					m.searchQuery = string(runes[:len(runes)-1])
+					m.cursor = firstMatchIndex(m.agents, m.showExpired, m.searchQuery)
+					m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
+				}
+			default:
+				if len(msg.Runes) > 0 {
+					m.searchQuery += string(msg.Runes)
+					m.cursor = firstMatchIndex(m.agents, m.showExpired, m.searchQuery)
+					m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
+				}
+			}
+			return m, tea.Batch(cmds...)
+		}
+
 		switch msg.String() {
 		case "q", "ctrl+c":
 			if m.view == viewDetail {
@@ -129,6 +159,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor = len(visible) - 1
 			}
 			m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
+
+		case "s":
+			if m.view == viewList {
+				m.searchMode = true
+				m.searchQuery = ""
+			}
 
 		case "K":
 			visible := visibleAgents(m.agents, m.showExpired)
@@ -262,6 +298,26 @@ func clampScroll(cursor, offset, availRows int) int {
 		offset = 0
 	}
 	return offset
+}
+
+// firstMatchIndex returns the index of the first visible agent whose ID or name contains query.
+// Returns 0 if no match is found or query is empty.
+func firstMatchIndex(agents []store.AgentState, showExpired bool, query string) int {
+	if query == "" {
+		return 0
+	}
+	q := strings.ToLower(query)
+	visible := visibleAgents(agents, showExpired)
+	for i, a := range visible {
+		label := a.ID
+		if a.Name != "" {
+			label = a.Name
+		}
+		if strings.Contains(strings.ToLower(label), q) {
+			return i
+		}
+	}
+	return 0
 }
 
 // listAvailableRows returns the number of rows available for agent entries in the list view.

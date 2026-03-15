@@ -232,9 +232,14 @@ func listView(m Model) string {
 	if m.showExpired {
 		historyLabel = "[o] hide history"
 	}
-	helpText := "[↑↓/jk] select  [space] detail  [y] yank  [K] kill  " + historyLabel + "  [q] quit"
-	if m.statusMsg != "" {
+	var helpText string
+	switch {
+	case m.searchMode:
+		helpText = "search: " + m.searchQuery + "█  [esc] cancel  [enter] confirm"
+	case m.statusMsg != "":
 		helpText = m.statusMsg
+	default:
+		helpText = "[↑↓/jk] select  [space] detail  [y] yank  [K] kill  [s] search  " + historyLabel + "  [q] quit"
 	}
 	help := NormalItemStyle.Render(helpText)
 	lines = append(lines, fr("│ ")+padRight(help, innerWidth)+fr(" │"))
