@@ -21,36 +21,11 @@ All PRs must be written in English and include the following sections in the bod
 <Bulleted list of specific changes made>
 ```
 
-## Commit Messages
-
-All commit messages must follow the **Conventional Commits** specification:
-
-```
-<type>: <short description>
-
-<optional body>
-```
-
-Allowed types and their use cases:
-
-| Type | When to use |
-|------|-------------|
-| `feat:` | New feature visible to users |
-| `fix:` | Bug fix |
-| `docs:` | Documentation only |
-| `style:` | Formatting, whitespace (no logic change) |
-| `refactor:` | Code improvement with no behavior change |
-| `perf:` | Performance improvement |
-| `test:` | Tests only |
-| `chore:` | Build, tooling, dependency changes |
-
-Examples: `feat: add worktree branch name hint`, `fix: resolve agent ID collision`
-
 ## Workflow After Task Completion
 
 After completing any implementation task, automatically perform the following steps without waiting for user instruction:
 
-1. **Commit** — Stage the relevant changed files and create a commit message following the Conventional Commits format above.
+1. **Commit** — Stage the relevant changed files and create a descriptive commit message in English.
 2. **Push** — Push the branch to the remote repository.
 3. **Create a Pull Request** — Open a PR against the main branch using `gh pr create`, following the PR format defined in the Pull Requests section above.
 

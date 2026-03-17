@@ -49,7 +49,7 @@ func Run(args []string, socketPath string, name string) error {
 	var worktreeBranch string
 	if workDir != "" {
 		if repoRoot, ok := detectGitRepo(workDir); ok {
-			wt, branch, wtErr := setupWorktree(id, repoRoot, name)
+			wt, branch, wtErr := setupWorktree(id, repoRoot)
 			if wtErr != nil {
 				fmt.Fprintf(os.Stderr, "warning: could not create worktree: %v\n", wtErr)
 			} else {
