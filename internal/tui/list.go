@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -139,21 +140,21 @@ func listView(m Model) string {
 		lines = append(lines, renderOverviewLine("Args:", args))
 	}
 
-	// Fixed column widths: cursor(2) id(24) sp(1) status(11) sp(1) elapsed(9) sp(1) ended(11)
+	// Fixed column widths: cursor(2) id(24) sp(1) repo(12) sp(1) status(11) sp(1) ended(11)
 	// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars; name can be longer so give extra room
 	const (
-		idWidth      = 24
-		statusWidth  = 11
-		elapsedWidth = 9
-		endedWidth   = 11
-		fixedTotal   = 2 + idWidth + 1 + statusWidth + 1 + elapsedWidth + 1 + endedWidth
+		idWidth     = 24
+		repoWidth   = 12
+		statusWidth = 11
+		endedWidth  = 11
+		fixedTotal  = 2 + idWidth + 1 + repoWidth + 1 + statusWidth + 1 + endedWidth
 	)
 
 	// Column header row (rendered under the Running section header)
 	colHeader := "  " +
 		padRight("Name/Id", idWidth) + " " +
+		padRight("Repo", repoWidth) + " " +
 		padRight("Status", statusWidth) + " " +
-		padRight("Elapsed", elapsedWidth) + " " +
 		padRight("Ended", endedWidth)
 	if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 {
 		colHeader += "  " + "Last Output"
@@ -174,10 +175,11 @@ func listView(m Model) string {
 		if agent.FinishedAt != nil {
 			endedAt = agent.FinishedAt.Format("01/02 15:04")
 		}
+		repo := repoName(agent.WorkDir)
 		row := cursor +
 			padRight(truncate(label, idWidth), idWidth) + " " +
+			padRight(RepoStyle.Render(truncate(repo, repoWidth)), repoWidth) + " " +
 			padRight(formatStatus(agent, m), statusWidth) + " " +
-			padRight(ElapsedStyle.Render(formatElapsed(agent)), elapsedWidth) + " " +
 			EndedStyle.Render(endedAt)
 
 		if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 && agent.LastOutput != "" {
@@ -314,6 +316,10 @@ func formatStatus(agent store.AgentState, m Model) string {
 	default:
 		return string(agent.Status)
 	}
+}
+
+func repoName(workDir string) string {
+	return filepath.Base(workDir)
 }
 
 func formatElapsed(agent store.AgentState) string {
