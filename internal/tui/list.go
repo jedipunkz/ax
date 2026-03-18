@@ -239,7 +239,7 @@ func listView(m Model) string {
 	case m.statusMsg != "":
 		helpText = m.statusMsg
 	default:
-		helpText = "[↑↓/jk] select  [space] detail  [y] yank  [K] kill  [/] search  " + historyLabel + "  [q] quit"
+		helpText = "[↑↓/jk] select  [enter] detail  [y] yank  [K] kill  [/] search  " + historyLabel + "  [q] quit"
 	}
 	help := NormalItemStyle.Render(helpText)
 	lines = append(lines, fr("│ ")+padRight(help, innerWidth)+fr(" │"))
