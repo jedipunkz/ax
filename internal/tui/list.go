@@ -91,6 +91,9 @@ func listView(m Model) string {
 
 	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
 
+	// Overview section title.
+	lines = append(lines, fr("│ ")+padRight(TitleStyle.Render("Overview"), innerWidth)+fr(" │"))
+
 	// Detail overview section: show selected agent's Name, PID, Dir, Branch, Args.
 	{
 		visible := visibleAgents(m.agents, m.showExpired)
@@ -180,7 +183,7 @@ func listView(m Model) string {
 	}
 
 	// Compute available rows for agent entries.
-	// Fixed frame lines: topBorder + 5 overview + divider + colHeader + 3 section headers + 2 section dividers + bottom divider + help + bottomBorder = 16.
+	// Fixed frame lines: topBorder + overviewTitle + 5 overview + divider + colHeader + 3 section headers + 2 section dividers + bottom divider + help + bottomBorder = 17.
 	emptyCount := 0
 	if len(running) == 0 {
 		emptyCount++
@@ -191,7 +194,7 @@ func listView(m Model) string {
 	if len(killed) == 0 {
 		emptyCount++
 	}
-	availableRows := max(0, height-16-emptyCount)
+	availableRows := max(0, height-17-emptyCount)
 
 	// Compute per-section slice bounds based on scroll offset.
 	// Flat visible list order: running[0..], success[0..], killed[0..]
