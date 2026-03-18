@@ -232,7 +232,7 @@ func listView(m Model) string {
 		if group.Rep.FinishedAt != nil {
 			endedAt = group.Rep.FinishedAt.Format("01/02 15:04")
 		}
-		repo := repoName(group.Rep.WorkDir)
+		repo := repoName(group.Rep.RepoName, group.Rep.WorkDir)
 		row := cursor +
 			padRight(truncate(label, idWidth), idWidth) + " " +
 			padRight(RepoStyle.Render(truncate(repo, repoWidth)), repoWidth) + " " +
@@ -373,7 +373,10 @@ func formatStatus(agent store.AgentState, m Model) string {
 	}
 }
 
-func repoName(workDir string) string {
+func repoName(name, workDir string) string {
+	if name != "" {
+		return name
+	}
 	return filepath.Base(workDir)
 }
 

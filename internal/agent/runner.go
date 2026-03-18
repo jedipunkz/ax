@@ -35,9 +35,10 @@ func Run(args []string, socketPath string, name string) error {
 		workDir = ""
 	}
 
-	var worktreeBranch string
+	var worktreeBranch, repoName string
 	if workDir != "" {
 		if repoRoot, ok := detectGitRepo(workDir); ok {
+			repoName = filepath.Base(repoRoot)
 			wt, branch, wtErr := setupWorktree(id, repoRoot, name)
 			if wtErr != nil {
 				fmt.Fprintf(os.Stderr, "warning: could not create worktree: %v\n", wtErr)
@@ -48,7 +49,7 @@ func Run(args []string, socketPath string, name string) error {
 		}
 	}
 
-	return runSession(args, socketPath, id, name, workDir, worktreeBranch)
+	return runSession(args, socketPath, id, name, workDir, worktreeBranch, repoName)
 }
 
 // Resume finds an existing agent by name and runs claude --resume in its worktree.
@@ -64,7 +65,7 @@ func Resume(args []string, socketPath string, name string) error {
 
 	id := generateID()
 	resumeArgs := append([]string{"--resume"}, args...)
-	return runSession(resumeArgs, socketPath, id, name, existing.WorkDir, existing.WorktreeBranch)
+	return runSession(resumeArgs, socketPath, id, name, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
 }
 
 // findAgentByName reads state.json and returns the most recent agent matching name.
@@ -100,7 +101,7 @@ func findAgentByName(name string) (store.AgentState, error) {
 }
 
 // runSession is the shared implementation for Run and Resume.
-func runSession(args []string, socketPath, id, name, workDir, worktreeBranch string) error {
+func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, repoName string) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("could not determine home directory: %w", err)
@@ -143,6 +144,7 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch str
 		LastOutput:     "interactive session",
 		LogFile:        logPath,
 		WorktreeBranch: worktreeBranch,
+		RepoName:       repoName,
 	}
 
 	// Start claude inside a PTY so it sees a real terminal while we can also
