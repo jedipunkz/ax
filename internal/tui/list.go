@@ -154,16 +154,16 @@ func listView(m Model) string {
 		fixedTotal   = 2 + idWidth + 1 + statusWidth + 1 + elapsedWidth + 1 + endedWidth
 	)
 
-	// Column header row
+	// Column header row (rendered under the Running section header)
 	colHeader := "  " +
-		padRight("NAME/ID", idWidth) + " " +
-		padRight("STATUS", statusWidth) + " " +
-		padRight("ELAPSED", elapsedWidth) + " " +
-		padRight("ENDED", endedWidth)
+		padRight("Name/Id", idWidth) + " " +
+		padRight("Status", statusWidth) + " " +
+		padRight("Elapsed", elapsedWidth) + " " +
+		padRight("Ended", endedWidth)
 	if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 {
-		colHeader += "  " + "LAST OUTPUT"
+		colHeader += "  " + "Last Output"
 	}
-	lines = append(lines, fr("│ ")+padRight(ColHeaderStyle.Render(colHeader), innerWidth)+fr(" │"))
+	colHeaderLine := fr("│ ") + padRight(ColHeaderStyle.Render(colHeader), innerWidth) + fr(" │")
 
 	renderRow := func(agent store.AgentState, idx int) string {
 		cursor := "  "
@@ -249,11 +249,15 @@ func listView(m Model) string {
 		}
 	}
 
-	// renderSection renders a divider-style section header + agent rows into the outer frame.
+	// renderSection renders a divider-style section header + optional pre-rows line + agent rows.
 	// baseGlobalIdx is the global index of agents[0] in the flat visible list.
 	// sliceStart/sliceLen control which agents within the section to show.
-	renderSection := func(title string, headerStyle lipgloss.Style, agents []store.AgentState, baseGlobalIdx int, sliceStart int, sliceLen int) {
+	// preRows is an optional line appended immediately after the section header (e.g. column headers).
+	renderSection := func(title string, headerStyle lipgloss.Style, agents []store.AgentState, baseGlobalIdx int, sliceStart int, sliceLen int, preRows string) {
 		lines = append(lines, renderSectionHeader(title, headerStyle))
+		if preRows != "" {
+			lines = append(lines, preRows)
+		}
 		if len(agents) == 0 {
 			lines = append(lines, fr("│ ")+padRight(NormalItemStyle.Render("  (none)"), innerWidth)+fr(" │"))
 			return
@@ -268,9 +272,9 @@ func listView(m Model) string {
 		}
 	}
 
-	renderSection("Running", RunningHeaderStyle, running, 0, runSliceStart, runSliceLen)
-	renderSection(successTitle, SuccessHeaderStyle, success, len(running), sucSliceStart, sucSliceLen)
-	renderSection(killedTitle, KilledHeaderStyle, killed, len(running)+len(success), kilSliceStart, kilSliceLen)
+	renderSection("Running", RunningHeaderStyle, running, 0, runSliceStart, runSliceLen, colHeaderLine)
+	renderSection(successTitle, SuccessHeaderStyle, success, len(running), sucSliceStart, sucSliceLen, "")
+	renderSection(killedTitle, KilledHeaderStyle, killed, len(running)+len(success), kilSliceStart, kilSliceLen, "")
 
 	// Fill remaining height with blank lines (divider + help + bottom = 3 lines)
 	for len(lines) < height-3 {
