@@ -15,7 +15,7 @@ import (
 )
 
 var agentCmd = &cobra.Command{
-	Use:                "agent [-n <name>] [-- <claude-args>...]",
+	Use:                "agent [-n <name>] [-r] [-- <claude-args>...]",
 	Short:              "Start a Claude Code agent",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -28,29 +28,42 @@ var agentCmd = &cobra.Command{
 			return fmt.Errorf("could not start daemon: %w", err)
 		}
 
-		name, rest := parseNameFlag(args)
+		name, resume, rest := parseFlagsForAgent(args)
+		if resume {
+			if name == "" {
+				return fmt.Errorf("-r/--resume requires -n/--name to specify the agent to resume")
+			}
+			return agent.Resume(rest, socketPath, name)
+		}
 		return agent.Run(rest, socketPath, name)
 	},
 }
 
-// parseNameFlag extracts -n / --name from args (before any -- separator).
-func parseNameFlag(args []string) (name string, rest []string) {
-	for i := 0; i < len(args); i++ {
+// parseFlagsForAgent extracts -n/--name and -r/--resume from args (before any -- separator).
+// Unrecognised flags and positional arguments are returned in rest.
+func parseFlagsForAgent(args []string) (name string, resume bool, rest []string) {
+	i := 0
+	for i < len(args) {
 		if args[i] == "--" {
+			rest = append(rest, args[i:]...)
 			break
 		}
-		if (args[i] == "-n" || args[i] == "--name") && i+1 < len(args) {
+		switch {
+		case (args[i] == "-n" || args[i] == "--name") && i+1 < len(args):
 			name = args[i+1]
-			rest = append(append([]string{}, args[:i]...), args[i+2:]...)
-			return
-		}
-		if strings.HasPrefix(args[i], "--name=") {
+			i += 2
+		case strings.HasPrefix(args[i], "--name="):
 			name = strings.TrimPrefix(args[i], "--name=")
-			rest = append(append([]string{}, args[:i]...), args[i+1:]...)
-			return
+			i++
+		case args[i] == "-r" || args[i] == "--resume":
+			resume = true
+			i++
+		default:
+			rest = append(rest, args[i])
+			i++
 		}
 	}
-	return "", args
+	return
 }
 
 func getSocketPath() (string, error) {

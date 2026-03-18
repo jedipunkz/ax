@@ -3,6 +3,7 @@ package agent
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -29,18 +30,6 @@ const waitingUserThreshold = 2 * time.Second
 func Run(args []string, socketPath string, name string) error {
 	id := generateID()
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("could not determine home directory: %w", err)
-	}
-
-	agentDir := filepath.Join(home, ".ax", "agents", id)
-	if err := os.MkdirAll(agentDir, 0755); err != nil {
-		return fmt.Errorf("could not create agent dir: %w", err)
-	}
-
-	logPath := filepath.Join(agentDir, "output.log")
-
 	workDir, err := os.Getwd()
 	if err != nil {
 		workDir = ""
@@ -58,6 +47,71 @@ func Run(args []string, socketPath string, name string) error {
 			}
 		}
 	}
+
+	return runSession(args, socketPath, id, name, workDir, worktreeBranch)
+}
+
+// Resume finds an existing agent by name and runs claude --resume in its worktree.
+func Resume(args []string, socketPath string, name string) error {
+	existing, err := findAgentByName(name)
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(existing.WorkDir); err != nil {
+		return fmt.Errorf("worktree directory %q no longer exists: %w", existing.WorkDir, err)
+	}
+
+	id := generateID()
+	resumeArgs := append([]string{"--resume"}, args...)
+	return runSession(resumeArgs, socketPath, id, name, existing.WorkDir, existing.WorktreeBranch)
+}
+
+// findAgentByName reads state.json and returns the most recent agent matching name.
+func findAgentByName(name string) (store.AgentState, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return store.AgentState{}, fmt.Errorf("could not determine home directory: %w", err)
+	}
+	stateFile := filepath.Join(home, ".ax", "state.json")
+	data, err := os.ReadFile(stateFile)
+	if err != nil {
+		return store.AgentState{}, fmt.Errorf("could not read state file: %w", err)
+	}
+	var agents []store.AgentState
+	if err := json.Unmarshal(data, &agents); err != nil {
+		return store.AgentState{}, fmt.Errorf("could not parse state file: %w", err)
+	}
+
+	sanitized := sanitizeBranchName(name)
+	var best *store.AgentState
+	for i := range agents {
+		a := &agents[i]
+		if a.Name == name || (sanitized != "" && a.WorktreeBranch == sanitized) {
+			if best == nil || a.StartedAt.After(best.StartedAt) {
+				best = a
+			}
+		}
+	}
+	if best == nil {
+		return store.AgentState{}, fmt.Errorf("no agent found with name %q", name)
+	}
+	return *best, nil
+}
+
+// runSession is the shared implementation for Run and Resume.
+func runSession(args []string, socketPath, id, name, workDir, worktreeBranch string) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("could not determine home directory: %w", err)
+	}
+
+	agentDir := filepath.Join(home, ".ax", "agents", id)
+	if err := os.MkdirAll(agentDir, 0755); err != nil {
+		return fmt.Errorf("could not create agent dir: %w", err)
+	}
+
+	logPath := filepath.Join(agentDir, "output.log")
 
 	// Connect to store
 	var client store.Client
