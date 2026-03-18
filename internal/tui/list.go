@@ -127,9 +127,10 @@ func listView(m Model) string {
 		}
 		renderOverviewLine := func(label, value string) string {
 			styledLabel := OverviewLabelStyle.Render(label + " ")
-			maxVal := max(0, innerWidth-lipgloss.Width(styledLabel))
+			prefix := "  " // align with cursor column in agent rows
+			maxVal := max(0, innerWidth-len(prefix)-lipgloss.Width(styledLabel))
 			styledValue := NormalItemStyle.Render(truncate(value, maxVal))
-			return fr("│ ") + padRight(styledLabel+styledValue, innerWidth) + fr(" │")
+			return fr("│ ") + padRight(prefix+styledLabel+styledValue, innerWidth) + fr(" │")
 		}
 		lines = append(lines, renderOverviewLine("Name:", name))
 		lines = append(lines, renderOverviewLine("PID: ", pid))
