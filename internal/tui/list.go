@@ -42,6 +42,79 @@ func visibleAgents(agents []store.AgentState, showExpired bool) []store.AgentSta
 	return append(append(running, success...), killed...)
 }
 
+// AgentGroup represents one or more agents sharing the same name/label (e.g. after -r resume).
+type AgentGroup struct {
+	Rep  store.AgentState // best representative (running > success > killed, then most recent)
+	PIDs []int            // all PIDs across agents in this group
+}
+
+// groupLabel returns the display label for this group.
+func (g AgentGroup) groupLabel() string {
+	if g.Rep.Name != "" {
+		return g.Rep.Name
+	}
+	return g.Rep.ID
+}
+
+// pidString returns comma-separated PIDs.
+func (g AgentGroup) pidString() string {
+	parts := make([]string, len(g.PIDs))
+	for i, p := range g.PIDs {
+		parts[i] = fmt.Sprintf("%d", p)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// isBetterRep returns true if candidate should replace current as the group representative.
+// Priority order: running > success > killed/failed, then most recently started.
+func isBetterRep(candidate, current store.AgentState) bool {
+	statusPriority := func(s store.Status) int {
+		switch s {
+		case store.StatusRunning:
+			return 3
+		case store.StatusSuccess:
+			return 2
+		default:
+			return 1
+		}
+	}
+	cp := statusPriority(candidate.Status)
+	rp := statusPriority(current.Status)
+	if cp != rp {
+		return cp > rp
+	}
+	return candidate.StartedAt.After(current.StartedAt)
+}
+
+// groupedVisibleAgents groups visible agents by name/label into AgentGroups.
+// Agents sharing the same Name (or the same ID when no Name is set) are merged into one group.
+func groupedVisibleAgents(agents []store.AgentState, showExpired bool) []AgentGroup {
+	visible := visibleAgents(agents, showExpired)
+	groupMap := map[string]*AgentGroup{}
+	var order []string
+	for _, a := range visible {
+		a := a
+		key := a.ID
+		if a.Name != "" {
+			key = a.Name
+		}
+		if g, ok := groupMap[key]; ok {
+			g.PIDs = append(g.PIDs, a.PID)
+			if isBetterRep(a, g.Rep) {
+				g.Rep = a
+			}
+		} else {
+			groupMap[key] = &AgentGroup{Rep: a, PIDs: []int{a.PID}}
+			order = append(order, key)
+		}
+	}
+	result := make([]AgentGroup, 0, len(order))
+	for _, key := range order {
+		result = append(result, *groupMap[key])
+	}
+	return result
+}
+
 func listView(m Model) string {
 	width := clampWidth(m.width)
 	height := m.height
@@ -51,25 +124,17 @@ func listView(m Model) string {
 
 	innerWidth := width - 4 // outer frame: "│ " + content(innerWidth) + " │"
 
-	// Single pass: build sections.
-	threshold := recentThreshold()
-	var running, success, killed []store.AgentState
-	for _, a := range m.agents {
-		switch a.Status {
+	// Build grouped sections.
+	groups := groupedVisibleAgents(m.agents, m.showExpired)
+	var running, success, killed []AgentGroup
+	for _, g := range groups {
+		switch g.Rep.Status {
 		case store.StatusRunning:
-			running = append(running, a)
+			running = append(running, g)
 		case store.StatusSuccess:
-			if m.showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
-				success = append(success, a)
-			}
-		case store.StatusKilled:
-			if m.showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
-				killed = append(killed, a)
-			}
-		case store.StatusFailed:
-			if m.showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
-				killed = append(killed, a)
-			}
+			success = append(success, g)
+		default:
+			killed = append(killed, g)
 		}
 	}
 
@@ -102,24 +167,19 @@ func listView(m Model) string {
 
 	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
 
-
-	// Detail overview section: show selected agent's Name, PID, Dir, Branch, Args.
+	// Detail overview section: show selected group's Name, PID(s), Dir, Branch, Args.
 	{
-		visible := visibleAgents(m.agents, m.showExpired)
 		var name, pid, dir, branch, args string
-		if len(visible) > 0 && m.cursor < len(visible) {
-			ag := visible[m.cursor]
-			name = ag.Name
-			if name == "" {
-				name = ag.ID
-			}
-			pid = fmt.Sprintf("%d", ag.PID)
-			dir = ag.WorkDir
-			branch = ag.WorktreeBranch
+		if len(groups) > 0 && m.cursor < len(groups) {
+			g := groups[m.cursor]
+			name = g.groupLabel()
+			pid = g.pidString()
+			dir = g.Rep.WorkDir
+			branch = g.Rep.WorktreeBranch
 			if branch == "" {
 				branch = "-"
 			}
-			args = strings.Join(ag.Args, " ")
+			args = strings.Join(g.Rep.Args, " ")
 			if args == "" {
 				args = "-"
 			}
@@ -161,29 +221,26 @@ func listView(m Model) string {
 	}
 	colHeaderLine := fr("│ ") + padRight(OverviewLabelStyle.Render(colHeader), innerWidth) + fr(" │")
 
-	renderRow := func(agent store.AgentState, idx int) string {
+	renderRow := func(group AgentGroup, idx int) string {
 		cursor := "  "
 		if idx == m.cursor {
 			cursor = "▶ "
 		}
 
-		label := agent.ID
-		if agent.Name != "" {
-			label = agent.Name
-		}
+		label := group.groupLabel()
 		endedAt := "           "
-		if agent.FinishedAt != nil {
-			endedAt = agent.FinishedAt.Format("01/02 15:04")
+		if group.Rep.FinishedAt != nil {
+			endedAt = group.Rep.FinishedAt.Format("01/02 15:04")
 		}
-		repo := repoName(agent.WorkDir)
+		repo := repoName(group.Rep.WorkDir)
 		row := cursor +
 			padRight(truncate(label, idWidth), idWidth) + " " +
 			padRight(RepoStyle.Render(truncate(repo, repoWidth)), repoWidth) + " " +
-			padRight(formatStatus(agent, m), statusWidth) + " " +
+			padRight(formatStatus(group.Rep, m), statusWidth) + " " +
 			EndedStyle.Render(endedAt)
 
-		if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 && agent.LastOutput != "" {
-			row += "  " + LastOutputStyle.Render(truncate(agent.LastOutput, remaining))
+		if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 && group.Rep.LastOutput != "" {
+			row += "  " + LastOutputStyle.Render(truncate(group.Rep.LastOutput, remaining))
 		}
 
 		if idx == m.cursor {
@@ -246,26 +303,24 @@ func listView(m Model) string {
 		}
 	}
 
-	// renderSection renders a divider-style section header + optional pre-rows line + agent rows.
-	// baseGlobalIdx is the global index of agents[0] in the flat visible list.
-	// sliceStart/sliceLen control which agents within the section to show.
+	// renderSection renders a divider-style section header + optional pre-rows line + group rows.
 	// preRows is an optional line appended immediately after the section header (e.g. column headers).
-	renderSection := func(title string, headerStyle lipgloss.Style, agents []store.AgentState, baseGlobalIdx int, sliceStart int, sliceLen int, preRows string) {
+	renderSection := func(title string, headerStyle lipgloss.Style, groupSlice []AgentGroup, baseGlobalIdx int, sliceStart int, sliceLen int, preRows string) {
 		lines = append(lines, renderSectionHeader(title, headerStyle))
 		if preRows != "" {
 			lines = append(lines, preRows)
 		}
-		if len(agents) == 0 {
+		if len(groupSlice) == 0 {
 			lines = append(lines, fr("│ ")+padRight(NormalItemStyle.Render("  (none)"), innerWidth)+fr(" │"))
 			return
 		}
 		end := sliceStart + sliceLen
-		if end > len(agents) {
-			end = len(agents)
+		if end > len(groupSlice) {
+			end = len(groupSlice)
 		}
 		for i := sliceStart; i < end; i++ {
 			globalIdx := baseGlobalIdx + i
-			lines = append(lines, fr("│ ")+padRight(renderRow(agents[i], globalIdx), innerWidth)+fr(" │"))
+			lines = append(lines, fr("│ ")+padRight(renderRow(groupSlice[i], globalIdx), innerWidth)+fr(" │"))
 		}
 	}
 

@@ -144,8 +144,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.view == viewDetail {
 				m.viewport.LineDown(1)
 			} else {
-				visible := visibleAgents(m.agents, m.showExpired)
-				if m.cursor < len(visible)-1 {
+				groups := groupedVisibleAgents(m.agents, m.showExpired)
+				if m.cursor < len(groups)-1 {
 					m.cursor++
 				}
 				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
@@ -155,10 +155,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.view == viewDetail {
 				m.view = viewList
 			} else {
-				visible := visibleAgents(m.agents, m.showExpired)
-				if len(visible) > 0 && m.cursor < len(visible) {
+				groups := groupedVisibleAgents(m.agents, m.showExpired)
+				if len(groups) > 0 && m.cursor < len(groups) {
 					m.view = viewDetail
-					agent := visible[m.cursor]
+					agent := groups[m.cursor].Rep
 					m.viewport = viewport.New(m.width-4, m.height-13)
 					cmds = append(cmds, loadLog(agent.LogFile))
 				}
@@ -167,9 +167,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "o":
 			m.showExpired = !m.showExpired
 			// Clamp cursor after toggling visibility
-			visible := visibleAgents(m.agents, m.showExpired)
-			if m.cursor >= len(visible) && len(visible) > 0 {
-				m.cursor = len(visible) - 1
+			groups := groupedVisibleAgents(m.agents, m.showExpired)
+			if m.cursor >= len(groups) && len(groups) > 0 {
+				m.cursor = len(groups) - 1
 			}
 			m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 
@@ -180,30 +180,42 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "K":
-			visible := visibleAgents(m.agents, m.showExpired)
-			if len(visible) > 0 && m.cursor < len(visible) {
-				ag := visible[m.cursor]
-				if ag.PID > 0 && ag.Status == store.StatusRunning {
-					killProcess(ag.PID)
-					// Optimistic update: mark killed immediately in local model
-					now := time.Now()
-					ag.Status = store.StatusKilled
-					ag.FinishedAt = &now
-					// Update in m.agents by ID
-					for i, a := range m.agents {
-						if a.ID == ag.ID {
-							m.agents[i] = ag
-							break
-						}
+			groups := groupedVisibleAgents(m.agents, m.showExpired)
+			if len(groups) > 0 && m.cursor < len(groups) {
+				g := groups[m.cursor]
+				// Kill all running agents in the group
+				for _, ag := range m.agents {
+					ag := ag
+					if ag.Status != store.StatusRunning {
+						continue
 					}
-					_ = m.client.SendUpdate(ag) // persist to daemon (best-effort)
+					label := ag.ID
+					if ag.Name != "" {
+						label = ag.Name
+					}
+					if label != g.groupLabel() {
+						continue
+					}
+					if ag.PID > 0 {
+						killProcess(ag.PID)
+						now := time.Now()
+						ag.Status = store.StatusKilled
+						ag.FinishedAt = &now
+						for i, a := range m.agents {
+							if a.ID == ag.ID {
+								m.agents[i] = ag
+								break
+							}
+						}
+						_ = m.client.SendUpdate(ag) // persist to daemon (best-effort)
+					}
 				}
 			}
 
 		case "y":
-			visible := visibleAgents(m.agents, m.showExpired)
-			if m.view == viewList && len(visible) > 0 && m.cursor < len(visible) {
-				ag := visible[m.cursor]
+			groups := groupedVisibleAgents(m.agents, m.showExpired)
+			if m.view == viewList && len(groups) > 0 && m.cursor < len(groups) {
+				ag := groups[m.cursor].Rep
 				if ag.WorkDir != "" {
 					cdCmd := fmt.Sprintf("cd %s", ag.WorkDir)
 					if err := copyToClipboard(cdCmd); err != nil {
@@ -239,15 +251,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				sortAgents(m.agents)
 			}
 		}
-		// Clamp cursor to visible agents
-		visible := visibleAgents(m.agents, m.showExpired)
-		if m.cursor >= len(visible) && len(visible) > 0 {
-			m.cursor = len(visible) - 1
+		// Clamp cursor to visible groups
+		groups := groupedVisibleAgents(m.agents, m.showExpired)
+		if m.cursor >= len(groups) && len(groups) > 0 {
+			m.cursor = len(groups) - 1
 		}
 		m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
-		// If in detail view, reload log for selected agent
-		if m.view == viewDetail && len(visible) > 0 && m.cursor < len(visible) {
-			cmds = append(cmds, loadLog(visible[m.cursor].LogFile))
+		// If in detail view, reload log for selected group's representative
+		if m.view == viewDetail && len(groups) > 0 && m.cursor < len(groups) {
+			cmds = append(cmds, loadLog(groups[m.cursor].Rep.LogFile))
 		}
 		cmds = append(cmds, waitForMsg(m.sub))
 
@@ -313,20 +325,16 @@ func clampScroll(cursor, offset, availRows int) int {
 	return offset
 }
 
-// firstMatchIndex returns the index of the first visible agent whose ID or name contains query.
+// firstMatchIndex returns the index of the first visible group whose label contains query.
 // Returns 0 if no match is found or query is empty.
 func firstMatchIndex(agents []store.AgentState, showExpired bool, query string) int {
 	if query == "" {
 		return 0
 	}
 	q := strings.ToLower(query)
-	visible := visibleAgents(agents, showExpired)
-	for i, a := range visible {
-		label := a.ID
-		if a.Name != "" {
-			label = a.Name
-		}
-		if strings.Contains(strings.ToLower(label), q) {
+	groups := groupedVisibleAgents(agents, showExpired)
+	for i, g := range groups {
+		if strings.Contains(strings.ToLower(g.groupLabel()), q) {
 			return i
 		}
 	}
@@ -335,20 +343,16 @@ func firstMatchIndex(agents []store.AgentState, showExpired bool, query string) 
 
 // listAvailableRows returns the number of rows available for agent entries in the list view.
 func (m Model) listAvailableRows() int {
-	threshold := recentThreshold()
+	groups := groupedVisibleAgents(m.agents, m.showExpired)
 	runCount, sucCount, kilCount := 0, 0, 0
-	for _, a := range m.agents {
-		switch a.Status {
+	for _, g := range groups {
+		switch g.Rep.Status {
 		case store.StatusRunning:
 			runCount++
 		case store.StatusSuccess:
-			if m.showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
-				sucCount++
-			}
-		case store.StatusKilled, store.StatusFailed:
-			if m.showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
-				kilCount++
-			}
+			sucCount++
+		default:
+			kilCount++
 		}
 	}
 	emptyCount := 0

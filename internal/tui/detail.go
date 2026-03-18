@@ -42,12 +42,12 @@ func cleanLog(data []byte) string {
 }
 
 func detailView(m Model) string {
-	visible := visibleAgents(m.agents, m.showExpired)
-	if len(visible) == 0 || m.cursor >= len(visible) {
+	groups := groupedVisibleAgents(m.agents, m.showExpired)
+	if len(groups) == 0 || m.cursor >= len(groups) {
 		return "No agent selected."
 	}
 
-	agent := visible[m.cursor]
+	agent := groups[m.cursor].Rep
 	width := clampWidth(m.width)
 	innerWidth := width - 4
 
