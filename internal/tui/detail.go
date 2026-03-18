@@ -60,24 +60,38 @@ func detailView(m Model) string {
 	if agent.Name != "" {
 		header = agent.Name + " (" + agent.ID + ")"
 	}
+
+	renderFieldLine := func(label, value string) string {
+		styledLabel := OverviewLabelStyle.Render(label)
+		styledValue := NormalItemStyle.Render(value)
+		content := styledLabel + styledValue
+		return fr("│ ") + padRight(content, innerWidth) + fr(" │")
+	}
+
+	renderSectionDivider := func(title string) string {
+		styledTitle := SectionHeaderStyle.Render(title)
+		d := max(0, innerWidth-lipgloss.Width(styledTitle)-1)
+		return fr("├─ ") + styledTitle + fr(" "+strings.Repeat("─", d)+"┤")
+	}
+
 	var lines []string
 	lines = append(lines, fr("╭─ "+header+" "+strings.Repeat("─", max(0, innerWidth-lipgloss.Width(header)-2))+"╮"))
-	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Status : %s", statusStr), innerWidth)+fr(" │"))
+	lines = append(lines, renderFieldLine("Status : ", statusStr))
 	if agent.Name != "" {
-		lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Name   : %s", agent.Name), innerWidth)+fr(" │"))
+		lines = append(lines, renderFieldLine("Name   : ", agent.Name))
 	}
-	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("PID    : %d", agent.PID), innerWidth)+fr(" │"))
-	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Dir    : %s", agent.WorkDir), innerWidth)+fr(" │"))
+	lines = append(lines, renderFieldLine("PID    : ", fmt.Sprintf("%d", agent.PID)))
+	lines = append(lines, renderFieldLine("Dir    : ", agent.WorkDir))
 	if agent.WorktreeBranch != "" {
-		lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Branch : %s", agent.WorktreeBranch), innerWidth)+fr(" │"))
+		lines = append(lines, renderFieldLine("Branch : ", agent.WorktreeBranch))
 	}
-	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Args   : %s", truncate(argsStr, innerWidth-9)), innerWidth)+fr(" │"))
-	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Started: %s", agent.StartedAt.Format("2006-01-02 15:04:05")), innerWidth)+fr(" │"))
-	lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Elapsed: %s", elapsed), innerWidth)+fr(" │"))
+	lines = append(lines, renderFieldLine("Args   : ", truncate(argsStr, innerWidth-9)))
+	lines = append(lines, renderFieldLine("Started: ", agent.StartedAt.Format("2006-01-02 15:04:05")))
+	lines = append(lines, renderFieldLine("Elapsed: ", elapsed))
 	if agent.LastOutput != "" {
-		lines = append(lines, fr("│ ")+padRight(fmt.Sprintf("Last   : %s", truncate(agent.LastOutput, innerWidth-9)), innerWidth)+fr(" │"))
+		lines = append(lines, renderFieldLine("Last   : ", truncate(agent.LastOutput, innerWidth-9)))
 	}
-	lines = append(lines, fr("│ ")+padRight("── Activity Log ──", innerWidth)+fr(" │"))
+	lines = append(lines, renderSectionDivider("Activity Log"))
 
 	// Viewport content
 	vpLines := strings.Split(m.viewport.View(), "\n")
@@ -85,10 +99,11 @@ func detailView(m Model) string {
 		lines = append(lines, fr("│ ")+padRight(l, innerWidth)+fr(" │"))
 	}
 
-	lines = append(lines, fr("╰"+strings.Repeat("─", innerWidth+2)+"╯"))
-
+	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
+	lines = append(lines, divider)
 	help := NormalItemStyle.Render("[esc] back  [K] kill  [↑↓/jk] scroll")
-	lines = append(lines, help)
+	lines = append(lines, fr("│ ")+padRight(help, innerWidth)+fr(" │"))
+	lines = append(lines, fr("╰"+strings.Repeat("─", innerWidth+2)+"╯"))
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
