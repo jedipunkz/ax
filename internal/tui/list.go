@@ -115,7 +115,7 @@ func listView(m Model) string {
 			name, pid, dir, branch, args = "-", "-", "-", "-", "-"
 		}
 		renderOverviewLine := func(label, value string) string {
-			styledLabel := ColHeaderStyle.Render(label + " ")
+			styledLabel := OverviewLabelStyle.Render(label + " ")
 			maxVal := max(0, innerWidth-lipgloss.Width(styledLabel))
 			styledValue := NormalItemStyle.Render(truncate(value, maxVal))
 			return fr("│ ") + padRight(styledLabel+styledValue, innerWidth) + fr(" │")

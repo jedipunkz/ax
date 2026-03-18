@@ -61,6 +61,9 @@ var (
 	ColHeaderStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#545c7e"))
 
+	OverviewLabelStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7aa2f7"))
+
 	ElapsedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#7dcfff"))
 
