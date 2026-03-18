@@ -34,7 +34,7 @@ ax agent
 |-----|--------|
 | `j` / `↓` | Move cursor down |
 | `k` / `↑` | Move cursor up |
-| `space` | Open detail view |
+| `enter` | Open detail view |
 | `esc` / `q` | Back to list or quit |
 | `y` | Yank — copy `cd <worktree-path>` to clipboard |
 | `K` | Kill selected agent (SIGTERM) |
