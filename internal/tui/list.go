@@ -72,24 +72,40 @@ func listView(m Model) string {
 		}
 	}
 
-	successTitle := "SUCCESS (24h)"
-	killedTitle := "KILLED (24h)"
+	successTitle := "Success (24h)"
+	killedTitle := "Killed (24h)"
 	if m.showExpired {
-		successTitle = "SUCCESS (all)"
-		killedTitle = "KILLED / FAILED (all)"
+		successTitle = "Success (all)"
+		killedTitle = "Killed / Failed (all)"
 	}
 
-	// Title line
+	// Title line with full working directory path
 	agentCount := fmt.Sprintf("%d running", len(running))
-	title := TitleStyle.Render("ax dash")
-	titleLine := title + " " + strings.Repeat("─", max(0, innerWidth-utf8.RuneCountInString("ax dash")-utf8.RuneCountInString(agentCount)-3)) + " " + agentCount
+	pathPart := ""
+	if m.workDir != "" {
+		pathPart = " " + m.workDir
+	}
+	titleText := "ax dash" + pathPart
+	dashes := max(0, innerWidth-utf8.RuneCountInString(titleText)-utf8.RuneCountInString(agentCount)-3)
+	titleLine := TitleStyle.Render("ax dash") + fr(pathPart) + fr(" "+strings.Repeat("─", dashes)+" ") + agentCount
 
 	topBorder := fr("╭─ ") + titleLine + fr("─╮")
+
+	// Helper to render a section divider line: ├─ Title ──────┤
+	renderSectionHeader := func(label string, style lipgloss.Style) string {
+		styledLabel := style.Render(label)
+		labelWidth := lipgloss.Width(styledLabel)
+		d := max(0, innerWidth-labelWidth-1)
+		return fr("├─ ") + styledLabel + fr(" "+strings.Repeat("─", d)+"┤")
+	}
 
 	var lines []string
 	lines = append(lines, topBorder)
 
 	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
+
+	// Overview section divider header
+	lines = append(lines, renderSectionHeader("Overview", OverviewLabelStyle))
 
 	// Detail overview section: show selected agent's Name, PID, Dir, Branch, Args.
 	{
@@ -180,7 +196,7 @@ func listView(m Model) string {
 	}
 
 	// Compute available rows for agent entries.
-	// Fixed frame lines: topBorder + 5 overview + divider + colHeader + 3 section headers + 2 section dividers + bottom divider + help + bottomBorder = 16.
+	// Fixed frame lines: topBorder + Overview divider + 5 overview + divider + colHeader + 3 section divider-headers + bottom divider + help + bottomBorder = 15.
 	emptyCount := 0
 	if len(running) == 0 {
 		emptyCount++
@@ -191,7 +207,7 @@ func listView(m Model) string {
 	if len(killed) == 0 {
 		emptyCount++
 	}
-	availableRows := max(0, height-16-emptyCount)
+	availableRows := max(0, height-15-emptyCount)
 
 	// Compute per-section slice bounds based on scroll offset.
 	// Flat visible list order: running[0..], success[0..], killed[0..]
@@ -233,11 +249,11 @@ func listView(m Model) string {
 		}
 	}
 
-	// renderSection renders a section header + agent rows into the outer frame.
+	// renderSection renders a divider-style section header + agent rows into the outer frame.
 	// baseGlobalIdx is the global index of agents[0] in the flat visible list.
 	// sliceStart/sliceLen control which agents within the section to show.
 	renderSection := func(title string, headerStyle lipgloss.Style, agents []store.AgentState, baseGlobalIdx int, sliceStart int, sliceLen int) {
-		lines = append(lines, fr("│ ")+padRight(headerStyle.Render(title), innerWidth)+fr(" │"))
+		lines = append(lines, renderSectionHeader(title, headerStyle))
 		if len(agents) == 0 {
 			lines = append(lines, fr("│ ")+padRight(NormalItemStyle.Render("  (none)"), innerWidth)+fr(" │"))
 			return
@@ -252,10 +268,8 @@ func listView(m Model) string {
 		}
 	}
 
-	renderSection("RUNNING", RunningHeaderStyle, running, 0, runSliceStart, runSliceLen)
-	lines = append(lines, divider)
+	renderSection("Running", RunningHeaderStyle, running, 0, runSliceStart, runSliceLen)
 	renderSection(successTitle, SuccessHeaderStyle, success, len(running), sucSliceStart, sucSliceLen)
-	lines = append(lines, divider)
 	renderSection(killedTitle, KilledHeaderStyle, killed, len(running)+len(success), kilSliceStart, kilSliceLen)
 
 	// Fill remaining height with blank lines (divider + help + bottom = 3 lines)
