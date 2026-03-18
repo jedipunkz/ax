@@ -87,7 +87,7 @@ func detailView(m Model) string {
 
 	lines = append(lines, fr("╰"+strings.Repeat("─", innerWidth+2)+"╯"))
 
-	help := NormalItemStyle.Render("[esc] back  [K] kill  [↑↓/jk/pgup/pgdn] scroll")
+	help := NormalItemStyle.Render("[esc] back  [K] kill  [↑↓/jk] scroll")
 	lines = append(lines, help)
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)

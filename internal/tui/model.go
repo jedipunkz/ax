@@ -126,19 +126,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
+			if m.view == viewDetail {
+				m.viewport.LineUp(1)
+			} else {
+				if m.cursor > 0 {
+					m.cursor--
+				}
+				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 			}
-			m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 
 		case "down", "j":
-			visible := visibleAgents(m.agents, m.showExpired)
-			if m.cursor < len(visible)-1 {
-				m.cursor++
+			if m.view == viewDetail {
+				m.viewport.LineDown(1)
+			} else {
+				visible := visibleAgents(m.agents, m.showExpired)
+				if m.cursor < len(visible)-1 {
+					m.cursor++
+				}
+				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 			}
-			m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 
-		case " ":
+		case "enter":
 			if m.view == viewDetail {
 				m.view = viewList
 			} else {
