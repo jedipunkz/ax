@@ -46,7 +46,7 @@ ax agent
 | Symbol | Meaning |
 |--------|---------|
 | `⠋ running` | Claude is actively processing |
-| `waiting you` | Idle at prompt, waiting for input |
+| `waiting` | Idle at prompt, waiting for input |
 | `success` | Exited with code 0 |
 | `failed` | Exited with non-zero code |
 | `killed` | Terminated by signal |

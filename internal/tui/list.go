@@ -200,12 +200,12 @@ func listView(m Model) string {
 		lines = append(lines, renderOverviewLine("Args:", args))
 	}
 
-	// Fixed column widths: cursor(2) id(24) sp(1) repo(12) sp(1) status(11) sp(1) ended(11)
+	// Fixed column widths: cursor(2) id(24) sp(1) repo(12) sp(1) status(9) sp(1) ended(11)
 	// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars; name can be longer so give extra room
 	const (
 		idWidth     = 24
 		repoWidth   = 12
-		statusWidth = 11
+		statusWidth = 9
 		endedWidth  = 11
 		fixedTotal  = 2 + idWidth + 1 + repoWidth + 1 + statusWidth + 1 + endedWidth
 	)
@@ -359,7 +359,7 @@ func formatStatus(agent store.AgentState, m Model) string {
 	switch agent.Status {
 	case store.StatusRunning:
 		if agent.WaitingUser {
-			return StatusWaitingStyle.Render("waiting you")
+			return StatusWaitingStyle.Render("waiting")
 		}
 		return StatusRunningStyle.Render(m.spinner.View() + " running")
 	case store.StatusSuccess:
