@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -51,11 +52,14 @@ type Model struct {
 	statusMsg    string
 	searchMode   bool
 	searchQuery  string
+	workDir      string
 }
 
 func newModel(client *store.Client, sub chan store.Message) Model {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
+
+	workDir, _ := os.Getwd()
 
 	return Model{
 		agents:  []store.AgentState{},
@@ -63,6 +67,7 @@ func newModel(client *store.Client, sub chan store.Message) Model {
 		sub:     sub,
 		spinner: sp,
 		view:    viewList,
+		workDir: workDir,
 	}
 }
 
@@ -364,7 +369,7 @@ func (m Model) listAvailableRows() int {
 	if h < 10 {
 		h = 24
 	}
-	avail := h - 16 - emptyCount
+	avail := h - 13 - emptyCount
 	if avail < 0 {
 		avail = 0
 	}

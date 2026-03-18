@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -137,19 +138,29 @@ func listView(m Model) string {
 		}
 	}
 
-	successTitle := "SUCCESS (24h)"
-	killedTitle := "KILLED (24h)"
+	successTitle := "Success (24h)"
+	killedTitle := "Killed (24h)"
 	if m.showExpired {
-		successTitle = "SUCCESS (all)"
-		killedTitle = "KILLED / FAILED (all)"
+		successTitle = "Success (all)"
+		killedTitle = "Killed / Failed (all)"
 	}
 
-	// Title line
+	// Title line with full working directory path
 	agentCount := fmt.Sprintf("%d running", len(running))
-	title := TitleStyle.Render("ax dash")
-	titleLine := title + " " + strings.Repeat("─", max(0, innerWidth-utf8.RuneCountInString("ax dash")-utf8.RuneCountInString(agentCount)-3)) + " " + agentCount
+	pathStr := m.workDir
+	dashes := max(0, innerWidth-utf8.RuneCountInString(pathStr)-utf8.RuneCountInString(agentCount)-3)
+	pathStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#f7768e"))
+	titleLine := pathStyle.Render(pathStr) + fr(" "+strings.Repeat("─", dashes)+" ") + agentCount
 
 	topBorder := fr("╭─ ") + titleLine + fr("─╮")
+
+	// Helper to render a section divider line: ├─ Title ──────┤
+	renderSectionHeader := func(label string, style lipgloss.Style) string {
+		styledLabel := style.Render(label)
+		labelWidth := lipgloss.Width(styledLabel)
+		d := max(0, innerWidth-labelWidth-1)
+		return fr("├─ ") + styledLabel + fr(" "+strings.Repeat("─", d)+"┤")
+	}
 
 	var lines []string
 	lines = append(lines, topBorder)
@@ -177,9 +188,10 @@ func listView(m Model) string {
 		}
 		renderOverviewLine := func(label, value string) string {
 			styledLabel := OverviewLabelStyle.Render(label + " ")
-			maxVal := max(0, innerWidth-lipgloss.Width(styledLabel))
+			prefix := "  " // align with cursor column in agent rows
+			maxVal := max(0, innerWidth-len(prefix)-lipgloss.Width(styledLabel))
 			styledValue := NormalItemStyle.Render(truncate(value, maxVal))
-			return fr("│ ") + padRight(styledLabel+styledValue, innerWidth) + fr(" │")
+			return fr("│ ") + padRight(prefix+styledLabel+styledValue, innerWidth) + fr(" │")
 		}
 		lines = append(lines, renderOverviewLine("Name:", name))
 		lines = append(lines, renderOverviewLine("PID: ", pid))
@@ -187,28 +199,27 @@ func listView(m Model) string {
 		lines = append(lines, renderOverviewLine("Branch:", branch))
 		lines = append(lines, renderOverviewLine("Args:", args))
 	}
-	lines = append(lines, divider)
 
-	// Fixed column widths: cursor(2) id(24) sp(1) status(11) sp(1) elapsed(9) sp(1) ended(11)
+	// Fixed column widths: cursor(2) id(24) sp(1) repo(12) sp(1) status(11) sp(1) ended(11)
 	// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars; name can be longer so give extra room
 	const (
-		idWidth      = 24
-		statusWidth  = 11
-		elapsedWidth = 9
-		endedWidth   = 11
-		fixedTotal   = 2 + idWidth + 1 + statusWidth + 1 + elapsedWidth + 1 + endedWidth
+		idWidth     = 24
+		repoWidth   = 12
+		statusWidth = 11
+		endedWidth  = 11
+		fixedTotal  = 2 + idWidth + 1 + repoWidth + 1 + statusWidth + 1 + endedWidth
 	)
 
-	// Column header row
+	// Column header row (rendered under the Running section header)
 	colHeader := "  " +
-		padRight("NAME/ID", idWidth) + " " +
-		padRight("STATUS", statusWidth) + " " +
-		padRight("ELAPSED", elapsedWidth) + " " +
-		padRight("ENDED", endedWidth)
+		padRight("Name/Id", idWidth) + " " +
+		padRight("Repo", repoWidth) + " " +
+		padRight("Status", statusWidth) + " " +
+		padRight("Ended", endedWidth)
 	if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 {
-		colHeader += "  " + "LAST OUTPUT"
+		colHeader += "  " + "Last Output"
 	}
-	lines = append(lines, fr("│ ")+padRight(ColHeaderStyle.Render(colHeader), innerWidth)+fr(" │"))
+	colHeaderLine := fr("│ ") + padRight(OverviewLabelStyle.Render(colHeader), innerWidth) + fr(" │")
 
 	renderRow := func(group AgentGroup, idx int) string {
 		cursor := "  "
@@ -221,10 +232,11 @@ func listView(m Model) string {
 		if group.Rep.FinishedAt != nil {
 			endedAt = group.Rep.FinishedAt.Format("01/02 15:04")
 		}
+		repo := repoName(group.Rep.WorkDir)
 		row := cursor +
 			padRight(truncate(label, idWidth), idWidth) + " " +
+			padRight(RepoStyle.Render(truncate(repo, repoWidth)), repoWidth) + " " +
 			padRight(formatStatus(group.Rep, m), statusWidth) + " " +
-			padRight(ElapsedStyle.Render(formatElapsed(group.Rep)), elapsedWidth) + " " +
 			EndedStyle.Render(endedAt)
 
 		if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 && group.Rep.LastOutput != "" {
@@ -238,7 +250,7 @@ func listView(m Model) string {
 	}
 
 	// Compute available rows for agent entries.
-	// Fixed frame lines: topBorder + 5 overview + divider + colHeader + 3 section headers + 2 section dividers + bottom divider + help + bottomBorder = 16.
+	// Fixed frame lines: topBorder + 5 overview + colHeader + 3 section divider-headers + bottom divider + help + bottomBorder = 13.
 	emptyCount := 0
 	if len(running) == 0 {
 		emptyCount++
@@ -249,7 +261,7 @@ func listView(m Model) string {
 	if len(killed) == 0 {
 		emptyCount++
 	}
-	availableRows := max(0, height-16-emptyCount)
+	availableRows := max(0, height-13-emptyCount)
 
 	// Compute per-section slice bounds based on scroll offset.
 	// Flat visible list order: running[0..], success[0..], killed[0..]
@@ -291,9 +303,13 @@ func listView(m Model) string {
 		}
 	}
 
-	// renderSection renders a section header + group rows into the outer frame.
-	renderSection := func(title string, headerStyle lipgloss.Style, groupSlice []AgentGroup, baseGlobalIdx int, sliceStart int, sliceLen int) {
-		lines = append(lines, fr("│ ")+padRight(headerStyle.Render(title), innerWidth)+fr(" │"))
+	// renderSection renders a divider-style section header + optional pre-rows line + group rows.
+	// preRows is an optional line appended immediately after the section header (e.g. column headers).
+	renderSection := func(title string, headerStyle lipgloss.Style, groupSlice []AgentGroup, baseGlobalIdx int, sliceStart int, sliceLen int, preRows string) {
+		lines = append(lines, renderSectionHeader(title, headerStyle))
+		if preRows != "" {
+			lines = append(lines, preRows)
+		}
 		if len(groupSlice) == 0 {
 			lines = append(lines, fr("│ ")+padRight(NormalItemStyle.Render("  (none)"), innerWidth)+fr(" │"))
 			return
@@ -308,11 +324,9 @@ func listView(m Model) string {
 		}
 	}
 
-	renderSection("RUNNING", RunningHeaderStyle, running, 0, runSliceStart, runSliceLen)
-	lines = append(lines, divider)
-	renderSection(successTitle, SuccessHeaderStyle, success, len(running), sucSliceStart, sucSliceLen)
-	lines = append(lines, divider)
-	renderSection(killedTitle, KilledHeaderStyle, killed, len(running)+len(success), kilSliceStart, kilSliceLen)
+	renderSection("Running", RunningHeaderStyle, running, 0, runSliceStart, runSliceLen, colHeaderLine)
+	renderSection(successTitle, SuccessHeaderStyle, success, len(running), sucSliceStart, sucSliceLen, "")
+	renderSection(killedTitle, KilledHeaderStyle, killed, len(running)+len(success), kilSliceStart, kilSliceLen, "")
 
 	// Fill remaining height with blank lines (divider + help + bottom = 3 lines)
 	for len(lines) < height-3 {
@@ -357,6 +371,10 @@ func formatStatus(agent store.AgentState, m Model) string {
 	default:
 		return string(agent.Status)
 	}
+}
+
+func repoName(workDir string) string {
+	return filepath.Base(workDir)
 }
 
 func formatElapsed(agent store.AgentState) string {

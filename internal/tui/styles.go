@@ -64,7 +64,7 @@ var (
 	OverviewLabelStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#7aa2f7"))
 
-	ElapsedStyle = lipgloss.NewStyle().
+	RepoStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#7dcfff"))
 
 	EndedStyle = lipgloss.NewStyle().
