@@ -11,6 +11,16 @@ import (
 	"github.com/jedipunkz/ax/internal/store"
 )
 
+// spinnerFrames are the animation frames for the running-agent indicator.
+var spinnerFrames = []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
+
+// spinnerFrame returns the current spinner character derived from wall-clock time.
+// No TickMsg is needed; the frame advances naturally on every re-render.
+func spinnerFrame() string {
+	idx := time.Now().UnixMilli() / 100 % int64(len(spinnerFrames))
+	return spinnerFrames[idx]
+}
+
 // recentThreshold returns the cutoff time for "recent" finished agents (24 hours ago).
 func recentThreshold() time.Time {
 	return time.Now().Add(-24 * time.Hour)
@@ -361,7 +371,7 @@ func formatStatus(agent store.AgentState, m Model) string {
 		if agent.WaitingUser {
 			return StatusWaitingStyle.Render("waiting")
 		}
-		return StatusRunningStyle.Render(m.spinner.View() + " running")
+		return StatusRunningStyle.Render(spinnerFrame() + " running")
 	case store.StatusSuccess:
 		return StatusSuccessStyle.Render("success")
 	case store.StatusFailed:

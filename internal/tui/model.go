@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jedipunkz/ax/internal/store"
@@ -37,39 +36,32 @@ type clearStatusMsg struct{}
 
 // Model is the main bubbletea model for ax status.
 type Model struct {
-	agents        []store.AgentState
-	cursor        int
-	scrollOffset  int
-	view          ViewMode
-	client        *store.Client
-	sub           chan store.Message
-	spinner       spinner.Model
-	spinnerActive bool
-	viewport      viewport.Model
-	width         int
-	height        int
-	logContent    string
-	showExpired   bool
-	statusMsg     string
-	searchMode    bool
-	searchQuery   string
-	workDir       string
+	agents      []store.AgentState
+	cursor      int
+	scrollOffset int
+	view        ViewMode
+	client      *store.Client
+	sub         chan store.Message
+	viewport    viewport.Model
+	width       int
+	height      int
+	logContent  string
+	showExpired bool
+	statusMsg   string
+	searchMode  bool
+	searchQuery string
+	workDir     string
 }
 
 func newModel(client *store.Client, sub chan store.Message) Model {
-	sp := spinner.New()
-	sp.Spinner = spinner.Dot
-
 	workDir, _ := os.Getwd()
 
 	return Model{
-		agents:        []store.AgentState{},
-		client:        client,
-		sub:           sub,
-		spinner:       sp,
-		spinnerActive: true,
-		view:          viewList,
-		workDir:       workDir,
+		agents:  []store.AgentState{},
+		client:  client,
+		sub:     sub,
+		view:    viewList,
+		workDir: workDir,
 	}
 }
 
@@ -80,10 +72,7 @@ func waitForMsg(sub chan store.Message) tea.Cmd {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(
-		m.spinner.Tick,
-		waitForMsg(m.sub),
-	)
+	return waitForMsg(m.sub)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -263,11 +252,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.view == viewDetail && len(groups) > 0 && m.cursor < len(groups) {
 			cmds = append(cmds, loadLog(groups[m.cursor].Rep.LogFile))
 		}
-		// Restart spinner if running agents appeared while it was stopped.
-		if m.hasRunningAgents() && !m.spinnerActive {
-			m.spinnerActive = true
-			cmds = append(cmds, m.spinner.Tick)
-		}
 		cmds = append(cmds, waitForMsg(m.sub))
 
 	case clearStatusMsg:
@@ -277,15 +261,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logContent = msg.content
 		m.viewport.SetContent(m.logContent)
 		m.viewport.GotoBottom()
-
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		if m.hasRunningAgents() {
-			cmds = append(cmds, cmd)
-		} else {
-			m.spinnerActive = false
-		}
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -350,16 +325,6 @@ func firstMatchIndex(agents []store.AgentState, showExpired bool, query string) 
 		}
 	}
 	return 0
-}
-
-// hasRunningAgents returns true if any agent is currently running.
-func (m Model) hasRunningAgents() bool {
-	for _, a := range m.agents {
-		if a.Status == store.StatusRunning {
-			return true
-		}
-	}
-	return false
 }
 
 // listAvailableRows returns the number of rows available for agent entries in the list view.
