@@ -132,7 +132,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "up", "k":
 			if m.view == viewDetail {
-				m.viewport.LineUp(1)
+				m.viewport.ScrollUp(1)
 			} else {
 				if m.cursor > 0 {
 					m.cursor--
@@ -142,7 +142,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "down", "j":
 			if m.view == viewDetail {
-				m.viewport.LineDown(1)
+				m.viewport.ScrollDown(1)
 			} else {
 				groups := groupedVisibleAgents(m.agents, m.showExpired)
 				if m.cursor < len(groups)-1 {
