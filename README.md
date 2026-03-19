@@ -94,6 +94,27 @@ Finished agents are visible for 24 hours after exit. Press `o` to toggle their v
 
 When `ax agent` is run inside a git repository, a dedicated worktree is automatically created at `~/.ax/worktrees/<repo>-<id>/` on a new branch `ax/<id>` branched from `HEAD`. Claude Code runs inside this isolated worktree so each agent's changes stay separate from the main working tree.
 
+## Configuration
+
+ax can be configured via `~/.ax/ax.yaml`.
+
+### Color theme
+
+Set the `theme` key to choose a color theme for the dashboard:
+
+```yaml
+theme: tokyonight
+```
+
+Available themes:
+
+| Theme | Description |
+|-------|-------------|
+| `tokyonight` | Tokyo Night (default) |
+| `kanagawa-wave` | Kanagawa Wave |
+| `solarized-dark` | Solarized Dark |
+| `catppuccin` | Catppuccin |
+
 ## License
 
 MIT
