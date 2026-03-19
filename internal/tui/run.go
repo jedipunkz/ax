@@ -33,7 +33,7 @@ func Run(socketPath string) error {
 	}()
 
 	m := newModel(client, sub)
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithFPS(30))
 	_, err := p.Run()
 	client.Close()
 	return err
