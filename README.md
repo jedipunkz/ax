@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Go version](https://img.shields.io/badge/go-1.25-blue)
 
-Launch and monitor multiple [Claude Code](https://claude.ai/code) agents from a single terminal.
+Run multiple [Claude Code](https://claude.ai/code) agents in parallel, each isolated in its own git worktree, and monitor them all from a single terminal dashboard.
 
 ## Installation
 
@@ -17,29 +17,55 @@ go install github.com/jedipunkz/ax@latest
 
 ## Usage
 
-Open Dashboard
+### Start an agent
+
+**Important**: `cd` into your git repository before running `ax agent`. ax uses the current directory to detect the git repo and automatically creates an isolated worktree for the agent.
+
+```bash
+cd /path/to/your/repo
+ax agent
+```
+
+You can optionally give the agent a name:
+
+```bash
+ax agent -n my-feature
+```
+
+To resume a previous session by name:
+
+```bash
+ax agent -n my-feature --resume
+```
+
+### Open the dashboard
 
 ```bash
 ax dash
 ```
 
-Start an interactive agent
-```bash
-ax agent
-```
-
 ### Key bindings
+
+#### List view
 
 | Key | Action |
 |-----|--------|
 | `j` / `↓` | Move cursor down |
 | `k` / `↑` | Move cursor up |
-| `enter` | Open detail view |
-| `esc` / `q` | Back to list or quit |
-| `y` | Yank — copy `cd <worktree-path>` to clipboard |
-| `K` | Kill selected agent (SIGTERM) |
-| `o` | Toggle showing full agent history |
+| `enter` | Open agent log (detail view) |
+| `o` | Toggle showing finished agents |
 | `/` | Search agents by ID or name |
+| `y` | Copy `cd <worktree-path>` to clipboard |
+| `K` | Kill selected agent (SIGTERM) |
+| `q` / `ctrl+c` | Quit |
+
+#### Detail view
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Scroll log down |
+| `k` / `↑` | Scroll log up |
+| `enter` / `esc` / `q` | Back to list |
 
 ### Status indicators
 
@@ -51,7 +77,7 @@ ax agent
 | `failed` | Exited with non-zero code |
 | `killed` | Terminated by signal |
 
-Finished agents are visible for 24 hours after exit. Press `h` to show the full history.
+Finished agents are visible for 24 hours after exit. Press `o` to toggle their visibility.
 
 ## Runtime files
 
