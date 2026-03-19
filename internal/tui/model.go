@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jedipunkz/ax/internal/store"
@@ -36,30 +37,35 @@ type clearStatusMsg struct{}
 
 // Model is the main bubbletea model for ax status.
 type Model struct {
-	agents      []store.AgentState
-	cursor      int
+	agents       []store.AgentState
+	cursor       int
 	scrollOffset int
-	view        ViewMode
-	client      *store.Client
-	sub         chan store.Message
-	viewport    viewport.Model
-	width       int
-	height      int
-	logContent  string
-	showExpired bool
-	statusMsg   string
-	searchMode  bool
-	searchQuery string
-	workDir     string
+	view         ViewMode
+	client       *store.Client
+	sub          chan store.Message
+	spinner      spinner.Model
+	viewport     viewport.Model
+	width        int
+	height       int
+	logContent   string
+	showExpired  bool
+	statusMsg    string
+	searchMode   bool
+	searchQuery  string
+	workDir      string
 }
 
 func newModel(client *store.Client, sub chan store.Message) Model {
+	sp := spinner.New()
+	sp.Spinner = spinner.Dot
+
 	workDir, _ := os.Getwd()
 
 	return Model{
 		agents:  []store.AgentState{},
 		client:  client,
 		sub:     sub,
+		spinner: sp,
 		view:    viewList,
 		workDir: workDir,
 	}
@@ -72,7 +78,10 @@ func waitForMsg(sub chan store.Message) tea.Cmd {
 }
 
 func (m Model) Init() tea.Cmd {
-	return waitForMsg(m.sub)
+	return tea.Batch(
+		m.spinner.Tick,
+		waitForMsg(m.sub),
+	)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -261,6 +270,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logContent = msg.content
 		m.viewport.SetContent(m.logContent)
 		m.viewport.GotoBottom()
+
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		cmds = append(cmds, cmd)
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
