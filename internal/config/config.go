@@ -4,13 +4,18 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
 // Config holds the ax configuration loaded from ~/.ax/ax.yaml.
 type Config struct {
-	Theme string
+	Theme        string
+	DurationDays int
 }
+
+// DefaultDurationDays is the default number of days to show finished agents.
+const DefaultDurationDays = 7
 
 // ThemePalette defines the color codes (hex) used by the TUI.
 type ThemePalette struct {
@@ -131,7 +136,7 @@ const DefaultTheme = "tokyonight"
 // Load reads ~/.ax/ax.yaml and returns a Config.
 // Missing file or unknown keys are silently ignored; defaults apply.
 func Load() (*Config, error) {
-	cfg := &Config{Theme: DefaultTheme}
+	cfg := &Config{Theme: DefaultTheme, DurationDays: DefaultDurationDays}
 
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -163,6 +168,11 @@ func Load() (*Config, error) {
 		switch key {
 		case "theme":
 			cfg.Theme = val
+		case "duration_days":
+			s := strings.TrimSuffix(val, "d")
+			if n, err := strconv.Atoi(s); err == nil && n > 0 {
+				cfg.DurationDays = n
+			}
 		}
 	}
 

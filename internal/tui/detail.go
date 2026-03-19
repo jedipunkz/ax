@@ -42,7 +42,7 @@ func cleanLog(data []byte) string {
 }
 
 func detailView(m Model) string {
-	groups := groupedVisibleAgents(m.agents, m.showExpired)
+	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
 	if len(groups) == 0 || m.cursor >= len(groups) {
 		return "No agent selected."
 	}

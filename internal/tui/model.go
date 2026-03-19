@@ -53,21 +53,23 @@ type Model struct {
 	searchMode   bool
 	searchQuery  string
 	workDir      string
+	durationDays int
 }
 
-func newModel(client *store.Client, sub chan store.Message) Model {
+func newModel(client *store.Client, sub chan store.Message, durationDays int) Model {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 
 	workDir, _ := os.Getwd()
 
 	return Model{
-		agents:  []store.AgentState{},
-		client:  client,
-		sub:     sub,
-		spinner: sp,
-		view:    viewList,
-		workDir: workDir,
+		agents:       []store.AgentState{},
+		client:       client,
+		sub:          sub,
+		spinner:      sp,
+		view:         viewList,
+		workDir:      workDir,
+		durationDays: durationDays,
 	}
 }
 
@@ -103,13 +105,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if len(m.searchQuery) > 0 {
 					runes := []rune(m.searchQuery)
 					m.searchQuery = string(runes[:len(runes)-1])
-					m.cursor = firstMatchIndex(m.agents, m.showExpired, m.searchQuery)
+					m.cursor = firstMatchIndex(m.agents, m.showExpired, m.searchQuery, m.durationDays)
 					m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 				}
 			default:
 				if len(msg.Runes) > 0 {
 					m.searchQuery += string(msg.Runes)
-					m.cursor = firstMatchIndex(m.agents, m.showExpired, m.searchQuery)
+					m.cursor = firstMatchIndex(m.agents, m.showExpired, m.searchQuery, m.durationDays)
 					m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 				}
 			}
@@ -144,7 +146,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.view == viewDetail {
 				m.viewport.ScrollDown(1)
 			} else {
-				groups := groupedVisibleAgents(m.agents, m.showExpired)
+				groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
 				if m.cursor < len(groups)-1 {
 					m.cursor++
 				}
@@ -155,7 +157,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.view == viewDetail {
 				m.view = viewList
 			} else {
-				groups := groupedVisibleAgents(m.agents, m.showExpired)
+				groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
 				if len(groups) > 0 && m.cursor < len(groups) {
 					m.view = viewDetail
 					agent := groups[m.cursor].Rep
@@ -167,7 +169,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "o":
 			m.showExpired = !m.showExpired
 			// Clamp cursor after toggling visibility
-			groups := groupedVisibleAgents(m.agents, m.showExpired)
+			groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
 			if m.cursor >= len(groups) && len(groups) > 0 {
 				m.cursor = len(groups) - 1
 			}
@@ -180,7 +182,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "K":
-			groups := groupedVisibleAgents(m.agents, m.showExpired)
+			groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
 			if len(groups) > 0 && m.cursor < len(groups) {
 				g := groups[m.cursor]
 				// Kill all running agents in the group
@@ -213,7 +215,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "y":
-			groups := groupedVisibleAgents(m.agents, m.showExpired)
+			groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
 			if m.view == viewList && len(groups) > 0 && m.cursor < len(groups) {
 				ag := groups[m.cursor].Rep
 				if ag.WorkDir != "" {
@@ -252,7 +254,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		// Clamp cursor to visible groups
-		groups := groupedVisibleAgents(m.agents, m.showExpired)
+		groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
 		if m.cursor >= len(groups) && len(groups) > 0 {
 			m.cursor = len(groups) - 1
 		}
@@ -327,12 +329,12 @@ func clampScroll(cursor, offset, availRows int) int {
 
 // firstMatchIndex returns the index of the first visible group whose label contains query.
 // Returns 0 if no match is found or query is empty.
-func firstMatchIndex(agents []store.AgentState, showExpired bool, query string) int {
+func firstMatchIndex(agents []store.AgentState, showExpired bool, query string, durationDays int) int {
 	if query == "" {
 		return 0
 	}
 	q := strings.ToLower(query)
-	groups := groupedVisibleAgents(agents, showExpired)
+	groups := groupedVisibleAgents(agents, showExpired, durationDays)
 	for i, g := range groups {
 		if strings.Contains(strings.ToLower(g.groupLabel()), q) {
 			return i
@@ -343,7 +345,7 @@ func firstMatchIndex(agents []store.AgentState, showExpired bool, query string) 
 
 // listAvailableRows returns the number of rows available for agent entries in the list view.
 func (m Model) listAvailableRows() int {
-	groups := groupedVisibleAgents(m.agents, m.showExpired)
+	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
 	runCount, sucCount, kilCount := 0, 0, 0
 	for _, g := range groups {
 		switch g.Rep.Status {

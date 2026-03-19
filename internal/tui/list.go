@@ -11,15 +11,15 @@ import (
 	"github.com/jedipunkz/ax/internal/store"
 )
 
-// recentThreshold returns the cutoff time for "recent" finished agents (24 hours ago).
-func recentThreshold() time.Time {
-	return time.Now().Add(-24 * time.Hour)
+// recentThreshold returns the cutoff time for finished agents based on the configured duration in days.
+func recentThreshold(days int) time.Time {
+	return time.Now().Add(-time.Duration(days) * 24 * time.Hour)
 }
 
 // visibleAgents returns the agents to display, in order: running (all), then success, then killed.
 // When showExpired is true, all finished agents are included regardless of age.
-func visibleAgents(agents []store.AgentState, showExpired bool) []store.AgentState {
-	threshold := recentThreshold()
+func visibleAgents(agents []store.AgentState, showExpired bool, days int) []store.AgentState {
+	threshold := recentThreshold(days)
 	var running, success, killed []store.AgentState
 	for _, a := range agents {
 		switch a.Status {
@@ -88,8 +88,8 @@ func isBetterRep(candidate, current store.AgentState) bool {
 
 // groupedVisibleAgents groups visible agents by name/label into AgentGroups.
 // Agents sharing the same Name (or the same ID when no Name is set) are merged into one group.
-func groupedVisibleAgents(agents []store.AgentState, showExpired bool) []AgentGroup {
-	visible := visibleAgents(agents, showExpired)
+func groupedVisibleAgents(agents []store.AgentState, showExpired bool, days int) []AgentGroup {
+	visible := visibleAgents(agents, showExpired, days)
 	groupMap := map[string]*AgentGroup{}
 	var order []string
 	for _, a := range visible {
@@ -125,7 +125,7 @@ func listView(m Model) string {
 	innerWidth := width - 4 // outer frame: "│ " + content(innerWidth) + " │"
 
 	// Build grouped sections.
-	groups := groupedVisibleAgents(m.agents, m.showExpired)
+	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
 	var running, success, killed []AgentGroup
 	for _, g := range groups {
 		switch g.Rep.Status {
@@ -138,8 +138,9 @@ func listView(m Model) string {
 		}
 	}
 
-	successTitle := "Success (24h)"
-	killedTitle := "Killed (24h)"
+	durationLabel := fmt.Sprintf("%dd", m.durationDays)
+	successTitle := "Success (" + durationLabel + ")"
+	killedTitle := "Killed (" + durationLabel + ")"
 	if m.showExpired {
 		successTitle = "Success (all)"
 		killedTitle = "Killed / Failed (all)"
