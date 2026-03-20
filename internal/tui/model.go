@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -100,19 +99,44 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor = 0
 				m.scrollOffset = 0
 			case "enter":
+				// Map filtered cursor back to full groups cursor before exiting search mode
+				allGroups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
+				filtered := fuzzyFilterGroups(allGroups, m.searchQuery)
+				if len(filtered) > 0 && m.cursor < len(filtered) {
+					selectedID := filtered[m.cursor].Rep.ID
+					for i, g := range allGroups {
+						if g.Rep.ID == selectedID {
+							m.cursor = i
+							break
+						}
+					}
+				}
 				m.searchMode = false
+				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
+			case "ctrl+n":
+				allGroups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
+				filtered := fuzzyFilterGroups(allGroups, m.searchQuery)
+				if m.cursor < len(filtered)-1 {
+					m.cursor++
+				}
+				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
+			case "ctrl+p":
+				if m.cursor > 0 {
+					m.cursor--
+				}
+				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 			case "backspace", "ctrl+h":
 				if len(m.searchQuery) > 0 {
 					runes := []rune(m.searchQuery)
 					m.searchQuery = string(runes[:len(runes)-1])
-					m.cursor = firstMatchIndex(m.agents, m.showExpired, m.searchQuery, m.durationDays)
-					m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
+					m.cursor = 0
+					m.scrollOffset = 0
 				}
 			default:
 				if len(msg.Runes) > 0 {
 					m.searchQuery += string(msg.Runes)
-					m.cursor = firstMatchIndex(m.agents, m.showExpired, m.searchQuery, m.durationDays)
-					m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
+					m.cursor = 0
+					m.scrollOffset = 0
 				}
 			}
 			return m, tea.Batch(cmds...)
@@ -327,25 +351,12 @@ func clampScroll(cursor, offset, availRows int) int {
 	return offset
 }
 
-// firstMatchIndex returns the index of the first visible group whose label contains query.
-// Returns 0 if no match is found or query is empty.
-func firstMatchIndex(agents []store.AgentState, showExpired bool, query string, durationDays int) int {
-	if query == "" {
-		return 0
-	}
-	q := strings.ToLower(query)
-	groups := groupedVisibleAgents(agents, showExpired, durationDays)
-	for i, g := range groups {
-		if strings.Contains(strings.ToLower(g.groupLabel()), q) {
-			return i
-		}
-	}
-	return 0
-}
-
 // listAvailableRows returns the number of rows available for agent entries in the list view.
 func (m Model) listAvailableRows() int {
 	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
+	if m.searchMode {
+		groups = fuzzyFilterGroups(groups, m.searchQuery)
+	}
 	runCount, sucCount, kilCount := 0, 0, 0
 	for _, g := range groups {
 		switch g.Rep.Status {

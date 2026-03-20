@@ -86,6 +86,37 @@ func isBetterRep(candidate, current store.AgentState) bool {
 	return candidate.StartedAt.After(current.StartedAt)
 }
 
+// fuzzyMatch returns true if all runes of pattern appear in text in order (case-insensitive).
+func fuzzyMatch(pattern, text string) bool {
+	if pattern == "" {
+		return true
+	}
+	pattern = strings.ToLower(pattern)
+	text = strings.ToLower(text)
+	pi := 0
+	patRunes := []rune(pattern)
+	for _, c := range text {
+		if pi < len(patRunes) && patRunes[pi] == c {
+			pi++
+		}
+	}
+	return pi == len(patRunes)
+}
+
+// fuzzyFilterGroups returns groups whose label matches the fuzzy query.
+func fuzzyFilterGroups(groups []AgentGroup, query string) []AgentGroup {
+	if query == "" {
+		return groups
+	}
+	var result []AgentGroup
+	for _, g := range groups {
+		if fuzzyMatch(query, g.groupLabel()) {
+			result = append(result, g)
+		}
+	}
+	return result
+}
+
 // groupedVisibleAgents groups visible agents by name/label into AgentGroups.
 // Agents sharing the same Name (or the same ID when no Name is set) are merged into one group.
 func groupedVisibleAgents(agents []store.AgentState, showExpired bool, days int) []AgentGroup {
@@ -126,6 +157,9 @@ func listView(m Model) string {
 
 	// Build grouped sections.
 	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
+	if m.searchMode {
+		groups = fuzzyFilterGroups(groups, m.searchQuery)
+	}
 	var running, success, killed []AgentGroup
 	for _, g := range groups {
 		switch g.Rep.Status {
@@ -343,7 +377,7 @@ func listView(m Model) string {
 	var helpText string
 	switch {
 	case m.searchMode:
-		helpText = "search: " + m.searchQuery + "█  [esc] cancel  [enter] confirm"
+		helpText = "search: " + m.searchQuery + "█  [ctrl-n/p] select  [esc] cancel  [enter] confirm"
 	case m.statusMsg != "":
 		helpText = m.statusMsg
 	default:
