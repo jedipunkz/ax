@@ -25,8 +25,8 @@ import (
 // to be waiting for user input rather than processing.
 const waitingUserThreshold = 2 * time.Second
 
-// Run starts an interactive Claude Code session with all permissions allowed,
-// and reports agent lifecycle state to the store daemon.
+// Run starts an interactive Claude Code session and reports agent lifecycle
+// state to the store daemon.
 func Run(args []string, socketPath string, name string) error {
 	id := generateID()
 
@@ -126,9 +126,6 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 	if len(claudeArgs) > 0 && claudeArgs[0] == "--" {
 		claudeArgs = claudeArgs[1:]
 	}
-
-	// Always run with all permissions allowed (interactive mode)
-	claudeArgs = append([]string{"--dangerously-skip-permissions"}, claudeArgs...)
 
 	cmd := exec.Command("claude", claudeArgs...)
 	cmd.Dir = workDir
