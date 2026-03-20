@@ -32,10 +32,10 @@ You can optionally give the agent a name:
 ax agent new -n my-feature
 ```
 
-You can also pass Claude Code options after `--`:
+You can also pass Claude Code options directly:
 
 ```bash
-ax agent new -n my-feature -- --model claude-opus-4-5
+ax agent new -n my-feature --model claude-opus-4-5
 ```
 
 ### Resume an agent
@@ -46,10 +46,10 @@ To resume a previous session by ID or name:
 ax agent resume -n <id|name>
 ```
 
-You can also pass Claude Code options after `--`:
+You can also pass Claude Code options directly:
 
 ```bash
-ax agent resume -n my-feature -- --model claude-opus-4-5
+ax agent resume -n my-feature --model claude-opus-4-5
 ```
 
 ### Open the dashboard
