@@ -23,4 +23,5 @@ func init() {
 	rootCmd.AddCommand(daemonCmd)
 	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(dashCmd)
+	rootCmd.AddCommand(resumeCmd)
 }
