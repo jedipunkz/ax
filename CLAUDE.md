@@ -66,6 +66,7 @@ Each element in the JSON array has the following fields:
 | LogFile | string | `log_file` | Absolute path to `output.log` |
 | WaitingUser | bool | `waiting_user` | Optional; omitted when false |
 | WorktreeBranch | string | `worktree_branch` | Optional; omitted when no worktree |
+| RepoName | string | `repo_name` | Optional; original repository name where the agent was started |
 
 ### Compatibility Goal
 
