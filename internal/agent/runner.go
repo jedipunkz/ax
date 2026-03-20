@@ -68,66 +68,6 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string) error {
 	return runSession(resumeArgs, socketPath, id, existing.Name, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
 }
 
-// DeleteByIDOrName finds all agents matching the given ID or name, kills any that are
-// running, removes their worktrees and agent directories, and removes them from the store.
-func DeleteByIDOrName(socketPath, idOrName string) error {
-	matches, err := findAllAgentsByIDOrName(idOrName)
-	if err != nil {
-		return err
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("could not determine home directory: %w", err)
-	}
-
-	var client store.Client
-	if err := client.Connect(socketPath); err != nil {
-		return fmt.Errorf("could not connect to store: %w", err)
-	}
-	defer client.Close()
-
-	for _, existing := range matches {
-		// Kill the process if it is still running.
-		if existing.Status == store.StatusRunning && existing.PID > 0 {
-			_ = syscall.Kill(existing.PID, syscall.SIGTERM)
-			_ = syscall.Kill(-existing.PID, syscall.SIGTERM)
-		}
-
-		// Remove git worktree if present.
-		if existing.WorkDir != "" {
-			if repoRoot, ok := detectGitRepo(filepath.Dir(existing.WorkDir)); ok {
-				if err := removeWorktree(repoRoot, existing.WorkDir); err != nil {
-					fmt.Fprintf(os.Stderr, "warning: could not remove worktree: %v\n", err)
-				}
-			} else {
-				if err := os.RemoveAll(existing.WorkDir); err != nil {
-					fmt.Fprintf(os.Stderr, "warning: could not remove work dir: %v\n", err)
-				}
-			}
-		}
-
-		// Remove agent log directory.
-		agentDir := filepath.Join(home, ".ax", "agents", existing.ID)
-		if err := os.RemoveAll(agentDir); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not remove agent dir: %v\n", err)
-		}
-
-		// Notify the daemon to remove the agent from state.
-		if err := client.SendDelete(existing.ID); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not send delete for %s: %v\n", existing.ID, err)
-			continue
-		}
-
-		fmt.Printf("deleted agent %s", existing.ID)
-		if existing.Name != "" {
-			fmt.Printf(" (%s)", existing.Name)
-		}
-		fmt.Println()
-	}
-	return nil
-}
-
 // findAgentByIDOrName reads state.json and returns the agent matching the given ID exactly,
 // or falls back to the most recent agent matching by name.
 func findAgentByIDOrName(idOrName string) (store.AgentState, error) {
@@ -167,45 +107,6 @@ func findAgentByIDOrName(idOrName string) (store.AgentState, error) {
 		return store.AgentState{}, fmt.Errorf("no agent found with ID or name %q", idOrName)
 	}
 	return *best, nil
-}
-
-// findAllAgentsByIDOrName returns all agents matching the given ID (exact) or name.
-// An exact ID match returns only that one agent; a name match returns all agents with that name.
-func findAllAgentsByIDOrName(idOrName string) ([]store.AgentState, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("could not determine home directory: %w", err)
-	}
-	stateFile := filepath.Join(home, ".ax", "state.json")
-	data, err := os.ReadFile(stateFile)
-	if err != nil {
-		return nil, fmt.Errorf("could not read state file: %w", err)
-	}
-	var agents []store.AgentState
-	if err := json.Unmarshal(data, &agents); err != nil {
-		return nil, fmt.Errorf("could not parse state file: %w", err)
-	}
-
-	// Exact ID match returns only that agent.
-	for i := range agents {
-		if agents[i].ID == idOrName {
-			return []store.AgentState{agents[i]}, nil
-		}
-	}
-
-	// Name match: collect all agents with the given name.
-	sanitized := sanitizeBranchName(idOrName)
-	var matches []store.AgentState
-	for i := range agents {
-		a := &agents[i]
-		if a.Name == idOrName || (sanitized != "" && a.WorktreeBranch == sanitized) {
-			matches = append(matches, *a)
-		}
-	}
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("no agent found with ID or name %q", idOrName)
-	}
-	return matches, nil
 }
 
 // runSession is the shared implementation for Run and Resume.

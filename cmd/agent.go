@@ -60,32 +60,9 @@ var agentResumeCmd = &cobra.Command{
 	},
 }
 
-var agentDeleteCmd = &cobra.Command{
-	Use:                "delete -n <id|name>",
-	Short:              "Delete an agent, its worktree, and associated data",
-	DisableFlagParsing: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		socketPath, err := getSocketPath()
-		if err != nil {
-			return err
-		}
-
-		if err := ensureDaemon(socketPath); err != nil {
-			return fmt.Errorf("could not start daemon: %w", err)
-		}
-
-		idOrName, _, err := parseNameFlagRequired(args)
-		if err != nil {
-			return err
-		}
-		return agent.DeleteByIDOrName(socketPath, idOrName)
-	},
-}
-
 func init() {
 	agentCmd.AddCommand(agentNewCmd)
 	agentCmd.AddCommand(agentResumeCmd)
-	agentCmd.AddCommand(agentDeleteCmd)
 }
 
 // parseNameFlag extracts -n/--name from args (before any -- separator).

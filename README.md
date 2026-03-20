@@ -52,16 +52,6 @@ You can also pass Claude Code options after `--`:
 ax agent resume -n my-feature -- --model claude-opus-4-5
 ```
 
-### Delete an agent
-
-To delete an agent and remove all associated data (worktree, log files, and state):
-
-```bash
-ax agent delete -n <id|name>
-```
-
-If multiple sessions share the same name (e.g. after several resumes), all of them are deleted in one command. If the agent is still running, it is terminated first.
-
 ### Open the dashboard
 
 ```bash

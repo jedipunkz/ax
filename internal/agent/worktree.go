@@ -69,14 +69,3 @@ func setupWorktree(agentID, repoRoot, branchHint string) (worktreePath, branchNa
 
 	return worktreePath, branchName, nil
 }
-
-// removeWorktree removes a git worktree at the given path.
-// repoRoot is the main repository directory. Uses --force to handle locked worktrees.
-func removeWorktree(repoRoot, worktreePath string) error {
-	cmd := exec.Command("git", "worktree", "remove", "--force", worktreePath)
-	cmd.Dir = repoRoot
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git worktree remove failed: %w\n%s", err, out)
-	}
-	return nil
-}

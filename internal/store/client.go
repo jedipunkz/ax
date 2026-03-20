@@ -54,12 +54,6 @@ func (c *Client) ReadMessage() (Message, error) {
 	return msg, nil
 }
 
-// SendDelete sends a delete request for the agent with the given ID.
-func (c *Client) SendDelete(agentID string) error {
-	msg := Message{Type: "delete", Agent: &AgentState{ID: agentID}}
-	return c.encoder.Encode(msg)
-}
-
 // Close closes the underlying connection.
 func (c *Client) Close() {
 	if c.conn != nil {
