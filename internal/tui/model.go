@@ -34,6 +34,9 @@ type logLoadedMsg struct {
 // clearStatusMsg clears the status message after a short delay.
 type clearStatusMsg struct{}
 
+// tickMsg is sent every second to update the clock display.
+type tickMsg time.Time
+
 // Model is the main bubbletea model for ax status.
 type Model struct {
 	agents       []store.AgentState
@@ -52,6 +55,7 @@ type Model struct {
 	searchMode   bool
 	searchQuery  string
 	workDir      string
+	now          time.Time
 	durationDays int
 }
 
@@ -68,6 +72,7 @@ func newModel(client *store.Client, sub chan store.Message, durationDays int) Mo
 		spinner:      sp,
 		view:         viewList,
 		workDir:      workDir,
+		now:          time.Now(),
 		durationDays: durationDays,
 	}
 }
@@ -78,10 +83,17 @@ func waitForMsg(sub chan store.Message) tea.Cmd {
 	}
 }
 
+func tickEverySecond() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return tickMsg(t)
+	})
+}
+
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
 		waitForMsg(m.sub),
+		tickEverySecond(),
 	)
 }
 
@@ -288,6 +300,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, loadLog(groups[m.cursor].Rep.LogFile))
 		}
 		cmds = append(cmds, waitForMsg(m.sub))
+
+	case tickMsg:
+		m.now = time.Time(msg)
+		cmds = append(cmds, tickEverySecond())
 
 	case clearStatusMsg:
 		m.statusMsg = ""

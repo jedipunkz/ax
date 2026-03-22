@@ -180,12 +180,24 @@ func listView(m Model) string {
 		killedTitle = "Killed / Failed (all)"
 	}
 
-	// Title line with full working directory path
-	agentCount := fmt.Sprintf("%d running", len(running))
-	pathStr := m.workDir
-	dashes := max(0, innerWidth-utf8.RuneCountInString(pathStr)-utf8.RuneCountInString(agentCount)-3)
-	pathStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#f7768e"))
-	titleLine := pathStyle.Render(pathStr) + fr(" "+strings.Repeat("─", dashes)+" ") + agentCount
+	// Title line: current time and agent status counts
+	clockStr := m.now.Format("2006-01-02 15:04")
+	// Count all agents (not filtered) for the summary
+	var totalRunning, totalSuccess, totalKilled int
+	for _, a := range m.agents {
+		switch a.Status {
+		case store.StatusRunning:
+			totalRunning++
+		case store.StatusSuccess:
+			totalSuccess++
+		default:
+			totalKilled++
+		}
+	}
+	countsStr := fmt.Sprintf("Running: %d  Success: %d  Killed: %d", totalRunning, totalSuccess, totalKilled)
+	clockStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#f7768e"))
+	dashes := max(0, innerWidth-utf8.RuneCountInString(clockStr)-utf8.RuneCountInString(countsStr)-3)
+	titleLine := clockStyle.Render(clockStr) + fr(" "+strings.Repeat("─", dashes)+" ") + countsStr
 
 	topBorder := fr("╭─ ") + titleLine + fr("─╮")
 
