@@ -133,13 +133,17 @@ func ensureDaemon(socketPath string) error {
 		return fmt.Errorf("could not start daemon: %w", err)
 	}
 
-	// Wait up to 3 seconds for socket to appear
+	// Wait up to 3 seconds for socket to appear using exponential backoff.
+	wait := 10 * time.Millisecond
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
 		if isSocketAlive(socketPath) {
 			return nil
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(wait)
+		if wait < 500*time.Millisecond {
+			wait *= 2
+		}
 	}
 
 	return fmt.Errorf("daemon did not start within 3 seconds")
@@ -180,7 +184,7 @@ func killDaemon(socketPath string) {
 }
 
 func isSocketAlive(socketPath string) bool {
-	conn, err := net.DialTimeout("unix", socketPath, 500*time.Millisecond)
+	conn, err := net.DialTimeout("unix", socketPath, 50*time.Millisecond)
 	if err != nil {
 		return false
 	}
