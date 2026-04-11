@@ -3,7 +3,7 @@ package tui
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/jedipunkz/ax/internal/config"
 	"github.com/jedipunkz/ax/internal/store"
 )
@@ -37,7 +37,7 @@ func Run(socketPath string, cfg *config.Config) error {
 	}()
 
 	m := newModel(client, sub, cfg.DurationDays)
-	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithFPS(30))
+	p := tea.NewProgram(m, tea.WithFPS(30))
 	_, err := p.Run()
 	client.Close()
 	return err
