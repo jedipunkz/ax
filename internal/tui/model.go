@@ -6,9 +6,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	"github.com/jedipunkz/ax/internal/store"
 )
 
@@ -101,7 +101,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		// In search mode, handle text input specially
 		if m.searchMode {
 			switch msg.String() {
@@ -145,8 +145,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.scrollOffset = 0
 				}
 			default:
-				if len(msg.Runes) > 0 {
-					m.searchQuery += string(msg.Runes)
+				if msg.Text != "" {
+					m.searchQuery += msg.Text
 					m.cursor = 0
 					m.scrollOffset = 0
 				}
@@ -197,7 +197,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if len(groups) > 0 && m.cursor < len(groups) {
 					m.view = viewDetail
 					agent := groups[m.cursor].Rep
-					m.viewport = viewport.New(m.width-4, m.height-13)
+					m.viewport = viewport.New(viewport.WithWidth(m.width-4), viewport.WithHeight(m.height-13))
 					cmds = append(cmds, loadLog(agent.LogFile))
 				}
 			}
@@ -322,7 +322,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		if m.view == viewDetail {
-			m.viewport = viewport.New(m.width-4, m.height-13)
+			m.viewport = viewport.New(viewport.WithWidth(m.width-4), viewport.WithHeight(m.height-13))
 			m.viewport.SetContent(m.logContent)
 			m.viewport.GotoBottom()
 		}
@@ -338,13 +338,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View() string {
+func (m Model) View() tea.View {
+	var content string
 	switch m.view {
 	case viewDetail:
-		return detailView(m)
+		content = detailView(m)
 	default:
-		return listView(m)
+		content = listView(m)
 	}
+	v := tea.NewView(content)
+	v.AltScreen = true
+	return v
 }
 
 func sortAgents(agents []store.AgentState) {
