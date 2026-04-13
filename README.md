@@ -129,6 +129,16 @@ Set the `duration_days` key to control how many days of finished (success/killed
 duration_days: 7d
 ```
 
+### Automatic worktree cleanup
+
+When `ax dash` is running, it automatically removes old git worktrees in the background. Set the `remove_duration_days` key to control how many days after an agent finishes before its worktree is deleted. The value must be a positive integer followed by `d` (e.g. `7d`, `30d`, `90d`). Default is `30d`.
+
+```yaml
+remove_duration_days: 30d
+```
+
+Cleanup runs once when the dashboard starts and then every 24 hours. Only worktrees under `~/.ax/worktrees/` belonging to finished agents (success/failed/killed) older than the configured threshold are removed.
+
 ## License
 
 MIT
