@@ -60,18 +60,19 @@ func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int)
 }
 
 // removeWorktree removes the git worktree at the given path.
-// It first attempts a clean removal via "git worktree remove --force",
-// falling back to os.RemoveAll if git is unavailable or the path is not a worktree.
+// It first attempts a clean removal via "git worktree remove --force" so that
+// the main repository's worktree admin data is cleaned up properly. If that
+// fails (e.g. the admin entry is already gone after a "git worktree prune"),
+// it falls back to os.RemoveAll silently, which is safe because git will
+// prune the stale admin entry automatically on the next gc or worktree prune.
 func removeWorktree(worktreePath string) error {
-	// Read the .git file inside the worktree to locate the main repository.
 	mainRepo, err := resolveMainRepo(worktreePath)
 	if err == nil && mainRepo != "" {
 		cmd := exec.Command("git", "-C", mainRepo, "worktree", "remove", "--force", worktreePath)
-		if out, err := cmd.CombinedOutput(); err == nil {
+		if err := cmd.Run(); err == nil {
 			return nil
-		} else {
-			fmt.Fprintf(os.Stderr, "warning: git worktree remove failed (%v): %s — falling back to os.RemoveAll\n", err, strings.TrimSpace(string(out)))
 		}
+		// git worktree remove failed (e.g. admin entry already pruned); fall through.
 	}
 
 	return os.RemoveAll(worktreePath)
