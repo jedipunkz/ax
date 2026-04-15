@@ -17,6 +17,15 @@ func detectGitRepo(dir string) (repoRoot string, ok bool) {
 	return strings.TrimSpace(string(out)), true
 }
 
+// branchExists reports whether a branch with the given name exists in the repo.
+func branchExists(repoRoot, branchName string) bool {
+	out, err := exec.Command("git", "-C", repoRoot, "branch", "--list", branchName).Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) != ""
+}
+
 // sanitizeBranchName converts a human-readable name into a valid git branch name.
 // Spaces are replaced with hyphens; characters illegal in git refs are removed.
 func sanitizeBranchName(name string) string {
@@ -59,6 +68,11 @@ func setupWorktree(agentID, repoRoot, branchHint string) (worktreePath, branchNa
 
 	if err := os.MkdirAll(filepath.Dir(worktreePath), 0755); err != nil {
 		return "", "", fmt.Errorf("could not create worktrees dir: %w", err)
+	}
+
+	// If the desired branch already exists, fall back to a unique branch name.
+	if branchExists(repoRoot, branchName) {
+		branchName = "ax/" + agentID
 	}
 
 	cmd := exec.Command("git", "worktree", "add", "-b", branchName, worktreePath, "HEAD")

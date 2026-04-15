@@ -2,8 +2,12 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/jedipunkz/ax/internal/agent"
 	"github.com/jedipunkz/ax/internal/config"
 	"github.com/jedipunkz/ax/internal/store"
 )
@@ -36,9 +40,36 @@ func Run(socketPath string, cfg *config.Config) error {
 		}
 	}()
 
+	// Start background goroutine to periodically remove old worktrees.
+	go runWorktreeCleanup(cfg.RemoveDurationDays)
+
 	m := newModel(client, sub, cfg.DurationDays)
 	p := tea.NewProgram(m, tea.WithFPS(30))
 	_, err := p.Run()
 	client.Close()
 	return err
+}
+
+// runWorktreeCleanup runs worktree cleanup immediately and then every 24 hours.
+func runWorktreeCleanup(removeDurationDays int) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	statePath := filepath.Join(home, ".ax", "state.json")
+	worktreesDir := filepath.Join(home, ".ax", "worktrees")
+
+	doCleanup := func() {
+		if err := agent.CleanupOldWorktrees(statePath, worktreesDir, removeDurationDays); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: worktree cleanup error: %v\n", err)
+		}
+	}
+
+	doCleanup()
+
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	for range ticker.C {
+		doCleanup()
+	}
 }
