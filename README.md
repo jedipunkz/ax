@@ -9,6 +9,21 @@ Run multiple [Claude Code](https://claude.ai/code) agents in parallel, each isol
 
 ## Installation
 
+### Homebrew (macOS / Linux)
+
+```bash
+brew tap jedipunkz/ax
+brew install ax
+```
+
+To upgrade to the latest version:
+
+```bash
+brew upgrade ax
+```
+
+### Go
+
 ```bash
 go install github.com/jedipunkz/ax@latest
 ```
