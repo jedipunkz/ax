@@ -38,6 +38,19 @@ var agentNewCmd = &cobra.Command{
 	},
 }
 
+var agentCdCmd = &cobra.Command{
+	Use:                "cd -n <id|name>",
+	Short:              "Print the worktree directory of an agent (use with: cd $(ax agent cd -n <name>))",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		idOrName, _, err := parseNameFlagRequired(args)
+		if err != nil {
+			return err
+		}
+		return agent.PrintWorktreeDir(idOrName)
+	},
+}
+
 var agentResumeCmd = &cobra.Command{
 	Use:                "resume -n <id|name> [-- <claude-args>...]",
 	Short:              "Resume a previous agent session by ID or name",
@@ -62,6 +75,7 @@ var agentResumeCmd = &cobra.Command{
 
 func init() {
 	agentCmd.AddCommand(agentNewCmd)
+	agentCmd.AddCommand(agentCdCmd)
 	agentCmd.AddCommand(agentResumeCmd)
 }
 
