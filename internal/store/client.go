@@ -23,6 +23,7 @@ func (c *Client) Connect(socketPath string) error {
 	c.conn = conn
 	c.encoder = json.NewEncoder(conn)
 	c.scanner = bufio.NewScanner(conn)
+	c.scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024) // allow up to 4 MB messages
 	return nil
 }
 

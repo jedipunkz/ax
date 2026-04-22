@@ -142,6 +142,7 @@ func (m *manager) broadcast(msg Message) {
 
 func (m *manager) handleConn(conn net.Conn) {
 	scanner := bufio.NewScanner(conn)
+	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024) // allow up to 4 MB messages
 	enc := json.NewEncoder(conn)
 
 	for scanner.Scan() {
