@@ -67,6 +67,16 @@ You can also pass Claude Code options directly:
 ax agent resume -n my-feature --model opus --enable-auto-mode
 ```
 
+### Change to an agent's worktree
+
+To open a new shell in the agent's worktree directory:
+
+```bash
+ax agent cd -n <id|name>
+```
+
+This spawns a subshell (`$SHELL`) with the working directory set to the agent's worktree. Type `exit` to return to your original shell.
+
 ### Open the dashboard
 
 ```bash
