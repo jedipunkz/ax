@@ -40,14 +40,14 @@ var agentNewCmd = &cobra.Command{
 
 var agentCdCmd = &cobra.Command{
 	Use:                "cd -n <id|name>",
-	Short:              "Print the worktree directory of an agent (use with: cd $(ax agent cd -n <name>))",
+	Short:              "Open a new shell in the agent's worktree directory",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		idOrName, _, err := parseNameFlagRequired(args)
 		if err != nil {
 			return err
 		}
-		return agent.PrintWorktreeDir(idOrName)
+		return agent.CdToWorktreeDir(idOrName)
 	},
 }
 
