@@ -100,12 +100,26 @@ var agentResumeCmd = &cobra.Command{
 	},
 }
 
+var agentDiffCmd = &cobra.Command{
+	Use:                "diff -n <id|name>",
+	Short:              "Show git diff for all commits recorded by the agent",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		idOrName, _, err := parseNameFlagRequired(args)
+		if err != nil {
+			return err
+		}
+		return agent.ShowDiff(idOrName)
+	},
+}
+
 func init() {
 	agentCmd.AddCommand(agentNewCmd)
 	agentCmd.AddCommand(agentCdCmd)
 	agentCmd.AddCommand(agentListCmd)
 	agentCmd.AddCommand(agentResumeCmd)
 	agentCmd.AddCommand(agentRmCmd)
+	agentCmd.AddCommand(agentDiffCmd)
 }
 
 // parseNameFlag extracts -n/--name from args (before any -- separator).

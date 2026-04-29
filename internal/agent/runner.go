@@ -261,7 +261,14 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 			if matches := gitCommitRe.FindAllStringSubmatch(clean, -1); len(matches) > 0 {
 				mu.Lock()
 				for _, m := range matches {
-					state.Commits = append(state.Commits, m[1])
+					// m[1] = "Committed <hash>" pattern; m[2] = "[branch <hash>]" pattern
+					hash := m[1]
+					if hash == "" {
+						hash = m[2]
+					}
+					if hash != "" {
+						state.Commits = append(state.Commits, hash)
+					}
 				}
 				s := state
 				mu.Unlock()
@@ -312,9 +319,15 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 
 var outputCleanRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z\\^_@]|\][^\x07\x1b]*(?:\x07|\x1b\\))`)
 
-// gitCommitRe matches git commit output lines like "[branch abc1234] message"
-// or "[branch (root-commit) abc1234] message".
-var gitCommitRe = regexp.MustCompile(`\[[\w/\-.]+(?:\s+\(root-commit\))?\s+([0-9a-f]{7,40})\]`)
+// gitCommitRe matches commit hashes from two sources:
+//   - Claude Code status line: "Committed abc123…" (6-char abbreviated hash,
+//     with optional cursor-movement escape stripped to zero or one space)
+//   - Raw git output: "[branch abc1234] message" (rare; present when the agent
+//     runs git directly in a plain shell rather than through Claude Code's Bash tool)
+var gitCommitRe = regexp.MustCompile(
+	`Committed\s*([0-9a-f]{6,40})\b` +
+		`|\[[\w/\-.]+(?:\s+\(root-commit\))?\s+([0-9a-f]{6,40})\]`,
+)
 
 // lastMeaningfulLine extracts the last readable text line from a raw PTY output chunk.
 func lastMeaningfulLine(chunk []byte) string {
