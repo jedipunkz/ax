@@ -10,19 +10,18 @@ import (
 	"golang.org/x/term"
 )
 
-// DiffWorktree prints the diff between the current HEAD of the repository (at cwd)
-// and the tip of the agent's worktree branch.
+// DiffWorktree compares the repository root directory against the agent's worktree
+// directory using git diff --no-index, so both modes cover exactly the same set of files.
 //
-// When unified is false (default), git diff handles colour and paging automatically.
-// When unified is true, diff -ru is used to produce plain unified diff output; the
-// result is colourised and piped through a pager when stdout is a terminal.
+// Without -u: git handles colour and paging (git-style output).
+// With -u:    output is captured, colourised, and piped through a pager (plain diff -u style).
 func DiffWorktree(idOrName string, unified bool) error {
 	ag, err := findAgentByIDOrName(idOrName)
 	if err != nil {
 		return err
 	}
-	if ag.WorktreeBranch == "" {
-		return fmt.Errorf("agent %q has no associated worktree branch", idOrName)
+	if ag.WorkDir == "" {
+		return fmt.Errorf("agent %q has no working directory", idOrName)
 	}
 
 	cwd, err := os.Getwd()
@@ -36,22 +35,27 @@ func DiffWorktree(idOrName string, unified bool) error {
 	}
 
 	if unified {
-		return diffUnified(repoRoot, idOrName, ag.WorkDir)
+		return diffUnified(repoRoot, ag.WorkDir)
 	}
 
-	// Three-dot diff: changes on worktree branch since it diverged from HEAD.
-	cmd := exec.Command("git", "-c", "color.ui=always", "diff", "HEAD..."+ag.WorktreeBranch)
-	cmd.Dir = repoRoot
+	// git diff --no-index recursively compares the two directory trees using
+	// git's engine; colour and paging are handled by git itself.
+	// Exit code 1 means files differ and is not an error.
+	cmd := exec.Command("git", "-c", "color.ui=always", "diff", "--no-index", repoRoot, ag.WorkDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
-func diffUnified(repoRoot, idOrName, workDir string) error {
-	if workDir == "" {
-		return fmt.Errorf("agent %q has no working directory", idOrName)
-	}
-
+// diffUnified runs diff -ru on the two directory trees, then colourises the output
+// and pipes it through a pager when stdout is a terminal.
+func diffUnified(repoRoot, workDir string) error {
 	// diff exits 0 (identical), 1 (differ), or 2 (error).
 	diffCmd := exec.Command("diff", "-ru", "--exclude=.git", repoRoot, workDir)
 	out, err := diffCmd.Output()
