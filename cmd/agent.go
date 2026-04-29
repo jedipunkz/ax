@@ -52,9 +52,10 @@ var agentCdCmd = &cobra.Command{
 }
 
 var agentRmCmd = &cobra.Command{
-	Use:   "rm <id|name>",
-	Short: "Remove a terminated agent's worktree and state entry",
-	Args:  cobra.ExactArgs(1),
+	Use:     "remove <id|name>",
+	Aliases: []string{"rm"},
+	Short:   "Remove a terminated agent's worktree and state entry",
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		socketPath, err := getSocketPath()
 		if err != nil {
@@ -65,8 +66,9 @@ var agentRmCmd = &cobra.Command{
 }
 
 var agentListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all agent worktrees",
+	Use:     "list",
+	Aliases: []string{"ls"},
+	Short:   "List all agent worktrees",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return agent.ListWorktrees()
 	},

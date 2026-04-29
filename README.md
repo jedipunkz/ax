@@ -82,7 +82,7 @@ This spawns a subshell (`$SHELL`) with the working directory set to the agent's 
 To list all agents with their ID, name, repo, ended time, and worktree directory:
 
 ```bash
-ax agent list
+ax agent list   # or: ax agent ls
 ```
 
 ### Remove an agent
@@ -90,7 +90,7 @@ ax agent list
 To remove a terminated agent's worktree, log file, and state entry:
 
 ```bash
-ax agent rm <id|name>
+ax agent remove <id|name>   # or: ax agent rm <id|name>
 ```
 
 Running agents are refused; stop them first. Accepts full ID, name, or ID prefix.
