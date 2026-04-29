@@ -69,6 +69,19 @@ var agentRmCmd = &cobra.Command{
 	},
 }
 
+var agentDiffCmd = &cobra.Command{
+	Use:                "diff -n <id|name>",
+	Short:              "Show diff between current HEAD and the agent's worktree branch",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		idOrName, _, err := parseNameFlagRequired(args)
+		if err != nil {
+			return err
+		}
+		return agent.DiffWorktree(idOrName)
+	},
+}
+
 var agentListCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"ls"},
@@ -103,6 +116,7 @@ var agentResumeCmd = &cobra.Command{
 func init() {
 	agentCmd.AddCommand(agentNewCmd)
 	agentCmd.AddCommand(agentCdCmd)
+	agentCmd.AddCommand(agentDiffCmd)
 	agentCmd.AddCommand(agentListCmd)
 	agentCmd.AddCommand(agentResumeCmd)
 	agentCmd.AddCommand(agentRmCmd)
