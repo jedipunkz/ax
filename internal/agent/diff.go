@@ -118,7 +118,7 @@ func runPager(content []byte) error {
 
 	if _, err := pipe.Write(content); err != nil {
 		pipe.Close()
-		cmd.Wait()
+		_ = cmd.Wait()
 		return fmt.Errorf("could not write to pager: %w", err)
 	}
 	pipe.Close()
