@@ -38,11 +38,11 @@ func ListWorktrees() error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME/ID\tREPO\tSTATUS\tENDED\tDIRECTORY")
+	fmt.Fprintln(w, "ID\tNAME\tREPO\tENDED\tDIR")
 	for _, a := range agents {
-		nameID := a.ID
-		if a.Name != "" {
-			nameID = a.Name + " (" + a.ID + ")"
+		name := a.Name
+		if name == "" {
+			name = "-"
 		}
 
 		repo := a.RepoName
@@ -60,7 +60,7 @@ func ListWorktrees() error {
 			dir = "-"
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", nameID, repo, string(a.Status), ended, dir)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", a.ID, name, repo, ended, dir)
 	}
 	return w.Flush()
 }
