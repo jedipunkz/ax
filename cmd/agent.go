@@ -70,15 +70,21 @@ var agentRmCmd = &cobra.Command{
 }
 
 var agentDiffCmd = &cobra.Command{
-	Use:                "diff -n <id|name>",
+	Use:                "diff -n <id|name> [-u]",
 	Short:              "Show diff between current HEAD and the agent's worktree branch",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		idOrName, _, err := parseNameFlagRequired(args)
+		idOrName, rest, err := parseNameFlagRequired(args)
 		if err != nil {
 			return err
 		}
-		return agent.DiffWorktree(idOrName)
+		unified := false
+		for _, a := range rest {
+			if a == "-u" {
+				unified = true
+			}
+		}
+		return agent.DiffWorktree(idOrName, unified)
 	},
 }
 
