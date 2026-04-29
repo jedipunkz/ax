@@ -41,7 +41,7 @@ func RemoveAgent(idOrName, socketPath string) error {
 		cleanWorkDir := filepath.Clean(target.WorkDir)
 		if strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
 			if _, err := os.Stat(cleanWorkDir); err == nil {
-				if err := removeWorktree(cleanWorkDir); err != nil {
+				if err := RemoveWorktree(cleanWorkDir); err != nil {
 					fmt.Fprintf(os.Stderr, "warning: could not remove worktree %s: %v\n", cleanWorkDir, err)
 				}
 			}

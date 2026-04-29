@@ -3,12 +3,15 @@ package tui
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
+	"github.com/jedipunkz/ax/internal/agent"
 	"github.com/jedipunkz/ax/internal/store"
 )
 
@@ -264,6 +267,47 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
 						return clearStatusMsg{}
 					}))
+				}
+			}
+
+		case "r":
+			if m.view == viewList {
+				groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
+				if len(groups) > 0 && m.cursor < len(groups) {
+					ag := groups[m.cursor].Rep
+					if !ag.Status.IsTerminal() {
+						m.statusMsg = "cannot remove running agent; stop it first"
+						cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+							return clearStatusMsg{}
+						}))
+					} else {
+						if ag.WorkDir != "" {
+							home, _ := os.UserHomeDir()
+							worktreesDir := filepath.Join(home, ".ax", "worktrees")
+							cleanWorktrees := filepath.Clean(worktreesDir)
+							cleanWorkDir := filepath.Clean(ag.WorkDir)
+							if strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
+								if _, err := os.Stat(cleanWorkDir); err == nil {
+									if err := agent.RemoveWorktree(cleanWorkDir); err != nil {
+										m.statusMsg = fmt.Sprintf("worktree remove error: %v", err)
+										cmds = append(cmds, tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
+											return clearStatusMsg{}
+										}))
+									}
+								}
+							}
+						}
+						if ag.LogFile != "" {
+							_ = os.Remove(ag.LogFile)
+							_ = os.Remove(filepath.Dir(ag.LogFile))
+						}
+						if err := m.client.SendRemove(ag.ID); err != nil {
+							m.statusMsg = fmt.Sprintf("remove error: %v", err)
+							cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+								return clearStatusMsg{}
+							}))
+						}
+					}
 				}
 			}
 		}
