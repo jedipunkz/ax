@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // ShowDiff finds an agent by ID or name and displays a colorized git diff
@@ -17,7 +18,7 @@ func ShowDiff(idOrName string) error {
 		return fmt.Errorf("agent %q has no working directory", idOrName)
 	}
 	if len(ag.Commits) == 0 {
-		return fmt.Errorf("agent %q has no recorded commits", idOrName)
+		return showBranchDiff(ag.WorkDir)
 	}
 
 	var gitArgs []string
@@ -39,6 +40,39 @@ func ShowDiff(idOrName string) error {
 	}
 
 	return runPager(output)
+}
+
+// showBranchDiff falls back to `git diff <merge-base>..HEAD` when no commits
+// were recorded in the agent state (e.g. the agent has not yet committed).
+func showBranchDiff(workDir string) error {
+	// Determine the merge-base against origin/HEAD or main/master.
+	base, err := findMergeBase(workDir)
+	if err != nil {
+		// Last resort: show uncommitted working-tree changes.
+		out, err2 := exec.Command("git", "diff", "--color=always").Output()
+		if err2 != nil {
+			return fmt.Errorf("could not compute diff: %w", err)
+		}
+		return runPager(out)
+	}
+	out, err := exec.Command("git", "diff", "--color=always", base, "HEAD").Output()
+	if err != nil {
+		return fmt.Errorf("git diff %s HEAD: %w", base, err)
+	}
+	return runPager(out)
+}
+
+func findMergeBase(workDir string) (string, error) {
+	for _, ref := range []string{"origin/main", "origin/master", "main", "master"} {
+		out, err := exec.Command("git", "merge-base", "HEAD", ref).Output()
+		if err == nil {
+			base := strings.TrimSpace(string(out))
+			if base != "" {
+				return base, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("could not find merge base")
 }
 
 func showCommitsIndividually(workDir string, commits []string) error {
