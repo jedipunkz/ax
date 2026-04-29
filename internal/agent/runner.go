@@ -3,7 +3,6 @@ package agent
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -75,14 +74,12 @@ func findAgentByIDOrName(idOrName string) (store.AgentState, error) {
 	if err != nil {
 		return store.AgentState{}, fmt.Errorf("could not determine home directory: %w", err)
 	}
-	stateFile := filepath.Join(home, ".ax", "state.json")
-	data, err := os.ReadFile(stateFile)
+	agents, err := readAgents(filepath.Join(home, ".ax", "state.json"))
 	if err != nil {
-		return store.AgentState{}, fmt.Errorf("could not read state file: %w", err)
+		return store.AgentState{}, err
 	}
-	var agents []store.AgentState
-	if err := json.Unmarshal(data, &agents); err != nil {
-		return store.AgentState{}, fmt.Errorf("could not parse state file: %w", err)
+	if agents == nil {
+		return store.AgentState{}, fmt.Errorf("no agent found with ID or name %q", idOrName)
 	}
 
 	// Search by ID first (exact match).
@@ -257,7 +254,7 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 			}
 
 			// Detect git commit output and record commit hashes.
-			clean := outputCleanRe.ReplaceAllString(string(buf[:n]), "")
+			clean := ansiRe.ReplaceAllString(string(buf[:n]), "")
 			if matches := gitCommitRe.FindAllStringSubmatch(clean, -1); len(matches) > 0 {
 				mu.Lock()
 				for _, m := range matches {
@@ -317,7 +314,6 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 	return nil
 }
 
-var outputCleanRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z\\^_@]|\][^\x07\x1b]*(?:\x07|\x1b\\))`)
 
 // gitCommitRe matches commit hashes from two sources:
 //   - Claude Code status line: "Committed abc123…" (6-char abbreviated hash,
@@ -331,7 +327,7 @@ var gitCommitRe = regexp.MustCompile(
 
 // lastMeaningfulLine extracts the last readable text line from a raw PTY output chunk.
 func lastMeaningfulLine(chunk []byte) string {
-	s := outputCleanRe.ReplaceAllString(string(chunk), "")
+	s := ansiRe.ReplaceAllString(string(chunk), "")
 	s = strings.ReplaceAll(s, "\r\n", "\n")
 	s = strings.ReplaceAll(s, "\r", "\n")
 	lines := strings.Split(s, "\n")

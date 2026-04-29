@@ -3,21 +3,18 @@ package tui
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"unicode"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/jedipunkz/ax/internal/agent"
 )
-
-// ansiRe matches ANSI/VT escape sequences produced by PTY output.
-var ansiRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z\\^_@]|\][^\x07\x1b]*(?:\x07|\x1b\\))`)
 
 // cleanLog strips ANSI codes, normalizes line endings, and keeps only
 // lines that contain readable text (at least 4 alphanumeric characters).
 func cleanLog(data []byte) string {
-	s := ansiRe.ReplaceAllString(string(data), "")
+	s := agent.StripANSI(string(data))
 	s = strings.ReplaceAll(s, "\r\n", "\n")
 	s = strings.ReplaceAll(s, "\r", "")
 

@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/spinner"
@@ -22,7 +21,6 @@ const (
 	viewList   ViewMode = iota
 	viewDetail ViewMode = iota
 )
-
 
 // agentUpdateMsg wraps a store.Message received from the socket.
 type agentUpdateMsg struct {
@@ -116,9 +114,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if ag.WorkDir != "" {
 					home, _ := os.UserHomeDir()
 					worktreesDir := filepath.Join(home, ".ax", "worktrees")
-					cleanWorktrees := filepath.Clean(worktreesDir)
-					cleanWorkDir := filepath.Clean(ag.WorkDir)
-					if strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
+					if agent.IsUnderDir(ag.WorkDir, worktreesDir) {
+						cleanWorkDir := filepath.Clean(ag.WorkDir)
 						if _, err := os.Stat(cleanWorkDir); err == nil {
 							if err := agent.RemoveWorktree(cleanWorkDir); err != nil {
 								m.statusMsg = fmt.Sprintf("worktree remove error: %v", err)

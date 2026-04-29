@@ -1,32 +1,24 @@
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/jedipunkz/ax/internal/store"
 )
 
 // CleanupOldWorktrees removes git worktrees for agents that finished more than
 // removeDurationDays ago. It reads the agent state from statePath and removes
 // worktree directories under worktreesDir that belong to sufficiently old agents.
 func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int) error {
-	data, err := os.ReadFile(statePath)
-	if os.IsNotExist(err) {
-		return nil
-	}
+	agents, err := readAgents(statePath)
 	if err != nil {
 		return fmt.Errorf("could not read state: %w", err)
 	}
-
-	var agents []store.AgentState
-	if err := json.Unmarshal(data, &agents); err != nil {
-		return fmt.Errorf("could not parse state: %w", err)
+	if agents == nil {
+		return nil
 	}
 
 	cutoff := time.Now().AddDate(0, 0, -removeDurationDays)
@@ -38,16 +30,12 @@ func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int)
 		if a.FinishedAt == nil || a.FinishedAt.After(cutoff) {
 			continue
 		}
-		if a.WorkDir == "" {
-			continue
-		}
 		// Only remove directories that live under ~/.ax/worktrees/ to avoid
 		// accidentally deleting the user's actual working directories.
-		cleanWorktrees := filepath.Clean(worktreesDir)
-		cleanWorkDir := filepath.Clean(a.WorkDir)
-		if !strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
+		if a.WorkDir == "" || !IsUnderDir(a.WorkDir, worktreesDir) {
 			continue
 		}
+		cleanWorkDir := filepath.Clean(a.WorkDir)
 		if _, err := os.Stat(cleanWorkDir); os.IsNotExist(err) {
 			continue
 		}

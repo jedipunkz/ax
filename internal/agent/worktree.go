@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+// IsUnderDir reports whether path is directly under dir (one or more levels deep).
+func IsUnderDir(path, dir string) bool {
+	return strings.HasPrefix(filepath.Clean(path), filepath.Clean(dir)+string(filepath.Separator))
+}
+
 // detectGitRepo returns the repository root if dir is inside a git repository.
 func detectGitRepo(dir string) (repoRoot string, ok bool) {
 	out, err := exec.Command("git", "-C", dir, "rev-parse", "--show-toplevel").Output()

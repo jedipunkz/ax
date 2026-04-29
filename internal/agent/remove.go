@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,6 +24,9 @@ func RemoveAgent(idOrName, socketPath string) error {
 	if err != nil {
 		return err
 	}
+	if agents == nil {
+		return fmt.Errorf("agent %q not found", idOrName)
+	}
 
 	target, idx := findAgent(agents, idOrName)
 	if idx < 0 {
@@ -36,14 +38,11 @@ func RemoveAgent(idOrName, socketPath string) error {
 
 	// Remove worktree directory if it lives under ~/.ax/worktrees/
 	worktreesDir := filepath.Join(home, ".ax", "worktrees")
-	if target.WorkDir != "" {
-		cleanWorktrees := filepath.Clean(worktreesDir)
+	if target.WorkDir != "" && IsUnderDir(target.WorkDir, worktreesDir) {
 		cleanWorkDir := filepath.Clean(target.WorkDir)
-		if strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
-			if _, err := os.Stat(cleanWorkDir); err == nil {
-				if err := RemoveWorktree(cleanWorkDir); err != nil {
-					fmt.Fprintf(os.Stderr, "warning: could not remove worktree %s: %v\n", cleanWorkDir, err)
-				}
+		if _, err := os.Stat(cleanWorkDir); err == nil {
+			if err := RemoveWorktree(cleanWorkDir); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: could not remove worktree %s: %v\n", cleanWorkDir, err)
 			}
 		}
 	}
@@ -104,32 +103,3 @@ func findAgent(agents []store.AgentState, idOrName string) (store.AgentState, in
 	return store.AgentState{}, -1
 }
 
-func readAgents(stateFile string) ([]store.AgentState, error) {
-	data, err := os.ReadFile(stateFile)
-	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("no agents found")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("could not read state file: %w", err)
-	}
-	var agents []store.AgentState
-	if err := json.Unmarshal(data, &agents); err != nil {
-		return nil, fmt.Errorf("could not parse state file: %w", err)
-	}
-	return agents, nil
-}
-
-func writeAgents(stateFile string, agents []store.AgentState) error {
-	data, err := json.Marshal(agents)
-	if err != nil {
-		return fmt.Errorf("could not marshal state: %w", err)
-	}
-	tmp := stateFile + ".tmp"
-	if err := os.WriteFile(tmp, data, 0644); err != nil {
-		return fmt.Errorf("could not write state: %w", err)
-	}
-	if err := os.Rename(tmp, stateFile); err != nil {
-		return fmt.Errorf("could not rename state file: %w", err)
-	}
-	return nil
-}

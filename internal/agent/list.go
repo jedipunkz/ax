@@ -1,15 +1,12 @@
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
 	"time"
-
-	"github.com/jedipunkz/ax/internal/store"
 )
 
 // ListWorktrees prints all agents with their name/id, repo, ended time, and directory name.
@@ -18,21 +15,10 @@ func ListWorktrees() error {
 	if err != nil {
 		return fmt.Errorf("could not determine home directory: %w", err)
 	}
-	stateFile := filepath.Join(home, ".ax", "state.json")
-	data, err := os.ReadFile(stateFile)
-	if os.IsNotExist(err) {
-		fmt.Println("no agents found")
-		return nil
-	}
+	agents, err := readAgents(filepath.Join(home, ".ax", "state.json"))
 	if err != nil {
-		return fmt.Errorf("could not read state file: %w", err)
+		return err
 	}
-
-	var agents []store.AgentState
-	if err := json.Unmarshal(data, &agents); err != nil {
-		return fmt.Errorf("could not parse state file: %w", err)
-	}
-
 	if len(agents) == 0 {
 		fmt.Println("no agents found")
 		return nil
