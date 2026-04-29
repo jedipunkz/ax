@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -55,9 +56,12 @@ func ListWorktrees() error {
 			ended = a.FinishedAt.Local().Format(time.DateTime)
 		}
 
-		dir := filepath.Base(a.WorkDir)
-		if a.WorkDir == "" {
-			dir = "-"
+		dir := "-"
+		if a.WorkDir != "" {
+			dir = a.WorkDir
+			if home != "" {
+				dir = strings.TrimPrefix(dir, home+string(filepath.Separator))
+			}
 		}
 
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", a.ID, name, repo, ended, dir)
