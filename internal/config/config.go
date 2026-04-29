@@ -197,11 +197,3 @@ func (c *Config) Palette() ThemePalette {
 	return themes[DefaultTheme]
 }
 
-// AvailableThemes returns the list of built-in theme names.
-func AvailableThemes() []string {
-	names := make([]string, 0, len(themes))
-	for k := range themes {
-		names = append(names, k)
-	}
-	return names
-}
