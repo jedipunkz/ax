@@ -62,13 +62,36 @@ func diffUnified(repoRoot, worktreeBranch string) error {
 		return nil
 	}
 
-	colored := colorDiff(string(out))
+	colored := colorDiff(stripGitHeaders(string(out)))
 
 	if term.IsTerminal(int(os.Stdout.Fd())) {
 		return runPager(colored)
 	}
 	_, err = fmt.Fprint(os.Stdout, colored)
 	return err
+}
+
+// stripGitHeaders removes git-specific header lines from diff output and
+// strips the a/ b/ path prefixes on --- and +++ lines, so the result
+// matches plain diff -u format.
+func stripGitHeaders(s string) string {
+	lines := strings.Split(s, "\n")
+	var buf strings.Builder
+	buf.Grow(len(s))
+	for _, line := range lines {
+		switch {
+		case strings.HasPrefix(line, "diff --git "), strings.HasPrefix(line, "index "):
+			continue
+		case strings.HasPrefix(line, "--- a/"):
+			buf.WriteString("--- " + line[6:])
+		case strings.HasPrefix(line, "+++ b/"):
+			buf.WriteString("+++ " + line[6:])
+		default:
+			buf.WriteString(line)
+		}
+		buf.WriteByte('\n')
+	}
+	return buf.String()
 }
 
 // colorDiff applies ANSI colour codes to unified diff output.
@@ -88,8 +111,6 @@ func colorDiff(s string) string {
 	for _, line := range lines {
 		switch {
 		case strings.HasPrefix(line, "---") || strings.HasPrefix(line, "+++"):
-			buf.WriteString(bold + line + reset)
-		case strings.HasPrefix(line, "diff ") || strings.HasPrefix(line, "index "):
 			buf.WriteString(bold + line + reset)
 		case strings.HasPrefix(line, "@@"):
 			buf.WriteString(cyan + line + reset)
