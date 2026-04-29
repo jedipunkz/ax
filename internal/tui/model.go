@@ -42,22 +42,24 @@ type tickMsg time.Time
 
 // Model is the main bubbletea model for ax status.
 type Model struct {
-	agents       []store.AgentState
-	cursor       int
-	scrollOffset int
-	view         ViewMode
-	client       *store.Client
-	sub          chan store.Message
-	spinner      spinner.Model
-	viewport     viewport.Model
-	width        int
-	height       int
-	logContent   string
-	showExpired  bool
-	statusMsg    string
-	searchMode   bool
-	searchQuery  string
-	workDir      string
+	agents        []store.AgentState
+	cursor        int
+	scrollOffset  int
+	view          ViewMode
+	client        *store.Client
+	sub           chan store.Message
+	spinner       spinner.Model
+	viewport      viewport.Model
+	width         int
+	height        int
+	logContent    string
+	showExpired   bool
+	statusMsg     string
+	searchMode    bool
+	searchQuery   string
+	workDir       string
+	confirmRemove bool
+	confirmTarget store.AgentState
 	now          time.Time
 	durationDays int
 }
@@ -105,6 +107,44 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
+		// In confirm-remove mode, only handle y/n/esc
+		if m.confirmRemove {
+			switch msg.String() {
+			case "y", "enter":
+				ag := m.confirmTarget
+				m.confirmRemove = false
+				if ag.WorkDir != "" {
+					home, _ := os.UserHomeDir()
+					worktreesDir := filepath.Join(home, ".ax", "worktrees")
+					cleanWorktrees := filepath.Clean(worktreesDir)
+					cleanWorkDir := filepath.Clean(ag.WorkDir)
+					if strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
+						if _, err := os.Stat(cleanWorkDir); err == nil {
+							if err := agent.RemoveWorktree(cleanWorkDir); err != nil {
+								m.statusMsg = fmt.Sprintf("worktree remove error: %v", err)
+								cmds = append(cmds, tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
+									return clearStatusMsg{}
+								}))
+							}
+						}
+					}
+				}
+				if ag.LogFile != "" {
+					_ = os.Remove(ag.LogFile)
+					_ = os.Remove(filepath.Dir(ag.LogFile))
+				}
+				if err := m.client.SendRemove(ag.ID); err != nil {
+					m.statusMsg = fmt.Sprintf("remove error: %v", err)
+					cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+						return clearStatusMsg{}
+					}))
+				}
+			case "n", "esc", "q":
+				m.confirmRemove = false
+			}
+			return m, tea.Batch(cmds...)
+		}
+
 		// In search mode, handle text input specially
 		if m.searchMode {
 			switch msg.String() {
@@ -281,32 +321,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							return clearStatusMsg{}
 						}))
 					} else {
-						if ag.WorkDir != "" {
-							home, _ := os.UserHomeDir()
-							worktreesDir := filepath.Join(home, ".ax", "worktrees")
-							cleanWorktrees := filepath.Clean(worktreesDir)
-							cleanWorkDir := filepath.Clean(ag.WorkDir)
-							if strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
-								if _, err := os.Stat(cleanWorkDir); err == nil {
-									if err := agent.RemoveWorktree(cleanWorkDir); err != nil {
-										m.statusMsg = fmt.Sprintf("worktree remove error: %v", err)
-										cmds = append(cmds, tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
-											return clearStatusMsg{}
-										}))
-									}
-								}
-							}
-						}
-						if ag.LogFile != "" {
-							_ = os.Remove(ag.LogFile)
-							_ = os.Remove(filepath.Dir(ag.LogFile))
-						}
-						if err := m.client.SendRemove(ag.ID); err != nil {
-							m.statusMsg = fmt.Sprintf("remove error: %v", err)
-							cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
-								return clearStatusMsg{}
-							}))
-						}
+						m.confirmRemove = true
+						m.confirmTarget = ag
 					}
 				}
 			}

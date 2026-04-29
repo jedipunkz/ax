@@ -388,6 +388,12 @@ func listView(m Model) string {
 	}
 	var helpText string
 	switch {
+	case m.confirmRemove:
+		label := m.confirmTarget.ID
+		if m.confirmTarget.Name != "" {
+			label = m.confirmTarget.Name
+		}
+		helpText = fmt.Sprintf("Remove \"%s\"? [y] yes  [n] no", label)
 	case m.searchMode:
 		helpText = "search: " + m.searchQuery + "█  [ctrl-n/p] select  [esc] cancel  [enter] confirm"
 	case m.statusMsg != "":
