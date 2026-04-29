@@ -176,6 +176,17 @@ func (m *manager) handleConn(conn net.Conn) {
 			m.broadcast(broadcastMsg)
 			m.mu.Unlock()
 
+		case "remove":
+			if msg.AgentID == "" {
+				continue
+			}
+			m.mu.Lock()
+			delete(m.agents, msg.AgentID)
+			m.persistState()
+			broadcastMsg := Message{Type: "remove", AgentID: msg.AgentID}
+			m.broadcast(broadcastMsg)
+			m.mu.Unlock()
+
 		case "subscribe":
 			m.mu.Lock()
 			sub := &subscriber{conn: conn, encoder: enc}

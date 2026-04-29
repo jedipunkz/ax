@@ -51,6 +51,19 @@ var agentCdCmd = &cobra.Command{
 	},
 }
 
+var agentRmCmd = &cobra.Command{
+	Use:   "rm <id|name>",
+	Short: "Remove a terminated agent's worktree and state entry",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		socketPath, err := getSocketPath()
+		if err != nil {
+			return err
+		}
+		return agent.RemoveAgent(args[0], socketPath)
+	},
+}
+
 var agentListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all agent worktrees",
@@ -86,6 +99,7 @@ func init() {
 	agentCmd.AddCommand(agentCdCmd)
 	agentCmd.AddCommand(agentListCmd)
 	agentCmd.AddCommand(agentResumeCmd)
+	agentCmd.AddCommand(agentRmCmd)
 }
 
 // parseNameFlag extracts -n/--name from args (before any -- separator).

@@ -33,6 +33,12 @@ func (c *Client) SendUpdate(agent AgentState) error {
 	return c.encoder.Encode(msg)
 }
 
+// SendRemove sends a remove request for the agent with the given ID.
+func (c *Client) SendRemove(agentID string) error {
+	msg := Message{Type: "remove", AgentID: agentID}
+	return c.encoder.Encode(msg)
+}
+
 // Subscribe sends a subscribe message so the client receives snapshots and updates.
 func (c *Client) Subscribe() error {
 	msg := Message{Type: "subscribe"}

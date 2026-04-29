@@ -37,7 +37,8 @@ func (s Status) IsTerminal() bool {
 
 // Message is the JSON-lines protocol message used over the Unix socket.
 type Message struct {
-	Type   string       `json:"type"`
-	Agent  *AgentState  `json:"agent,omitempty"`
-	Agents []AgentState `json:"agents,omitempty"`
+	Type    string       `json:"type"`
+	Agent   *AgentState  `json:"agent,omitempty"`
+	Agents  []AgentState `json:"agents,omitempty"`
+	AgentID string       `json:"agent_id,omitempty"`
 }
