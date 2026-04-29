@@ -10,18 +10,19 @@ import (
 	"golang.org/x/term"
 )
 
-// DiffWorktree compares the repository root directory against the agent's worktree
-// directory using git diff --no-index, so both modes cover exactly the same set of files.
+// DiffWorktree shows the diff between the current HEAD and the agent's worktree branch.
 //
-// Without -u: git handles colour and paging (git-style output).
-// With -u:    output is captured, colourised, and piped through a pager (plain diff -u style).
+// Both modes use the same git branch comparison (HEAD...<worktree-branch>) so the
+// scope of changes is identical. The -u flag only changes the output format:
+//   - without -u: git diff with colour and paging handled by git
+//   - with -u:    same diff, colourised and piped through a pager in plain unified format
 func DiffWorktree(idOrName string, unified bool) error {
 	ag, err := findAgentByIDOrName(idOrName)
 	if err != nil {
 		return err
 	}
-	if ag.WorkDir == "" {
-		return fmt.Errorf("agent %q has no working directory", idOrName)
+	if ag.WorktreeBranch == "" {
+		return fmt.Errorf("agent %q has no associated worktree branch", idOrName)
 	}
 
 	cwd, err := os.Getwd()
@@ -35,36 +36,26 @@ func DiffWorktree(idOrName string, unified bool) error {
 	}
 
 	if unified {
-		return diffUnified(repoRoot, ag.WorkDir)
+		return diffUnified(repoRoot, ag.WorktreeBranch)
 	}
 
-	// git diff --no-index recursively compares the two directory trees using
-	// git's engine; colour and paging are handled by git itself.
-	// Exit code 1 means files differ and is not an error.
-	cmd := exec.Command("git", "-c", "color.ui=always", "diff", "--no-index", repoRoot, ag.WorkDir)
+	// Three-dot diff: changes on worktree branch since it diverged from HEAD.
+	// git handles colour and paging automatically.
+	cmd := exec.Command("git", "-c", "color.ui=always", "diff", "HEAD..."+ag.WorktreeBranch)
+	cmd.Dir = repoRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
-			return nil
-		}
-		return err
-	}
-	return nil
+	return cmd.Run()
 }
 
-// diffUnified runs diff -ru on the two directory trees, then colourises the output
-// and pipes it through a pager when stdout is a terminal.
-func diffUnified(repoRoot, workDir string) error {
-	// diff exits 0 (identical), 1 (differ), or 2 (error).
-	diffCmd := exec.Command("diff", "-ru", "--exclude=.git", repoRoot, workDir)
-	out, err := diffCmd.Output()
+// diffUnified fetches the same git diff without colour, then colourises it and
+// pipes it through a pager — producing plain unified diff style output.
+func diffUnified(repoRoot, worktreeBranch string) error {
+	cmd := exec.Command("git", "--no-pager", "diff", "--no-color", "HEAD..."+worktreeBranch)
+	cmd.Dir = repoRoot
+	out, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
-			// exit 1 means files differ — normal result
-		} else {
-			return fmt.Errorf("diff failed: %w", err)
-		}
+		return fmt.Errorf("git diff failed: %w", err)
 	}
 
 	if len(out) == 0 {
@@ -98,7 +89,7 @@ func colorDiff(s string) string {
 		switch {
 		case strings.HasPrefix(line, "---") || strings.HasPrefix(line, "+++"):
 			buf.WriteString(bold + line + reset)
-		case strings.HasPrefix(line, "diff "):
+		case strings.HasPrefix(line, "diff ") || strings.HasPrefix(line, "index "):
 			buf.WriteString(bold + line + reset)
 		case strings.HasPrefix(line, "@@"):
 			buf.WriteString(cyan + line + reset)
