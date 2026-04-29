@@ -85,14 +85,6 @@ To list all agents with their ID, name, repo, ended time, and worktree directory
 ax agent list
 ```
 
-Example output:
-
-```
-ID                NAME                          REPO   ENDED                DIR
-ax-29614447-d2e4  fix/feat/add-agent-cd         ax     2026-04-22 23:11:15  ~/.ax/worktrees/ax-ax-29614447-d2e4
-ax-29624062-68a7  feat/add-agent-list           ax     -                    ~/.ax/worktrees/ax-ax-29624062-68a7
-```
-
 ### Open the dashboard
 
 ```bash
