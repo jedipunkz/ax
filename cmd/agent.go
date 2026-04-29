@@ -52,8 +52,8 @@ var agentCdCmd = &cobra.Command{
 }
 
 var agentRmCmd = &cobra.Command{
-	Use:     "rm <id|name>",
-	Aliases: []string{"remove"},
+	Use:     "remove <id|name>",
+	Aliases: []string{"rm"},
 	Short:   "Remove a terminated agent's worktree and state entry",
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
