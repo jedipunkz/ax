@@ -136,6 +136,9 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 		claudeArgs = claudeArgs[1:]
 	}
 
+	// Record the HEAD commit before the session so we can diff afterwards.
+	initialHead := gitHeadCommit(workDir)
+
 	cmd := exec.Command("claude", claudeArgs...)
 	cmd.Dir = workDir
 
@@ -256,24 +259,6 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 				}
 			}
 
-			// Detect git commit output and record commit hashes.
-			clean := outputCleanRe.ReplaceAllString(string(buf[:n]), "")
-			if matches := gitCommitRe.FindAllStringSubmatch(clean, -1); len(matches) > 0 {
-				mu.Lock()
-				for _, m := range matches {
-					// m[1] = "Committed <hash>" pattern; m[2] = "[branch <hash>]" pattern
-					hash := m[1]
-					if hash == "" {
-						hash = m[2]
-					}
-					if hash != "" && !containsString(state.Commits, hash) {
-						state.Commits = append(state.Commits, hash)
-					}
-				}
-				s := state
-				mu.Unlock()
-				_ = client.SendUpdate(s)
-			}
 		}
 		if readErr != nil {
 			break
@@ -310,6 +295,10 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 		state.Status = store.StatusFailed
 	}
 
+	// Collect any git commits made during the session by comparing HEAD now
+	// against the HEAD recorded before the session started.
+	state.Commits = gitNewCommits(workDir, initialHead)
+
 	if err := client.SendUpdate(state); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not send final state: %v\n", err)
 	}
@@ -319,16 +308,39 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 
 var outputCleanRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z\\^_@]|\][^\x07\x1b]*(?:\x07|\x1b\\))`)
 
-// gitCommitRe matches commit hashes from two sources:
-//   - Claude Code status line: e.g. "⏺Committed abc123…" — the bullet or a
-//     preceding \r/\n/space anchors the match so that source-code comments
-//     containing the literal string "Committed abc123" are not captured.
-//   - Raw git output: "[branch abc1234] message" (rare; present when the agent
-//     runs git directly in a plain shell rather than through Claude Code's Bash tool)
-var gitCommitRe = regexp.MustCompile(
-	`[\r\n ⏺]Committed\s*([0-9a-f]{6,40})\b` +
-		`|\[[\w/\-.]+(?:\s+\(root-commit\))?\s+([0-9a-f]{6,40})\]`,
-)
+// gitHeadCommit returns the full SHA of HEAD in workDir, or "" if not a git repo.
+func gitHeadCommit(workDir string) string {
+	if workDir == "" {
+		return ""
+	}
+	out, err := exec.Command("git", "-C", workDir, "rev-parse", "HEAD").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// gitNewCommits returns the full SHAs of commits reachable from HEAD but not
+// from before (oldest-first). Returns nil when workDir is not a git repo or
+// before is empty (e.g. the repo had no commits before the session).
+func gitNewCommits(workDir, before string) []string {
+	if workDir == "" || before == "" {
+		return nil
+	}
+	out, err := exec.Command(
+		"git", "-C", workDir,
+		"log", "--format=%H", "--reverse",
+		before+"..HEAD",
+	).Output()
+	if err != nil {
+		return nil
+	}
+	raw := strings.TrimSpace(string(out))
+	if raw == "" {
+		return nil
+	}
+	return strings.Split(raw, "\n")
+}
 
 // lastMeaningfulLine extracts the last readable text line from a raw PTY output chunk.
 func lastMeaningfulLine(chunk []byte) string {
@@ -349,15 +361,6 @@ func lastMeaningfulLine(chunk []byte) string {
 		}
 	}
 	return ""
-}
-
-func containsString(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 func generateID() string {
