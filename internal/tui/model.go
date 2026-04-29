@@ -288,6 +288,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				sortAgents(m.agents)
 			}
+		case "remove":
+			if msg.AgentID != "" {
+				for i, a := range m.agents {
+					if a.ID == msg.AgentID {
+						m.agents = append(m.agents[:i], m.agents[i+1:]...)
+						break
+					}
+				}
+			}
 		}
 		// Clamp cursor to visible groups
 		groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)

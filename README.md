@@ -85,6 +85,16 @@ To list all agents with their ID, name, repo, ended time, and worktree directory
 ax agent list
 ```
 
+### Remove an agent
+
+To remove a terminated agent's worktree, log file, and state entry:
+
+```bash
+ax agent rm <id|name>
+```
+
+Running agents are refused; stop them first. Accepts full ID, name, or ID prefix.
+
 ### Open the dashboard
 
 ```bash
