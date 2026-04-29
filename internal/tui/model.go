@@ -23,7 +23,6 @@ const (
 	viewDetail ViewMode = iota
 )
 
-
 // agentUpdateMsg wraps a store.Message received from the socket.
 type agentUpdateMsg struct {
 	store.Message
