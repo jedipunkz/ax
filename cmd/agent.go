@@ -51,6 +51,14 @@ var agentCdCmd = &cobra.Command{
 	},
 }
 
+var agentListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all agent worktrees",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return agent.ListWorktrees()
+	},
+}
+
 var agentResumeCmd = &cobra.Command{
 	Use:                "resume -n <id|name> [-- <claude-args>...]",
 	Short:              "Resume a previous agent session by ID or name",
@@ -76,6 +84,7 @@ var agentResumeCmd = &cobra.Command{
 func init() {
 	agentCmd.AddCommand(agentNewCmd)
 	agentCmd.AddCommand(agentCdCmd)
+	agentCmd.AddCommand(agentListCmd)
 	agentCmd.AddCommand(agentResumeCmd)
 }
 
