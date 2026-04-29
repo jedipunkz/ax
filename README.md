@@ -90,7 +90,7 @@ ax agent list   # or: ax agent ls
 To remove a terminated agent's worktree, log file, and state entry:
 
 ```bash
-ax agent remove <id|name>   # or: ax agent rm <id|name>
+ax agent remove -n <id|name>   # or: ax agent rm -n <id|name>
 ```
 
 Running agents are refused; stop them first. Accepts full ID, name, or ID prefix.

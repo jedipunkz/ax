@@ -52,16 +52,20 @@ var agentCdCmd = &cobra.Command{
 }
 
 var agentRmCmd = &cobra.Command{
-	Use:     "remove <id|name>",
-	Aliases: []string{"rm"},
-	Short:   "Remove a terminated agent's worktree and state entry",
-	Args:    cobra.ExactArgs(1),
+	Use:                "remove -n <id|name>",
+	Aliases:            []string{"rm"},
+	Short:              "Remove a terminated agent's worktree and state entry",
+	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		idOrName, _, err := parseNameFlagRequired(args)
+		if err != nil {
+			return err
+		}
 		socketPath, err := getSocketPath()
 		if err != nil {
 			return err
 		}
-		return agent.RemoveAgent(args[0], socketPath)
+		return agent.RemoveAgent(idOrName, socketPath)
 	},
 }
 
