@@ -220,6 +220,31 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 		}
 	}()
 
+	// Periodically collect new git commits made during the session so that
+	// ax dash reflects them even while the agent is still running.
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				commits := gitNewCommits(workDir, initialHead)
+				mu.Lock()
+				changed := !stringSliceEqual(state.Commits, commits)
+				if changed {
+					state.Commits = commits
+					s := state
+					mu.Unlock()
+					_ = client.SendUpdate(s)
+				} else {
+					mu.Unlock()
+				}
+			}
+		}
+	}()
+
 	logFile, err := os.Create(logPath)
 	if err != nil {
 		return fmt.Errorf("could not create log file: %w", err)
@@ -361,6 +386,18 @@ func lastMeaningfulLine(chunk []byte) string {
 		}
 	}
 	return ""
+}
+
+func stringSliceEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func generateID() string {
