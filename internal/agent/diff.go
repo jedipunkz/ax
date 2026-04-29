@@ -45,17 +45,20 @@ func ShowDiff(idOrName string) error {
 // showBranchDiff falls back to `git diff <merge-base>..HEAD` when no commits
 // were recorded in the agent state (e.g. the agent has not yet committed).
 func showBranchDiff(workDir string) error {
-	// Determine the merge-base against origin/HEAD or main/master.
 	base, err := findMergeBase(workDir)
 	if err != nil {
 		// Last resort: show uncommitted working-tree changes.
-		out, err2 := exec.Command("git", "diff", "--color=always").Output()
+		c := exec.Command("git", "diff", "--color=always")
+		c.Dir = workDir
+		out, err2 := c.Output()
 		if err2 != nil {
 			return fmt.Errorf("could not compute diff: %w", err)
 		}
 		return runPager(out)
 	}
-	out, err := exec.Command("git", "diff", "--color=always", base, "HEAD").Output()
+	c := exec.Command("git", "diff", "--color=always", base, "HEAD")
+	c.Dir = workDir
+	out, err := c.Output()
 	if err != nil {
 		return fmt.Errorf("git diff %s HEAD: %w", base, err)
 	}
@@ -64,7 +67,9 @@ func showBranchDiff(workDir string) error {
 
 func findMergeBase(workDir string) (string, error) {
 	for _, ref := range []string{"origin/main", "origin/master", "main", "master"} {
-		out, err := exec.Command("git", "merge-base", "HEAD", ref).Output()
+		c := exec.Command("git", "merge-base", "HEAD", ref)
+		c.Dir = workDir
+		out, err := c.Output()
 		if err == nil {
 			base := strings.TrimSpace(string(out))
 			if base != "" {
@@ -77,10 +82,12 @@ func findMergeBase(workDir string) (string, error) {
 
 func showCommitsIndividually(workDir string, commits []string) error {
 	var combined []byte
-	for _, c := range commits {
-		out, err := exec.Command("git", "show", "--color=always", c).Output()
+	for _, commit := range commits {
+		c := exec.Command("git", "show", "--color=always", commit)
+		c.Dir = workDir
+		out, err := c.Output()
 		if err != nil {
-			return fmt.Errorf("git show %s: %w", c, err)
+			return fmt.Errorf("git show %s: %w", commit, err)
 		}
 		combined = append(combined, out...)
 	}
