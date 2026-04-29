@@ -59,8 +59,8 @@ func ListWorktrees() error {
 		dir := "-"
 		if a.WorkDir != "" {
 			dir = a.WorkDir
-			if home != "" {
-				dir = strings.TrimPrefix(dir, home+string(filepath.Separator))
+			if home != "" && strings.HasPrefix(dir, home) {
+				dir = "~" + dir[len(home):]
 			}
 		}
 
