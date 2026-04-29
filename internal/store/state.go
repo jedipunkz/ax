@@ -25,9 +25,10 @@ type AgentState struct {
 	ExitCode    *int       `json:"exit_code,omitempty"`
 	LastOutput  string     `json:"last_output"`
 	LogFile     string     `json:"log_file"`
-	WaitingUser    bool   `json:"waiting_user,omitempty"`    // true when Claude is waiting for user input
-	WorktreeBranch string `json:"worktree_branch,omitempty"` // git worktree branch name, if any
-	RepoName       string `json:"repo_name,omitempty"`       // original repository name where the agent was started
+	WaitingUser    bool     `json:"waiting_user,omitempty"`    // true when Claude is waiting for user input
+	WorktreeBranch string   `json:"worktree_branch,omitempty"` // git worktree branch name, if any
+	RepoName       string   `json:"repo_name,omitempty"`       // original repository name where the agent was started
+	Commits        []string `json:"commits,omitempty"`         // git commit hashes made during this session
 }
 
 // IsTerminal returns true if the status is a terminal (non-running) state.

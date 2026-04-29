@@ -255,6 +255,18 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 					_ = client.SendUpdate(s)
 				}
 			}
+
+			// Detect git commit output and record commit hashes.
+			clean := outputCleanRe.ReplaceAllString(string(buf[:n]), "")
+			if matches := gitCommitRe.FindAllStringSubmatch(clean, -1); len(matches) > 0 {
+				mu.Lock()
+				for _, m := range matches {
+					state.Commits = append(state.Commits, m[1])
+				}
+				s := state
+				mu.Unlock()
+				_ = client.SendUpdate(s)
+			}
 		}
 		if readErr != nil {
 			break
@@ -299,6 +311,10 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 }
 
 var outputCleanRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z\\^_@]|\][^\x07\x1b]*(?:\x07|\x1b\\))`)
+
+// gitCommitRe matches git commit output lines like "[branch abc1234] message"
+// or "[branch (root-commit) abc1234] message".
+var gitCommitRe = regexp.MustCompile(`\[[\w/\-.]+(?:\s+\(root-commit\))?\s+([0-9a-f]{7,40})\]`)
 
 // lastMeaningfulLine extracts the last readable text line from a raw PTY output chunk.
 func lastMeaningfulLine(chunk []byte) string {
