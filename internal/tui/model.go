@@ -39,28 +39,40 @@ type clearStatusMsg struct{}
 // tickMsg is sent every second to update the clock display.
 type tickMsg time.Time
 
+// removingTickMsg is sent every second while a worktree removal is in
+// progress to advance the "..." progress indicator.
+type removingTickMsg struct{}
+
+// removeDoneMsg is sent when the asynchronous worktree removal completes.
+type removeDoneMsg struct {
+	err error
+}
+
 // Model is the main bubbletea model for ax status.
 type Model struct {
-	agents        []store.AgentState
-	cursor        int
-	scrollOffset  int
-	view          ViewMode
-	client        *store.Client
-	sub           chan store.Message
-	spinner       spinner.Model
-	viewport      viewport.Model
-	width         int
-	height        int
-	logContent    string
-	showExpired   bool
-	statusMsg     string
-	searchMode    bool
-	searchQuery   string
-	workDir       string
-	confirmRemove bool
-	confirmTarget store.AgentState
-	now          time.Time
-	durationDays int
+	agents         []store.AgentState
+	cursor         int
+	scrollOffset   int
+	view           ViewMode
+	client         *store.Client
+	sub            chan store.Message
+	spinner        spinner.Model
+	viewport       viewport.Model
+	width          int
+	height         int
+	logContent     string
+	showExpired    bool
+	statusMsg      string
+	searchMode     bool
+	searchQuery    string
+	workDir        string
+	confirmRemove  bool
+	confirmTarget  store.AgentState
+	removing       bool
+	removingTarget store.AgentState
+	removingDots   int
+	now            time.Time
+	durationDays   int
 }
 
 func newModel(client *store.Client, sub chan store.Message, durationDays int) Model {
@@ -93,6 +105,41 @@ func tickEverySecond() tea.Cmd {
 	})
 }
 
+func removingTickCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return removingTickMsg{}
+	})
+}
+
+// removeAgentCmd performs the (potentially slow) worktree removal and
+// associated cleanup off the UI thread, returning a removeDoneMsg when done.
+func removeAgentCmd(ag store.AgentState, client *store.Client) tea.Cmd {
+	return func() tea.Msg {
+		var firstErr error
+		if ag.WorkDir != "" {
+			home, _ := os.UserHomeDir()
+			worktreesDir := filepath.Join(home, ".ax", "worktrees")
+			cleanWorktrees := filepath.Clean(worktreesDir)
+			cleanWorkDir := filepath.Clean(ag.WorkDir)
+			if strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
+				if _, err := os.Stat(cleanWorkDir); err == nil {
+					if err := agent.RemoveWorktree(cleanWorkDir); err != nil {
+						firstErr = fmt.Errorf("worktree remove: %w", err)
+					}
+				}
+			}
+		}
+		if ag.LogFile != "" {
+			_ = os.Remove(ag.LogFile)
+			_ = os.Remove(filepath.Dir(ag.LogFile))
+		}
+		if err := client.SendRemove(ag.ID); err != nil && firstErr == nil {
+			firstErr = err
+		}
+		return removeDoneMsg{err: firstErr}
+	}
+}
+
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
@@ -106,38 +153,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
+		// While a removal is in progress, ignore key inputs so the user
+		// cannot trigger conflicting actions mid-deletion.
+		if m.removing {
+			return m, tea.Batch(cmds...)
+		}
+
 		// In confirm-remove mode, only handle y/n/esc
 		if m.confirmRemove {
 			switch msg.String() {
 			case "y", "enter":
 				ag := m.confirmTarget
 				m.confirmRemove = false
-				if ag.WorkDir != "" {
-					home, _ := os.UserHomeDir()
-					worktreesDir := filepath.Join(home, ".ax", "worktrees")
-					cleanWorktrees := filepath.Clean(worktreesDir)
-					cleanWorkDir := filepath.Clean(ag.WorkDir)
-					if strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
-						if _, err := os.Stat(cleanWorkDir); err == nil {
-							if err := agent.RemoveWorktree(cleanWorkDir); err != nil {
-								m.statusMsg = fmt.Sprintf("worktree remove error: %v", err)
-								cmds = append(cmds, tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
-									return clearStatusMsg{}
-								}))
-							}
-						}
-					}
-				}
-				if ag.LogFile != "" {
-					_ = os.Remove(ag.LogFile)
-					_ = os.Remove(filepath.Dir(ag.LogFile))
-				}
-				if err := m.client.SendRemove(ag.ID); err != nil {
-					m.statusMsg = fmt.Sprintf("remove error: %v", err)
-					cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
-						return clearStatusMsg{}
-					}))
-				}
+				m.removing = true
+				m.removingTarget = ag
+				m.removingDots = 1
+				cmds = append(cmds, removeAgentCmd(ag, m.client), removingTickCmd())
 			case "n", "esc", "q":
 				m.confirmRemove = false
 			}
@@ -372,6 +403,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		m.now = time.Time(msg)
 		cmds = append(cmds, tickEverySecond())
+
+	case removingTickMsg:
+		if m.removing {
+			m.removingDots = (m.removingDots % 3) + 1
+			cmds = append(cmds, removingTickCmd())
+		}
+
+	case removeDoneMsg:
+		m.removing = false
+		m.removingDots = 0
+		m.removingTarget = store.AgentState{}
+		if msg.err != nil {
+			m.statusMsg = fmt.Sprintf("remove error: %v", msg.err)
+			cmds = append(cmds, tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
+				return clearStatusMsg{}
+			}))
+		}
 
 	case clearStatusMsg:
 		m.statusMsg = ""

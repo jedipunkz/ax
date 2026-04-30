@@ -388,6 +388,16 @@ func listView(m Model) string {
 	}
 	var helpText string
 	switch {
+	case m.removing:
+		label := m.removingTarget.ID
+		if m.removingTarget.Name != "" {
+			label = m.removingTarget.Name
+		}
+		dots := m.removingDots
+		if dots < 1 {
+			dots = 1
+		}
+		helpText = fmt.Sprintf("Removing \"%s\"%s", label, strings.Repeat(".", dots))
 	case m.confirmRemove:
 		label := m.confirmTarget.ID
 		if m.confirmTarget.Name != "" {
@@ -465,4 +475,3 @@ func truncate(s string, max int) string {
 func padRight(s string, width int) string {
 	return s + strings.Repeat(" ", max(0, width-lipgloss.Width(s)))
 }
-
