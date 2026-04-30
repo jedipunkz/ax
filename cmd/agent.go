@@ -16,12 +16,12 @@ import (
 
 var agentCmd = &cobra.Command{
 	Use:   "agent",
-	Short: "Manage Claude Code agents",
+	Short: "Manage AI coding agents",
 }
 
 var agentNewCmd = &cobra.Command{
-	Use:                "new [-n <name>] [-- <claude-args>...]",
-	Short:              "Start a new Claude Code agent",
+	Use:                "new [agent-type] [-n <name>] [-- <agent-args>...]",
+	Short:              "Start a new agent session (agent-type: claude, codex, gemini, opencode, ...)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		socketPath, err := getSocketPath()
@@ -33,8 +33,8 @@ var agentNewCmd = &cobra.Command{
 			return fmt.Errorf("could not start daemon: %w", err)
 		}
 
-		name, rest := parseNameFlag(args)
-		return agent.Run(rest, socketPath, name)
+		agentType, name, rest := parseAgentTypeAndNameFlag(args)
+		return agent.Run(rest, socketPath, name, agentType)
 	},
 }
 
@@ -120,6 +120,38 @@ func init() {
 	agentCmd.AddCommand(agentResumeCmd)
 	agentCmd.AddCommand(agentRmCmd)
 	agentCmd.AddCommand(agentDiffCmd)
+}
+
+// parseAgentTypeAndNameFlag extracts the agent type (first positional argument
+// before any flag or -- separator) and -n/--name from args. The agent type
+// defaults to "claude" when no positional argument is found. All remaining
+// unrecognised flags and positional arguments are returned in rest.
+func parseAgentTypeAndNameFlag(args []string) (agentType string, name string, rest []string) {
+	agentType = "claude"
+	agentTypeParsed := false
+	i := 0
+	for i < len(args) {
+		if args[i] == "--" {
+			rest = append(rest, args[i:]...)
+			break
+		}
+		switch {
+		case (args[i] == "-n" || args[i] == "--name") && i+1 < len(args):
+			name = args[i+1]
+			i += 2
+		case strings.HasPrefix(args[i], "--name="):
+			name = strings.TrimPrefix(args[i], "--name=")
+			i++
+		case !strings.HasPrefix(args[i], "-") && !agentTypeParsed:
+			agentType = args[i]
+			agentTypeParsed = true
+			i++
+		default:
+			rest = append(rest, args[i])
+			i++
+		}
+	}
+	return
 }
 
 // parseNameFlag extracts -n/--name from args (before any -- separator).

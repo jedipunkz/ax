@@ -25,9 +25,13 @@ import (
 // to be waiting for user input rather than processing.
 const waitingUserThreshold = 2 * time.Second
 
-// Run starts an interactive Claude Code session and reports agent lifecycle
-// state to the store daemon.
-func Run(args []string, socketPath string, name string) error {
+// Run starts an interactive agent session and reports agent lifecycle
+// state to the store daemon. agentType is the binary to invoke (e.g. "claude",
+// "codex", "gemini"); an empty string defaults to "claude".
+func Run(args []string, socketPath string, name string, agentType string) error {
+	if agentType == "" {
+		agentType = "claude"
+	}
 	id := generateID()
 
 	workDir, err := os.Getwd()
@@ -49,10 +53,11 @@ func Run(args []string, socketPath string, name string) error {
 		}
 	}
 
-	return runSession(args, socketPath, id, name, workDir, worktreeBranch, repoName)
+	return runSession(args, socketPath, id, name, agentType, workDir, worktreeBranch, repoName)
 }
 
-// ResumeByIDOrName finds an existing agent by ID or name and runs claude --resume in its worktree.
+// ResumeByIDOrName finds an existing agent by ID or name and runs the agent
+// binary with --resume in its worktree, preserving the original agent type.
 func ResumeByIDOrName(args []string, socketPath string, idOrName string) error {
 	existing, err := findAgentByIDOrName(idOrName)
 	if err != nil {
@@ -63,9 +68,14 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string) error {
 		return fmt.Errorf("worktree directory %q no longer exists: %w", existing.WorkDir, err)
 	}
 
+	agentType := existing.AgentType
+	if agentType == "" {
+		agentType = "claude"
+	}
+
 	id := generateID()
 	resumeArgs := append([]string{"--resume"}, args...)
-	return runSession(resumeArgs, socketPath, id, existing.Name, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
+	return runSession(resumeArgs, socketPath, id, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
 }
 
 // findAgentByIDOrName reads state.json and returns the agent matching the given ID exactly,
@@ -110,7 +120,7 @@ func findAgentByIDOrName(idOrName string) (store.AgentState, error) {
 }
 
 // runSession is the shared implementation for Run and Resume.
-func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, repoName string) error {
+func runSession(args []string, socketPath, id, name, agentType, workDir, worktreeBranch, repoName string) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("could not determine home directory: %w", err)
@@ -139,13 +149,14 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 	// Record the HEAD commit before the session so we can diff afterwards.
 	initialHead := gitHeadCommit(workDir)
 
-	cmd := exec.Command("claude", claudeArgs...)
+	cmd := exec.Command(agentType, claudeArgs...)
 	cmd.Dir = workDir
 
 	now := time.Now()
 	state := store.AgentState{
 		ID:             id,
 		Name:           name,
+		AgentType:      agentType,
 		Args:           claudeArgs,
 		WorkDir:        workDir,
 		Status:         store.StatusRunning,
