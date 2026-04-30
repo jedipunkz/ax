@@ -82,8 +82,8 @@ var agentListCmd = &cobra.Command{
 }
 
 var agentResumeCmd = &cobra.Command{
-	Use:                "resume -n <id|name> [-- <agent-args>...]",
-	Short:              "Resume a previous agent session by ID or name (preserves original agent type)",
+	Use:                "resume [agent-type] -n <id|name> [-- <agent-args>...]",
+	Short:              "Resume a previous agent session by ID or name (agent-type overrides stored type)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		socketPath, err := getSocketPath()
@@ -95,11 +95,16 @@ var agentResumeCmd = &cobra.Command{
 			return fmt.Errorf("could not start daemon: %w", err)
 		}
 
-		idOrName, rest, err := parseNameFlagRequired(args)
+		// agentType is "" when not explicitly provided; ResumeByIDOrName falls
+		// back to the agent type stored in state when override is empty.
+		agentType, idOrName, rest, err := parseAgentTypeAndNameFlag(args)
 		if err != nil {
 			return err
 		}
-		return agent.ResumeByIDOrName(rest, socketPath, idOrName)
+		if idOrName == "" {
+			return fmt.Errorf("requires -n/--name to specify the agent ID or name")
+		}
+		return agent.ResumeByIDOrName(rest, socketPath, idOrName, agentType)
 	},
 }
 
@@ -126,13 +131,10 @@ func init() {
 }
 
 // parseAgentTypeAndNameFlag extracts the agent type (first positional argument
-// before any flag or -- separator) and -n/--name from args. The agent type
-// defaults to "claude" when no positional argument is found. All remaining
-// unrecognised flags and positional arguments are returned in rest.
-// Returns an error if the agent type contains path separators or spaces, which
-// would indicate an invalid binary name.
+// before any flag or -- separator) and -n/--name from args. agentType is empty
+// when no positional argument is found; callers should apply their own default.
+// Returns an error if the agent type contains path separators or spaces.
 func parseAgentTypeAndNameFlag(args []string) (agentType string, name string, rest []string, err error) {
-	agentType = "claude"
 	agentTypeParsed := false
 	i := 0
 	for i < len(args) {

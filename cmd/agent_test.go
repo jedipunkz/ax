@@ -14,9 +14,9 @@ func TestParseAgentTypeAndNameFlag(t *testing.T) {
 		wantErr       bool
 	}{
 		{
-			name:          "no args defaults to claude",
+			name:          "no args returns empty agent type",
 			args:          []string{},
-			wantAgentType: "claude",
+			wantAgentType: "",
 		},
 		{
 			name:          "agent type only",
@@ -30,9 +30,9 @@ func TestParseAgentTypeAndNameFlag(t *testing.T) {
 			wantName:      "myjob",
 		},
 		{
-			name:          "name flag without agent type defaults to claude",
+			name:          "name flag without agent type returns empty",
 			args:          []string{"-n", "myjob"},
-			wantAgentType: "claude",
+			wantAgentType: "",
 			wantName:      "myjob",
 		},
 		{
@@ -48,9 +48,9 @@ func TestParseAgentTypeAndNameFlag(t *testing.T) {
 			wantRest:      []string{"--", "--some-flag"},
 		},
 		{
-			name:          "double-dash only, no agent type",
+			name:          "double-dash only, no agent type returns empty",
 			args:          []string{"--", "--some-flag"},
-			wantAgentType: "claude",
+			wantAgentType: "",
 			wantRest:      []string{"--", "--some-flag"},
 		},
 		{

@@ -86,7 +86,8 @@ func resumePrefixArgs(agentType string) []string {
 
 // ResumeByIDOrName finds an existing agent by ID or name and launches it in
 // its worktree using the appropriate resume arguments for the agent type.
-func ResumeByIDOrName(args []string, socketPath string, idOrName string) error {
+// agentTypeOverride, when non-empty, replaces the agent type stored in state.
+func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTypeOverride string) error {
 	existing, err := findAgentByIDOrName(idOrName)
 	if err != nil {
 		return err
@@ -97,6 +98,9 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string) error {
 	}
 
 	agentType := normalizeAgentType(existing.AgentType)
+	if agentTypeOverride != "" {
+		agentType = agentTypeOverride
+	}
 	id := generateID()
 	resumeArgs := append(resumePrefixArgs(agentType), args...)
 	return runSession(resumeArgs, socketPath, id, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
