@@ -33,7 +33,10 @@ var agentNewCmd = &cobra.Command{
 			return fmt.Errorf("could not start daemon: %w", err)
 		}
 
-		agentType, name, rest := parseAgentTypeAndNameFlag(args)
+		agentType, name, rest, err := parseAgentTypeAndNameFlag(args)
+		if err != nil {
+			return err
+		}
 		return agent.Run(rest, socketPath, name, agentType)
 	},
 }
@@ -126,7 +129,9 @@ func init() {
 // before any flag or -- separator) and -n/--name from args. The agent type
 // defaults to "claude" when no positional argument is found. All remaining
 // unrecognised flags and positional arguments are returned in rest.
-func parseAgentTypeAndNameFlag(args []string) (agentType string, name string, rest []string) {
+// Returns an error if the agent type contains path separators or spaces, which
+// would indicate an invalid binary name.
+func parseAgentTypeAndNameFlag(args []string) (agentType string, name string, rest []string, err error) {
 	agentType = "claude"
 	agentTypeParsed := false
 	i := 0
@@ -143,7 +148,12 @@ func parseAgentTypeAndNameFlag(args []string) (agentType string, name string, re
 			name = strings.TrimPrefix(args[i], "--name=")
 			i++
 		case !strings.HasPrefix(args[i], "-") && !agentTypeParsed:
-			agentType = args[i]
+			candidate := args[i]
+			if strings.ContainsAny(candidate, "/ \\") {
+				err = fmt.Errorf("invalid agent type %q: must be a plain binary name", candidate)
+				return
+			}
+			agentType = candidate
 			agentTypeParsed = true
 			i++
 		default:

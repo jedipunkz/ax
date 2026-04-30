@@ -32,6 +32,15 @@ type AgentState struct {
 	Commits        []string `json:"commits,omitempty"`         // git commit hashes made during this session
 }
 
+// AgentTypeName returns the agent binary name, defaulting to "claude" for
+// sessions created before AgentType was introduced.
+func (a AgentState) AgentTypeName() string {
+	if a.AgentType == "" {
+		return "claude"
+	}
+	return a.AgentType
+}
+
 // IsTerminal returns true if the status is a terminal (non-running) state.
 func (s Status) IsTerminal() bool {
 	return s == StatusKilled || s == StatusSuccess || s == StatusFailed

@@ -21,17 +21,21 @@ import (
 	"golang.org/x/term"
 )
 
-// waitingUserThreshold is how long with no output before we consider Claude
+// waitingUserThreshold is how long with no output before we consider the agent
 // to be waiting for user input rather than processing.
 const waitingUserThreshold = 2 * time.Second
+
+// normalizeAgentType returns agentType unchanged if non-empty, or "claude" as default.
+// Delegates to store.AgentState.AgentTypeName for consistent behavior.
+func normalizeAgentType(agentType string) string {
+	return (store.AgentState{AgentType: agentType}).AgentTypeName()
+}
 
 // Run starts an interactive agent session and reports agent lifecycle
 // state to the store daemon. agentType is the binary to invoke (e.g. "claude",
 // "codex", "gemini"); an empty string defaults to "claude".
 func Run(args []string, socketPath string, name string, agentType string) error {
-	if agentType == "" {
-		agentType = "claude"
-	}
+	agentType = normalizeAgentType(agentType)
 	id := generateID()
 
 	workDir, err := os.Getwd()
@@ -68,11 +72,7 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string) error {
 		return fmt.Errorf("worktree directory %q no longer exists: %w", existing.WorkDir, err)
 	}
 
-	agentType := existing.AgentType
-	if agentType == "" {
-		agentType = "claude"
-	}
-
+	agentType := normalizeAgentType(existing.AgentType)
 	id := generateID()
 	resumeArgs := append([]string{"--resume"}, args...)
 	return runSession(resumeArgs, socketPath, id, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
@@ -167,11 +167,11 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 		RepoName:       repoName,
 	}
 
-	// Start claude inside a PTY so it sees a real terminal while we can also
+	// Start the agent inside a PTY so it sees a real terminal while we can also
 	// monitor its output.
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
-		return fmt.Errorf("could not start claude: %w", err)
+		return fmt.Errorf("could not start %s: %w", agentType, err)
 	}
 	defer ptmx.Close()
 

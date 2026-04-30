@@ -220,10 +220,7 @@ func listView(m Model) string {
 		if len(groups) > 0 && m.cursor < len(groups) {
 			g := groups[m.cursor]
 			name = g.groupLabel()
-			agentType = g.Rep.AgentType
-			if agentType == "" {
-				agentType = "claude"
-			}
+			agentType = g.Rep.AgentTypeName()
 			pid = g.pidString()
 			dir = g.Rep.WorkDir
 			branch = g.Rep.WorktreeBranch
