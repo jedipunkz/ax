@@ -60,8 +60,32 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 	return runSession(args, socketPath, id, name, agentType, workDir, worktreeBranch, repoName)
 }
 
-// ResumeByIDOrName finds an existing agent by ID or name and runs the agent
-// binary with --resume in its worktree, preserving the original agent type.
+// resumePrefixArgs returns the arguments that should be prepended to resume a
+// previous session for the given agent binary. The mapping reflects each tool's
+// own session-continuation interface:
+//
+//	claude    --resume
+//	gemini    --resume
+//	codex     resume --last
+//	opencode  --continue
+//
+// For unknown agent types no prefix is added; the agent is launched fresh in
+// the existing worktree.
+func resumePrefixArgs(agentType string) []string {
+	switch agentType {
+	case "claude", "gemini":
+		return []string{"--resume"}
+	case "codex":
+		return []string{"resume", "--last"}
+	case "opencode":
+		return []string{"--continue"}
+	default:
+		return nil
+	}
+}
+
+// ResumeByIDOrName finds an existing agent by ID or name and launches it in
+// its worktree using the appropriate resume arguments for the agent type.
 func ResumeByIDOrName(args []string, socketPath string, idOrName string) error {
 	existing, err := findAgentByIDOrName(idOrName)
 	if err != nil {
@@ -74,7 +98,7 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string) error {
 
 	agentType := normalizeAgentType(existing.AgentType)
 	id := generateID()
-	resumeArgs := append([]string{"--resume"}, args...)
+	resumeArgs := append(resumePrefixArgs(agentType), args...)
 	return runSession(resumeArgs, socketPath, id, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
 }
 
