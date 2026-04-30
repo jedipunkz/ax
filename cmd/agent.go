@@ -79,8 +79,8 @@ var agentListCmd = &cobra.Command{
 }
 
 var agentResumeCmd = &cobra.Command{
-	Use:                "resume -n <id|name> [-- <claude-args>...]",
-	Short:              "Resume a previous agent session by ID or name",
+	Use:                "resume -n <id|name> [-- <agent-args>...]",
+	Short:              "Resume a previous agent session by ID or name (preserves original agent type)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		socketPath, err := getSocketPath()
