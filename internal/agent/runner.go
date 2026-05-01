@@ -36,6 +36,16 @@ func normalizeAgentType(agentType string) string {
 // "codex", "gemini"); an empty string defaults to "claude".
 func Run(args []string, socketPath string, name string, agentType string) error {
 	agentType = normalizeAgentType(agentType)
+
+	if name != "" {
+		if existing, err := findAgentByIDOrName(name); err == nil {
+			return fmt.Errorf(
+				"agent %q already exists (status: %s)\nhint: use 'ax agent resume -n %s' to resume it",
+				name, existing.Status, name,
+			)
+		}
+	}
+
 	id := generateID()
 
 	workDir, err := os.Getwd()
