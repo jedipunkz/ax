@@ -16,12 +16,12 @@ import (
 
 var agentCmd = &cobra.Command{
 	Use:   "agent",
-	Short: "Manage Claude Code agents",
+	Short: "Manage AI coding agents",
 }
 
 var agentNewCmd = &cobra.Command{
-	Use:                "new [-n <name>] [-- <claude-args>...]",
-	Short:              "Start a new Claude Code agent",
+	Use:                "new [-a <agent>] [-n <name>] [-- <agent-args>...]",
+	Short:              "Start a new agent session (e.g. -a claude, -a codex, -a gemini, -a opencode)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		socketPath, err := getSocketPath()
@@ -33,8 +33,11 @@ var agentNewCmd = &cobra.Command{
 			return fmt.Errorf("could not start daemon: %w", err)
 		}
 
-		name, rest := parseNameFlag(args)
-		return agent.Run(rest, socketPath, name)
+		agentType, name, rest, err := parseAgentTypeAndNameFlag(args)
+		if err != nil {
+			return err
+		}
+		return agent.Run(rest, socketPath, name, agentType)
 	},
 }
 
@@ -79,8 +82,8 @@ var agentListCmd = &cobra.Command{
 }
 
 var agentResumeCmd = &cobra.Command{
-	Use:                "resume -n <id|name> [-- <claude-args>...]",
-	Short:              "Resume a previous agent session by ID or name",
+	Use:                "resume [-a <agent>] -n <id|name> [-- <agent-args>...]",
+	Short:              "Resume a previous agent session by ID or name (-a overrides stored agent type)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		socketPath, err := getSocketPath()
@@ -92,11 +95,16 @@ var agentResumeCmd = &cobra.Command{
 			return fmt.Errorf("could not start daemon: %w", err)
 		}
 
-		idOrName, rest, err := parseNameFlagRequired(args)
+		// agentType is "" when not explicitly provided; ResumeByIDOrName falls
+		// back to the agent type stored in state when override is empty.
+		agentType, idOrName, rest, err := parseAgentTypeAndNameFlag(args)
 		if err != nil {
 			return err
 		}
-		return agent.ResumeByIDOrName(rest, socketPath, idOrName)
+		if idOrName == "" {
+			return fmt.Errorf("requires -n/--name to specify the agent ID or name")
+		}
+		return agent.ResumeByIDOrName(rest, socketPath, idOrName, agentType)
 	},
 }
 
@@ -120,6 +128,47 @@ func init() {
 	agentCmd.AddCommand(agentResumeCmd)
 	agentCmd.AddCommand(agentRmCmd)
 	agentCmd.AddCommand(agentDiffCmd)
+}
+
+// parseAgentTypeAndNameFlag extracts -a/-m/--agent and -n/--name from args.
+// agentType is empty when neither flag is given; callers apply their own default.
+// Returns an error if the agent type contains path separators or spaces.
+func parseAgentTypeAndNameFlag(args []string) (agentType string, name string, rest []string, err error) {
+	i := 0
+	for i < len(args) {
+		if args[i] == "--" {
+			rest = append(rest, args[i:]...)
+			break
+		}
+		switch {
+		case (args[i] == "-n" || args[i] == "--name") && i+1 < len(args):
+			name = args[i+1]
+			i += 2
+		case strings.HasPrefix(args[i], "--name="):
+			name = strings.TrimPrefix(args[i], "--name=")
+			i++
+		case (args[i] == "-a" || args[i] == "-m" || args[i] == "--agent") && i+1 < len(args):
+			candidate := args[i+1]
+			if strings.ContainsAny(candidate, "/ \\") {
+				err = fmt.Errorf("invalid agent type %q: must be a plain binary name", candidate)
+				return
+			}
+			agentType = candidate
+			i += 2
+		case strings.HasPrefix(args[i], "--agent="):
+			candidate := strings.TrimPrefix(args[i], "--agent=")
+			if strings.ContainsAny(candidate, "/ \\") {
+				err = fmt.Errorf("invalid agent type %q: must be a plain binary name", candidate)
+				return
+			}
+			agentType = candidate
+			i++
+		default:
+			rest = append(rest, args[i])
+			i++
+		}
+	}
+	return
 }
 
 // parseNameFlag extracts -n/--name from args (before any -- separator).

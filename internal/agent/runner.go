@@ -21,13 +21,31 @@ import (
 	"golang.org/x/term"
 )
 
-// waitingUserThreshold is how long with no output before we consider Claude
+// waitingUserThreshold is how long with no output before we consider the agent
 // to be waiting for user input rather than processing.
 const waitingUserThreshold = 2 * time.Second
 
-// Run starts an interactive Claude Code session and reports agent lifecycle
-// state to the store daemon.
-func Run(args []string, socketPath string, name string) error {
+// normalizeAgentType returns agentType unchanged if non-empty, or "claude" as default.
+// Delegates to store.AgentState.AgentTypeName for consistent behavior.
+func normalizeAgentType(agentType string) string {
+	return (store.AgentState{AgentType: agentType}).AgentTypeName()
+}
+
+// Run starts an interactive agent session and reports agent lifecycle
+// state to the store daemon. agentType is the binary to invoke (e.g. "claude",
+// "codex", "gemini"); an empty string defaults to "claude".
+func Run(args []string, socketPath string, name string, agentType string) error {
+	agentType = normalizeAgentType(agentType)
+
+	if name != "" {
+		if existing, err := findAgentByIDOrName(name); err == nil {
+			return fmt.Errorf(
+				"agent %q already exists (status: %s)\nhint: use 'ax agent resume -n %s' to resume it",
+				name, existing.Status, name,
+			)
+		}
+	}
+
 	id := generateID()
 
 	workDir, err := os.Getwd()
@@ -49,11 +67,39 @@ func Run(args []string, socketPath string, name string) error {
 		}
 	}
 
-	return runSession(args, socketPath, id, name, workDir, worktreeBranch, repoName)
+	return runSession(args, socketPath, id, name, agentType, workDir, worktreeBranch, repoName)
 }
 
-// ResumeByIDOrName finds an existing agent by ID or name and runs claude --resume in its worktree.
-func ResumeByIDOrName(args []string, socketPath string, idOrName string) error {
+// resumePrefixArgs returns the arguments that should be prepended to resume a
+// previous session for the given agent binary. The mapping reflects each tool's
+// own session-continuation interface:
+//
+//	claude    --resume           (opens interactive session picker)
+//	gemini    --resume latest    (resumes most recent session; v0.20.0+)
+//	codex     resume --last
+//	opencode  --continue
+//
+// For unknown agent types no prefix is added; the agent is launched fresh in
+// the existing worktree.
+func resumePrefixArgs(agentType string) []string {
+	switch agentType {
+	case "claude":
+		return []string{"--resume"}
+	case "gemini":
+		return []string{"--resume", "latest"}
+	case "codex":
+		return []string{"resume", "--last"}
+	case "opencode":
+		return []string{"--continue"}
+	default:
+		return nil
+	}
+}
+
+// ResumeByIDOrName finds an existing agent by ID or name and launches it in
+// its worktree using the appropriate resume arguments for the agent type.
+// agentTypeOverride, when non-empty, replaces the agent type stored in state.
+func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTypeOverride string) error {
 	existing, err := findAgentByIDOrName(idOrName)
 	if err != nil {
 		return err
@@ -63,9 +109,13 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string) error {
 		return fmt.Errorf("worktree directory %q no longer exists: %w", existing.WorkDir, err)
 	}
 
+	agentType := normalizeAgentType(existing.AgentType)
+	if agentTypeOverride != "" {
+		agentType = agentTypeOverride
+	}
 	id := generateID()
-	resumeArgs := append([]string{"--resume"}, args...)
-	return runSession(resumeArgs, socketPath, id, existing.Name, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
+	resumeArgs := append(resumePrefixArgs(agentType), args...)
+	return runSession(resumeArgs, socketPath, id, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
 }
 
 // findAgentByIDOrName reads state.json and returns the agent matching the given ID exactly,
@@ -110,7 +160,7 @@ func findAgentByIDOrName(idOrName string) (store.AgentState, error) {
 }
 
 // runSession is the shared implementation for Run and Resume.
-func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, repoName string) error {
+func runSession(args []string, socketPath, id, name, agentType, workDir, worktreeBranch, repoName string) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("could not determine home directory: %w", err)
@@ -139,13 +189,14 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 	// Record the HEAD commit before the session so we can diff afterwards.
 	initialHead := gitHeadCommit(workDir)
 
-	cmd := exec.Command("claude", claudeArgs...)
+	cmd := exec.Command(agentType, claudeArgs...)
 	cmd.Dir = workDir
 
 	now := time.Now()
 	state := store.AgentState{
 		ID:             id,
 		Name:           name,
+		AgentType:      agentType,
 		Args:           claudeArgs,
 		WorkDir:        workDir,
 		Status:         store.StatusRunning,
@@ -156,11 +207,11 @@ func runSession(args []string, socketPath, id, name, workDir, worktreeBranch, re
 		RepoName:       repoName,
 	}
 
-	// Start claude inside a PTY so it sees a real terminal while we can also
+	// Start the agent inside a PTY so it sees a real terminal while we can also
 	// monitor its output.
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
-		return fmt.Errorf("could not start claude: %w", err)
+		return fmt.Errorf("could not start %s: %w", agentType, err)
 	}
 	defer ptmx.Close()
 

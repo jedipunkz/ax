@@ -214,12 +214,13 @@ func listView(m Model) string {
 
 	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
 
-	// Detail overview section: show selected group's Name, PID(s), Dir, Branch, Args.
+	// Detail overview section: show selected group's Name, Agent, PID(s), Dir, Branch, Args.
 	{
-		var name, pid, dir, branch, args string
+		var name, agentType, pid, dir, branch, args string
 		if len(groups) > 0 && m.cursor < len(groups) {
 			g := groups[m.cursor]
 			name = g.groupLabel()
+			agentType = g.Rep.AgentTypeName()
 			pid = g.pidString()
 			dir = g.Rep.WorkDir
 			branch = g.Rep.WorktreeBranch
@@ -231,7 +232,7 @@ func listView(m Model) string {
 				args = "-"
 			}
 		} else {
-			name, pid, dir, branch, args = "-", "-", "-", "-", "-"
+			name, agentType, pid, dir, branch, args = "-", "-", "-", "-", "-", "-"
 		}
 		renderOverviewLine := func(label, value string) string {
 			styledLabel := OverviewLabelStyle.Render(label + " ")
@@ -240,26 +241,29 @@ func listView(m Model) string {
 			styledValue := NormalItemStyle.Render(truncate(value, maxVal))
 			return fr("│ ") + padRight(prefix+styledLabel+styledValue, innerWidth) + fr(" │")
 		}
-		lines = append(lines, renderOverviewLine("Name:", name))
-		lines = append(lines, renderOverviewLine("PID: ", pid))
-		lines = append(lines, renderOverviewLine("Dir: ", dir))
+		lines = append(lines, renderOverviewLine("Name: ", name))
+		lines = append(lines, renderOverviewLine("Agent:", agentType))
+		lines = append(lines, renderOverviewLine("PID:  ", pid))
+		lines = append(lines, renderOverviewLine("Dir:  ", dir))
 		lines = append(lines, renderOverviewLine("Branch:", branch))
-		lines = append(lines, renderOverviewLine("Args:", args))
+		lines = append(lines, renderOverviewLine("Args: ", args))
 	}
 
-	// Fixed column widths: cursor(2) id(24) sp(1) repo(12) sp(1) status(9) sp(1) ended(11)
+	// Fixed column widths: cursor(2) id(24) sp(1) agent(8) sp(1) repo(12) sp(1) status(9) sp(1) ended(11)
 	// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars; name can be longer so give extra room
 	const (
 		idWidth     = 24
+		agentWidth  = 8
 		repoWidth   = 12
 		statusWidth = 9
 		endedWidth  = 11
-		fixedTotal  = 2 + idWidth + 1 + repoWidth + 1 + statusWidth + 1 + endedWidth
+		fixedTotal  = 2 + idWidth + 1 + agentWidth + 1 + repoWidth + 1 + statusWidth + 1 + endedWidth
 	)
 
 	// Column header row (rendered under the Running section header)
 	colHeader := "  " +
 		padRight("Name/Id", idWidth) + " " +
+		padRight("Agent", agentWidth) + " " +
 		padRight("Repo", repoWidth) + " " +
 		padRight("Status", statusWidth) + " " +
 		padRight("Ended", endedWidth)
@@ -279,9 +283,11 @@ func listView(m Model) string {
 		if group.Rep.FinishedAt != nil {
 			endedAt = group.Rep.FinishedAt.Format("01/02 15:04")
 		}
+		agentType := group.Rep.AgentTypeName()
 		repo := repoName(group.Rep.RepoName, group.Rep.WorkDir)
 		row := cursor +
 			padRight(truncate(label, idWidth), idWidth) + " " +
+			padRight(truncate(agentType, agentWidth), agentWidth) + " " +
 			padRight(RepoStyle.Render(truncate(repo, repoWidth)), repoWidth) + " " +
 			padRight(formatStatus(group.Rep, m), statusWidth) + " " +
 			EndedStyle.Render(endedAt)
@@ -297,7 +303,7 @@ func listView(m Model) string {
 	}
 
 	// Compute available rows for agent entries.
-	// Fixed frame lines: topBorder + 5 overview + colHeader + 3 section divider-headers + bottom divider + help + bottomBorder = 13.
+	// Fixed frame lines: topBorder + 6 overview + colHeader + 3 section divider-headers + bottom divider + help + bottomBorder = 14.
 	emptyCount := 0
 	if len(running) == 0 {
 		emptyCount++
@@ -308,7 +314,7 @@ func listView(m Model) string {
 	if len(killed) == 0 {
 		emptyCount++
 	}
-	availableRows := max(0, height-13-emptyCount)
+	availableRows := max(0, height-14-emptyCount)
 
 	// Compute per-section slice bounds based on scroll offset.
 	// Flat visible list order: running[0..], success[0..], killed[0..]
