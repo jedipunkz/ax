@@ -13,7 +13,7 @@ func TestResumePrefixArgs(t *testing.T) {
 		{"claude", []string{"--resume"}},
 		{"codex", []string{"resume", "--last"}},
 		{"opencode", []string{"--continue"}},
-		{"gemini", nil}, // gemini v0.11.2 has no resume flag; launch fresh in worktree
+		{"gemini", []string{"--resume", "latest"}}, // gemini v0.20.0+
 		{"unknown", nil},
 		{"", nil},
 	}
