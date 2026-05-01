@@ -64,16 +64,16 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 // previous session for the given agent binary. The mapping reflects each tool's
 // own session-continuation interface:
 //
-//	claude    --resume
-//	gemini    --resume
+//	claude    --resume  (opens interactive session picker)
 //	codex     resume --last
 //	opencode  --continue
+//	gemini    (no resume flag in v0.11.2; launched fresh in existing worktree)
 //
 // For unknown agent types no prefix is added; the agent is launched fresh in
 // the existing worktree.
 func resumePrefixArgs(agentType string) []string {
 	switch agentType {
-	case "claude", "gemini":
+	case "claude":
 		return []string{"--resume"}
 	case "codex":
 		return []string{"resume", "--last"}
