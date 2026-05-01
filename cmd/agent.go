@@ -20,8 +20,8 @@ var agentCmd = &cobra.Command{
 }
 
 var agentNewCmd = &cobra.Command{
-	Use:                "new [agent-type] [-n <name>] [-- <agent-args>...]",
-	Short:              "Start a new agent session (agent-type: claude, codex, gemini, opencode, ...)",
+	Use:                "new [-a <agent>] [-n <name>] [-- <agent-args>...]",
+	Short:              "Start a new agent session (e.g. -a claude, -a codex, -a gemini, -a opencode)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		socketPath, err := getSocketPath()
@@ -82,8 +82,8 @@ var agentListCmd = &cobra.Command{
 }
 
 var agentResumeCmd = &cobra.Command{
-	Use:                "resume [agent-type] -n <id|name> [-- <agent-args>...]",
-	Short:              "Resume a previous agent session by ID or name (agent-type overrides stored type)",
+	Use:                "resume [-a <agent>] -n <id|name> [-- <agent-args>...]",
+	Short:              "Resume a previous agent session by ID or name (-a overrides stored agent type)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		socketPath, err := getSocketPath()
@@ -130,12 +130,10 @@ func init() {
 	agentCmd.AddCommand(agentDiffCmd)
 }
 
-// parseAgentTypeAndNameFlag extracts the agent type (first positional argument
-// before any flag or -- separator) and -n/--name from args. agentType is empty
-// when no positional argument is found; callers should apply their own default.
+// parseAgentTypeAndNameFlag extracts -a/-m/--agent and -n/--name from args.
+// agentType is empty when neither flag is given; callers apply their own default.
 // Returns an error if the agent type contains path separators or spaces.
 func parseAgentTypeAndNameFlag(args []string) (agentType string, name string, rest []string, err error) {
-	agentTypeParsed := false
 	i := 0
 	for i < len(args) {
 		if args[i] == "--" {
@@ -149,14 +147,21 @@ func parseAgentTypeAndNameFlag(args []string) (agentType string, name string, re
 		case strings.HasPrefix(args[i], "--name="):
 			name = strings.TrimPrefix(args[i], "--name=")
 			i++
-		case !strings.HasPrefix(args[i], "-") && !agentTypeParsed:
-			candidate := args[i]
+		case (args[i] == "-a" || args[i] == "-m" || args[i] == "--agent") && i+1 < len(args):
+			candidate := args[i+1]
 			if strings.ContainsAny(candidate, "/ \\") {
 				err = fmt.Errorf("invalid agent type %q: must be a plain binary name", candidate)
 				return
 			}
 			agentType = candidate
-			agentTypeParsed = true
+			i += 2
+		case strings.HasPrefix(args[i], "--agent="):
+			candidate := strings.TrimPrefix(args[i], "--agent=")
+			if strings.ContainsAny(candidate, "/ \\") {
+				err = fmt.Errorf("invalid agent type %q: must be a plain binary name", candidate)
+				return
+			}
+			agentType = candidate
 			i++
 		default:
 			rest = append(rest, args[i])
