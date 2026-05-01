@@ -249,19 +249,21 @@ func listView(m Model) string {
 		lines = append(lines, renderOverviewLine("Args: ", args))
 	}
 
-	// Fixed column widths: cursor(2) id(24) sp(1) repo(12) sp(1) status(9) sp(1) ended(11)
+	// Fixed column widths: cursor(2) id(24) sp(1) agent(8) sp(1) repo(12) sp(1) status(9) sp(1) ended(11)
 	// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars; name can be longer so give extra room
 	const (
 		idWidth     = 24
+		agentWidth  = 8
 		repoWidth   = 12
 		statusWidth = 9
 		endedWidth  = 11
-		fixedTotal  = 2 + idWidth + 1 + repoWidth + 1 + statusWidth + 1 + endedWidth
+		fixedTotal  = 2 + idWidth + 1 + agentWidth + 1 + repoWidth + 1 + statusWidth + 1 + endedWidth
 	)
 
 	// Column header row (rendered under the Running section header)
 	colHeader := "  " +
 		padRight("Name/Id", idWidth) + " " +
+		padRight("Agent", agentWidth) + " " +
 		padRight("Repo", repoWidth) + " " +
 		padRight("Status", statusWidth) + " " +
 		padRight("Ended", endedWidth)
@@ -281,9 +283,11 @@ func listView(m Model) string {
 		if group.Rep.FinishedAt != nil {
 			endedAt = group.Rep.FinishedAt.Format("01/02 15:04")
 		}
+		agentType := group.Rep.AgentTypeName()
 		repo := repoName(group.Rep.RepoName, group.Rep.WorkDir)
 		row := cursor +
 			padRight(truncate(label, idWidth), idWidth) + " " +
+			padRight(truncate(agentType, agentWidth), agentWidth) + " " +
 			padRight(RepoStyle.Render(truncate(repo, repoWidth)), repoWidth) + " " +
 			padRight(formatStatus(group.Rep, m), statusWidth) + " " +
 			EndedStyle.Render(endedAt)
