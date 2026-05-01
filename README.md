@@ -5,7 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Go version](https://img.shields.io/badge/go-1.25-blue)
 
-Run multiple [Claude Code](https://claude.ai/code) agents in parallel, each isolated in its own git worktree, and monitor them all from a single terminal dashboard.
+Run multiple AI coding agents in parallel, each isolated in its own git worktree, and monitor them all from a single terminal dashboard.
+
+Supported agents: [Claude Code](https://claude.ai/code) (`claude`, default), [Codex CLI](https://github.com/openai/codex) (`codex`), [Gemini CLI](https://github.com/google-gemini/gemini-cli) (`gemini`), [OpenCode](https://opencode.ai/) (`opencode`).
 
 ## Installation
 
@@ -28,7 +30,7 @@ brew upgrade ax
 go install github.com/jedipunkz/ax@latest
 ```
 
-**Requirements**: `claude` CLI must be on your `$PATH`.
+**Requirements**: The CLI for your chosen agent must be on your `$PATH` (e.g. `claude`, `codex`, `gemini`, or `opencode`).
 
 ## Usage
 
@@ -41,16 +43,27 @@ cd /path/to/your/repo
 ax agent new
 ```
 
+By default ax uses Claude Code. Use `-a` to choose a different agent:
+
+```bash
+ax agent new -a claude      # Claude Code (default)
+ax agent new -a codex       # OpenAI Codex CLI
+ax agent new -a gemini      # Gemini CLI
+ax agent new -a opencode    # OpenCode
+```
+
 You can optionally give the agent a name:
 
 ```bash
 ax agent new -n my-feature
+ax agent new -a gemini -n my-feature
 ```
 
-You can also pass Claude Code options directly:
+You can also pass agent-specific options after `--`:
 
 ```bash
-ax agent new -n my-feature --model sonnet --dangerously-skip-permissions
+ax agent new -n my-feature -- --model sonnet --dangerously-skip-permissions
+ax agent new -a codex -n my-feature -- --approval-mode full-auto
 ```
 
 ### Resume an agent
@@ -61,10 +74,16 @@ To resume a previous session by ID or name:
 ax agent resume -n <id|name>
 ```
 
-You can also pass Claude Code options directly:
+The agent type is remembered from the original session. Use `-a` to override it:
 
 ```bash
-ax agent resume -n my-feature --model opus --enable-auto-mode
+ax agent resume -a gemini -n my-feature
+```
+
+You can also pass agent-specific options after `--`:
+
+```bash
+ax agent resume -n my-feature -- --model opus --enable-auto-mode
 ```
 
 ### Change to an agent's worktree
@@ -128,7 +147,7 @@ ax dash
 
 | Symbol | Meaning |
 |--------|---------|
-| `⠋ running` | Claude is actively processing |
+| `⠋ running` | Agent is actively processing |
 | `waiting` | Idle at prompt, waiting for input |
 | `success` | Exited with code 0 |
 | `failed` | Exited with non-zero code |
@@ -145,12 +164,12 @@ Finished agents are visible for the configured duration after exit (default: 7 d
 ├── state.json            # Agent state snapshot
 ├── agents/
 │   └── <id>/
-│       └── output.log    # Claude output log for each agent
+│       └── output.log    # Agent output log for each session
 └── worktrees/
     └── <repo>-<id>/      # Git worktree per agent (branch: ax/<id>)
 ```
 
-When `ax agent` is run inside a git repository, a dedicated worktree is automatically created at `~/.ax/worktrees/<repo>-<id>/` on a new branch `ax/<id>` branched from `HEAD`. Claude Code runs inside this isolated worktree so each agent's changes stay separate from the main working tree.
+When `ax agent` is run inside a git repository, a dedicated worktree is automatically created at `~/.ax/worktrees/<repo>-<id>/` on a new branch `ax/<id>` branched from `HEAD`. The agent runs inside this isolated worktree so each agent's changes stay separate from the main working tree.
 
 ## Configuration (Optional)
 
