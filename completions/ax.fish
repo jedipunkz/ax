@@ -17,18 +17,36 @@ complete -c ax -n 'not __fish_seen_subcommand_from agent dash completion' -a das
 complete -c ax -n 'not __fish_seen_subcommand_from agent dash completion' -a completion -d 'Generate autocompletion scripts'
 
 # ax agent subcommands
-complete -c ax -n '__fish_seen_subcommand_from agent; and not __fish_seen_subcommand_from new resume' -a new    -d 'Start a new Claude Code agent'
-complete -c ax -n '__fish_seen_subcommand_from agent; and not __fish_seen_subcommand_from new resume' -a resume -d 'Resume a previous agent session by ID or name'
+complete -c ax -n '__fish_seen_subcommand_from agent; and not __fish_seen_subcommand_from new resume cd list ls remove rm diff' -a new    -d 'Start a new agent session'
+complete -c ax -n '__fish_seen_subcommand_from agent; and not __fish_seen_subcommand_from new resume cd list ls remove rm diff' -a resume -d 'Resume a previous agent session by ID or name'
+complete -c ax -n '__fish_seen_subcommand_from agent; and not __fish_seen_subcommand_from new resume cd list ls remove rm diff' -a cd     -d 'Print the worktree path of an agent'
+complete -c ax -n '__fish_seen_subcommand_from agent; and not __fish_seen_subcommand_from new resume cd list ls remove rm diff' -a list   -d 'List all agents'
+complete -c ax -n '__fish_seen_subcommand_from agent; and not __fish_seen_subcommand_from new resume cd list ls remove rm diff' -a ls     -d 'List all agents (alias)'
+complete -c ax -n '__fish_seen_subcommand_from agent; and not __fish_seen_subcommand_from new resume cd list ls remove rm diff' -a remove -d 'Remove an agent and its worktree'
+complete -c ax -n '__fish_seen_subcommand_from agent; and not __fish_seen_subcommand_from new resume cd list ls remove rm diff' -a rm     -d 'Remove an agent and its worktree (alias)'
+complete -c ax -n '__fish_seen_subcommand_from agent; and not __fish_seen_subcommand_from new resume cd list ls remove rm diff' -a diff   -d 'Show git diff for an agent worktree'
 
-# ax agent new: optional -n/--name flag and claude options
-complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from new' -s n -l name -d 'Name for the agent' -r
-complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from new' -l dangerously-skip-permissions -d 'Skip Claude permission prompts (claude option)'
-complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from new' -l enable-auto-mode -d 'Enable auto mode for Claude (claude option)'
+# ax agent new: -a/--agent flag for agent type, -n/--name flag, and agent-specific options
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from new' -s a -s m -l agent -d 'Agent binary to use' -r -a 'claude\tClaude\ Code codex\tOpenAI\ Codex gemini\tGoogle\ Gemini opencode\tOpenCode'
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from new' -s n -l name  -d 'Name for the agent' -r
 
-# ax agent resume: required -n/--name flag with dynamic agent completions and claude options
-complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from resume' -s n -l name -d 'Agent ID or name' -r -a '(__ax_agents)'
-complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from resume' -l dangerously-skip-permissions -d 'Skip Claude permission prompts (claude option)'
-complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from resume' -l enable-auto-mode -d 'Enable auto mode for Claude (claude option)'
+# ax agent new: claude-specific options
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from new' -l dangerously-skip-permissions -d '[claude] Skip permission prompts'
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from new' -l enable-auto-mode             -d '[claude] Enable auto mode'
+
+# ax agent resume: -a/--agent flag, required -n/--name with dynamic completions, and agent-specific options
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from resume' -s a -s m -l agent -d 'Override agent binary' -r -a 'claude\tClaude\ Code codex\tOpenAI\ Codex gemini\tGoogle\ Gemini opencode\tOpenCode'
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from resume' -s n -l name  -d 'Agent ID or name to resume' -r -a '(__ax_agents)'
+
+# ax agent resume: claude-specific options
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from resume' -l dangerously-skip-permissions -d '[claude] Skip permission prompts'
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from resume' -l enable-auto-mode             -d '[claude] Enable auto mode'
+
+# ax agent cd, remove/rm, diff: -n/--name with dynamic completions
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from cd'     -s n -l name -d 'Agent ID or name' -r -a '(__ax_agents)'
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from remove' -s n -l name -d 'Agent ID or name' -r -a '(__ax_agents)'
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from rm'     -s n -l name -d 'Agent ID or name' -r -a '(__ax_agents)'
+complete -c ax -n '__fish_seen_subcommand_from agent; and __fish_seen_subcommand_from diff'   -s n -l name -d 'Agent ID or name' -r -a '(__ax_agents)'
 
 # ax completion subcommands
 complete -c ax -n '__fish_seen_subcommand_from completion' -a bash       -d 'Generate bash completion script'
