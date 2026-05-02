@@ -55,8 +55,9 @@ Each element in the JSON array has the following fields:
 |---|---|---|---|
 | ID | string | `id` | Format: `ax-<unix-ts>-<4hex>` |
 | Name | string | `name` | Optional; omitted when empty |
+| AgentType | string | `agent_type` | Optional; agent binary name (e.g. `"claude"`, `"codex"`); defaults to `"claude"` when empty |
 | PID | int | `pid` | OS process ID |
-| Args | []string | `args` | CLI args passed to claude |
+| Args | []string | `args` | CLI args passed to the agent |
 | WorkDir | string | `work_dir` | Absolute path |
 | Status | string | `status` | `"running"` \| `"success"` \| `"failed"` \| `"killed"` |
 | StartedAt | time.Time | `started_at` | RFC3339 timestamp |
@@ -67,6 +68,7 @@ Each element in the JSON array has the following fields:
 | WaitingUser | bool | `waiting_user` | Optional; omitted when false |
 | WorktreeBranch | string | `worktree_branch` | Optional; omitted when no worktree |
 | RepoName | string | `repo_name` | Optional; original repository name where the agent was started |
+| Commits | []string | `commits` | Optional; git commit hashes made during this session |
 
 ### Compatibility Goal
 
