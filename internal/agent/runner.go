@@ -71,29 +71,10 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 }
 
 // resumePrefixArgs returns the arguments that should be prepended to resume a
-// previous session for the given agent binary. The mapping reflects each tool's
-// own session-continuation interface:
-//
-//	claude    --resume           (opens interactive session picker)
-//	gemini    --resume latest    (resumes most recent session; v0.20.0+)
-//	codex     resume --last
-//	opencode  --continue
-//
-// For unknown agent types no prefix is added; the agent is launched fresh in
-// the existing worktree.
+// previous session for the given agent binary. Unknown agents return nil and
+// are relaunched fresh in the existing worktree.
 func resumePrefixArgs(agentType string) []string {
-	switch agentType {
-	case "claude":
-		return []string{"--resume"}
-	case "gemini":
-		return []string{"--resume", "latest"}
-	case "codex":
-		return []string{"resume", "--last"}
-	case "opencode":
-		return []string{"--continue"}
-	default:
-		return nil
-	}
+	return lookupAgent(agentType).ResumeArgs
 }
 
 // ResumeByIDOrName finds an existing agent by ID or name and launches it in
@@ -181,15 +162,15 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	defer client.Close()
 
 	// Strip leading "--" separator if present (cobra passes it through)
-	claudeArgs := args
-	if len(claudeArgs) > 0 && claudeArgs[0] == "--" {
-		claudeArgs = claudeArgs[1:]
+	agentArgs := args
+	if len(agentArgs) > 0 && agentArgs[0] == "--" {
+		agentArgs = agentArgs[1:]
 	}
 
 	// Record the HEAD commit before the session so we can diff afterwards.
 	initialHead := gitHeadCommit(workDir)
 
-	cmd := exec.Command(agentType, claudeArgs...)
+	cmd := exec.Command(agentType, agentArgs...)
 	cmd.Dir = workDir
 
 	now := time.Now()
@@ -197,7 +178,7 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 		ID:             id,
 		Name:           name,
 		AgentType:      agentType,
-		Args:           claudeArgs,
+		Args:           agentArgs,
 		WorkDir:        workDir,
 		Status:         store.StatusRunning,
 		StartedAt:      now,

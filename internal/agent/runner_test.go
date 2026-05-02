@@ -27,3 +27,21 @@ func TestResumePrefixArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestLookupAgent(t *testing.T) {
+	for name, want := range knownAgents {
+		t.Run(name, func(t *testing.T) {
+			got := lookupAgent(name)
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("lookupAgent(%q) = %v, want %v", name, got, want)
+			}
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		got := lookupAgent("unknown")
+		if got.ResumeArgs != nil {
+			t.Errorf("lookupAgent(unknown).ResumeArgs = %v, want nil", got.ResumeArgs)
+		}
+	})
+}
