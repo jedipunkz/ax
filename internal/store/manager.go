@@ -160,7 +160,7 @@ func (m *manager) handleConn(conn net.Conn) {
 			m.mu.Lock()
 			if existing, exists := m.agents[msg.Agent.ID]; exists {
 				// StatusKilled is final: user explicitly terminated the agent.
-				if existing.Status == StatusKilled {
+				if existing.Status == StatusKilled && msg.Agent.Status != StatusKilled {
 					m.mu.Unlock()
 					continue
 				}

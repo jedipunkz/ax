@@ -41,7 +41,7 @@ func Run(socketPath string, cfg *config.Config) error {
 	}()
 
 	// Start background goroutine to periodically remove old worktrees.
-	go runWorktreeCleanup(cfg.RemoveDurationDays)
+	go runWorktreeCleanup(socketPath, cfg.RemoveDurationDays)
 
 	m := newModel(client, sub, cfg.DurationDays)
 	p := tea.NewProgram(m, tea.WithFPS(30))
@@ -51,7 +51,7 @@ func Run(socketPath string, cfg *config.Config) error {
 }
 
 // runWorktreeCleanup runs worktree cleanup immediately and then every 24 hours.
-func runWorktreeCleanup(removeDurationDays int) {
+func runWorktreeCleanup(socketPath string, removeDurationDays int) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return
@@ -60,7 +60,15 @@ func runWorktreeCleanup(removeDurationDays int) {
 	worktreesDir := filepath.Join(home, ".ax", "worktrees")
 
 	doCleanup := func() {
-		if err := agent.CleanupOldWorktrees(statePath, worktreesDir, removeDurationDays); err != nil {
+		update := func(ag store.AgentState) error {
+			var c store.Client
+			if err := c.Connect(socketPath); err != nil {
+				return err
+			}
+			defer c.Close()
+			return c.SendUpdate(ag)
+		}
+		if err := agent.CleanupOldWorktreesWithUpdate(statePath, worktreesDir, removeDurationDays, update); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: worktree cleanup error: %v\n", err)
 		}
 	}

@@ -16,6 +16,13 @@ import (
 // removeDurationDays ago. It reads the agent state from statePath and removes
 // worktree directories under worktreesDir that belong to sufficiently old agents.
 func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int) error {
+	return CleanupOldWorktreesWithUpdate(statePath, worktreesDir, removeDurationDays, nil)
+}
+
+// CleanupOldWorktreesWithUpdate removes old worktrees and clears the removed
+// worktree metadata from state. When update is provided, the caller is
+// responsible for persisting each updated agent state.
+func CleanupOldWorktreesWithUpdate(statePath, worktreesDir string, removeDurationDays int, update func(store.AgentState) error) error {
 	data, err := os.ReadFile(statePath)
 	if os.IsNotExist(err) {
 		return nil
@@ -30,8 +37,26 @@ func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int)
 	}
 
 	cutoff := time.Now().AddDate(0, 0, -removeDurationDays)
+	changed := false
+	clearWorktreeState := func(i int, a store.AgentState) error {
+		if a.WorkDir == "" && a.WorktreeBranch == "" {
+			return nil
+		}
 
-	for _, a := range agents {
+		a.WorkDir = ""
+		a.WorktreeBranch = ""
+		agents[i] = a
+		changed = true
+
+		if update != nil {
+			if err := update(a); err != nil {
+				return fmt.Errorf("could not update cleaned worktree state for agent %s: %w", a.ID, err)
+			}
+		}
+		return nil
+	}
+
+	for i, a := range agents {
 		if !a.Status.IsTerminal() {
 			continue
 		}
@@ -48,11 +73,29 @@ func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int)
 		if !strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
 			continue
 		}
-		if _, err := os.Stat(cleanWorkDir); os.IsNotExist(err) {
+		if _, err := os.Stat(cleanWorkDir); err != nil {
+			if os.IsNotExist(err) {
+				if err := clearWorktreeState(i, a); err != nil {
+					return err
+				}
+				continue
+			}
+			fmt.Fprintf(os.Stderr, "warning: could not stat worktree %s: %v\n", cleanWorkDir, err)
 			continue
 		}
 		if err := RemoveWorktree(cleanWorkDir); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: could not remove worktree %s: %v\n", cleanWorkDir, err)
+			continue
+		}
+
+		if err := clearWorktreeState(i, a); err != nil {
+			return err
+		}
+	}
+
+	if changed && update == nil {
+		if err := writeAgents(statePath, agents); err != nil {
+			return err
 		}
 	}
 
@@ -98,8 +141,8 @@ func resolveMainRepo(worktreePath string) (string, error) {
 	// Walk up from .git/worktrees/<name> to find the main .git directory,
 	// then return its parent (the main working tree).
 	// Expected structure: <mainRepo>/.git/worktrees/<agentID>
-	worktreesDir := filepath.Dir(gitDir)   // <mainRepo>/.git/worktrees
+	worktreesDir := filepath.Dir(gitDir)    // <mainRepo>/.git/worktrees
 	dotGitDir := filepath.Dir(worktreesDir) // <mainRepo>/.git
-	mainRepo := filepath.Dir(dotGitDir)    // <mainRepo>
+	mainRepo := filepath.Dir(dotGitDir)     // <mainRepo>
 	return mainRepo, nil
 }
