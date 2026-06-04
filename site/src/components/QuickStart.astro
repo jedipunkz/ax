@@ -1,0 +1,135 @@
+---
+const steps = [
+  {
+    label: '1. Start in a repo',
+    cmd: 'cd /path/to/repo && ax agent new',
+    desc: 'ax detects the current git repository and creates a dedicated worktree for the agent.',
+  },
+  {
+    label: '2. Pick an agent',
+    cmd: 'ax agent new -a codex -n my-feature',
+    desc: 'Claude is the default. Codex, Gemini, and OpenCode are supported with the same workflow.',
+  },
+  {
+    label: '3. Watch the work',
+    cmd: 'ax dash',
+    desc: 'Monitor status, open logs, resume sessions, and clean up finished worktrees from the dashboard.',
+  },
+];
+---
+<section class="quickstart-section" aria-label="Quick start">
+  <div class="section-inner">
+    <div class="section-header">
+      <p class="section-tag">Quick start</p>
+      <h2>Run agents without mixing changes.</h2>
+    </div>
+
+    <div class="steps-grid">
+      {steps.map((step) => (
+        <article class="step-card">
+          <p class="step-label">{step.label}</p>
+          <code>{step.cmd}</code>
+          <p>{step.desc}</p>
+        </article>
+      ))}
+    </div>
+
+    <p class="state-note">
+      Session state, logs, and worktrees live under <code>~/.ax/</code>.
+      Finished sessions stay visible in the dashboard for 7 days by default.
+    </p>
+  </div>
+</section>
+
+<style>
+  .quickstart-section {
+    padding: 4.5rem 2rem 5.25rem;
+    border-top: 1px solid var(--tn-border);
+  }
+
+  .section-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    max-width: 700px;
+    margin-bottom: 1.25rem;
+  }
+
+  .section-tag {
+    color: var(--tn-orange);
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+
+  h2 {
+    color: var(--tn-fg);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 720;
+    letter-spacing: 0;
+    line-height: 1.05;
+  }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .step-card {
+    min-height: 220px;
+    padding: 22px;
+    border: 1px solid var(--tn-border);
+    border-radius: 8px;
+    background: var(--tn-bg-card);
+    box-shadow: var(--tn-shadow);
+  }
+
+  .step-label {
+    color: var(--tn-blue);
+    font-size: 0.85rem;
+    font-weight: 800;
+    margin-bottom: 14px;
+  }
+
+  .step-card code {
+    display: block;
+    color: var(--tn-green);
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    margin-bottom: 14px;
+  }
+
+  .step-card p:last-child,
+  .state-note {
+    color: var(--tn-fg-dark);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .state-note {
+    max-width: 720px;
+    margin-top: 1.25rem;
+  }
+
+  .state-note code {
+    color: var(--tn-green);
+    font-weight: 800;
+  }
+
+  @media (max-width: 860px) {
+    .steps-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .quickstart-section {
+      padding: 3.5rem 1.25rem 4rem;
+    }
+  }
+</style>

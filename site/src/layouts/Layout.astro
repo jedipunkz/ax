@@ -4,7 +4,7 @@ interface Props {
   description?: string;
 }
 
-const { title, description = 'ax — parallel AI coding agent orchestrator. Run Claude, Codex, Gemini and more in isolated git worktrees, monitored from a single dashboard.' } = Astro.props;
+const { title, description = 'ax, short for agent cross, is an open source CLI for running AI coding agents in isolated git worktrees.' } = Astro.props;
 ---
 
 <!doctype html>
@@ -21,23 +21,25 @@ const { title, description = 'ax — parallel AI coding agent orchestrator. Run 
     <title>{title}</title>
     <style is:global>
       :root {
-        --tn-bg:        #1a1b26;
-        --tn-bg-dark:   #16161e;
-        --tn-bg-hi:     #292e42;
-        --tn-bg-card:   #1f2335;
-        --tn-border:    #2d3158;
-        --tn-fg:        #c0caf5;
-        --tn-fg-dark:   #a9b1d6;
-        --tn-comment:   #565f89;
-        --tn-blue:      #7aa2f7;
-        --tn-cyan:      #7dcfff;
-        --tn-purple:    #bb9af7;
-        --tn-green:     #9ece6a;
-        --tn-yellow:    #e0af68;
-        --tn-orange:    #ff9e64;
-        --tn-red:       #f7768e;
-        --tn-magenta:   #ff007c;
-        --tn-teal:      #73daca;
+        color-scheme: dark;
+        --tn-bg:        #16161d;
+        --tn-bg-dark:   #121218;
+        --tn-bg-hi:     #223249;
+        --tn-bg-card:   #1f1f28;
+        --tn-border:    #363646;
+        --tn-border-hi: #54546d;
+        --tn-fg:        #dcd7ba;
+        --tn-fg-dark:   #c8c093;
+        --tn-comment:   #727169;
+        --tn-blue:      #7e9cd8;
+        --tn-cyan:      #7aa89f;
+        --tn-purple:    #957fb8;
+        --tn-green:     #98bb6c;
+        --tn-yellow:    #e6c384;
+        --tn-orange:    #ffa066;
+        --tn-red:       #c34043;
+        --tn-teal:      #6a9589;
+        --tn-shadow:    0 20px 56px rgb(0 0 0 / 42%);
       }
 
       *, *::before, *::after {
@@ -51,15 +53,15 @@ const { title, description = 'ax — parallel AI coding agent orchestrator. Run 
       }
 
       body {
-        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background-color: var(--tn-bg);
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+        background: var(--tn-bg);
         color: var(--tn-fg);
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
       }
 
       code, pre, .mono {
-        font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace;
+        font-family: 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
       }
 
       a {
