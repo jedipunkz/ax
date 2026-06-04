@@ -5,6 +5,7 @@ interface Props {
 }
 
 const { title, description = 'ax, short for agent cross, is an open source CLI for running AI coding agents in isolated git worktrees.' } = Astro.props;
+const base = import.meta.env.BASE_URL;
 ---
 
 <!doctype html>
@@ -16,8 +17,8 @@ const { title, description = 'ax, short for agent cross, is an open source CLI f
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://jedipunkz.rocks" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:url" content="https://jedipunkz.rocks/ax/" />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <title>{title}</title>
     <style is:global>
       :root {
