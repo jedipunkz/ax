@@ -1,0 +1,380 @@
+---
+const themes = [
+  { name: 'tokyonight', color: '#7aa2f7', desc: 'Deep blue-purple night (default)' },
+  { name: 'catppuccin', color: '#cba6f7', desc: 'Warm pastel colors' },
+  { name: 'solarized-dark', color: '#2aa198', desc: 'Classic precision palette' },
+  { name: 'kanagawa-wave', color: '#7e9cd8', desc: 'Japanese watercolor inspired' },
+];
+---
+<section id="config" class="config-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <span class="section-tag">Configuration</span>
+      <h2 class="section-title">Customize <span class="gradient-text">your workflow</span></h2>
+      <p class="section-desc">
+        Drop an <code>ax.yaml</code> in <code>~/.ax/</code> to tweak themes, retention, and more.
+      </p>
+    </div>
+
+    <div class="config-grid">
+      <div class="config-yaml">
+        <div class="yaml-window">
+          <div class="yaml-titlebar">
+            <div class="yaml-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-yellow"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <span class="yaml-title">~/.ax/ax.yaml</span>
+          </div>
+          <div class="yaml-body">
+            <div class="yaml-line">
+              <span class="yaml-key">theme</span>
+              <span class="yaml-colon">:</span>
+              <span class="yaml-string"> tokyonight</span>
+              <span class="yaml-comment">  # tokyonight | catppuccin | solarized-dark | kanagawa-wave</span>
+            </div>
+            <div class="yaml-line yaml-line--empty"></div>
+            <div class="yaml-line">
+              <span class="yaml-key">duration_days</span>
+              <span class="yaml-colon">:</span>
+              <span class="yaml-number"> 7d</span>
+              <span class="yaml-comment">     # Show finished agents for N days</span>
+            </div>
+            <div class="yaml-line yaml-line--empty"></div>
+            <div class="yaml-line">
+              <span class="yaml-key">remove_duration_days</span>
+              <span class="yaml-colon">:</span>
+              <span class="yaml-number"> 30d</span>
+              <span class="yaml-comment">   # Delete old worktrees after N days</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-details">
+        <div class="config-field">
+          <div class="field-header">
+            <code class="field-name">theme</code>
+            <span class="field-type">string</span>
+          </div>
+          <p class="field-desc">Color theme for the TUI dashboard. Defaults to <code>tokyonight</code>.</p>
+          <div class="theme-swatches">
+            {themes.map((t) => (
+              <div class="theme-swatch">
+                <span class="swatch-dot" style={`background: ${t.color}`}></span>
+                <div>
+                  <code class="swatch-name">{t.name}</code>
+                  <span class="swatch-desc">{t.desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div class="config-field">
+          <div class="field-header">
+            <code class="field-name">duration_days</code>
+            <span class="field-type">duration</span>
+          </div>
+          <p class="field-desc">
+            How long finished agents remain visible in <code>ax dash</code>.
+            Format: <code>7d</code>, <code>24h</code>, <code>720h</code>.
+            Default: <code>7d</code>.
+          </p>
+        </div>
+
+        <div class="config-field">
+          <div class="field-header">
+            <code class="field-name">remove_duration_days</code>
+            <span class="field-type">duration</span>
+          </div>
+          <p class="field-desc">
+            Worktrees older than this are automatically deleted at dashboard startup.
+            Default: <code>30d</code>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="data-layout">
+      <h3 class="layout-title">Data directory layout</h3>
+      <div class="layout-tree">
+        <div class="tree-line">
+          <span class="tree-sym">~/.ax/</span>
+        </div>
+        <div class="tree-line tree-line--indent">
+          <span class="tree-sym">├── </span>
+          <span class="tree-file">state.json</span>
+          <span class="tree-comment">— all agent state (source of truth)</span>
+        </div>
+        <div class="tree-line tree-line--indent">
+          <span class="tree-sym">├── </span>
+          <span class="tree-file">ax.yaml</span>
+          <span class="tree-comment">— configuration (optional)</span>
+        </div>
+        <div class="tree-line tree-line--indent">
+          <span class="tree-sym">├── </span>
+          <span class="tree-file">ax.sock</span>
+          <span class="tree-comment">— Unix socket for daemon IPC</span>
+        </div>
+        <div class="tree-line tree-line--indent">
+          <span class="tree-sym">├── </span>
+          <span class="tree-dir">agents/</span>
+          <span class="tree-comment">— per-agent log files</span>
+        </div>
+        <div class="tree-line tree-line--indent2">
+          <span class="tree-sym">└── </span>
+          <span class="tree-file">&lt;agent-id&gt;/output.log</span>
+        </div>
+        <div class="tree-line tree-line--indent">
+          <span class="tree-sym">└── </span>
+          <span class="tree-dir">worktrees/</span>
+          <span class="tree-comment">— isolated git worktrees</span>
+        </div>
+        <div class="tree-line tree-line--indent2">
+          <span class="tree-sym">└── </span>
+          <span class="tree-file">&lt;repo&gt;-&lt;agent-id&gt;/</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .config-section {
+    padding: 6rem 2rem;
+    background: var(--tn-bg-dark);
+    border-top: 1px solid var(--tn-border);
+  }
+
+  .section-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--tn-yellow);
+    background: rgba(224, 175, 104, 0.1);
+    border: 1px solid rgba(224, 175, 104, 0.2);
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: var(--tn-fg);
+    margin-bottom: 1rem;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, var(--tn-yellow) 0%, var(--tn-orange) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .section-desc {
+    font-size: 1.05rem;
+    color: var(--tn-fg-dark);
+    max-width: 440px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .section-desc code {
+    color: var(--tn-cyan);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+  }
+
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 3rem;
+    align-items: start;
+  }
+
+  /* YAML window */
+  .yaml-window {
+    background: var(--tn-bg-dark);
+    border: 1px solid var(--tn-border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  }
+
+  .yaml-titlebar {
+    background: var(--tn-bg-hi);
+    border-bottom: 1px solid var(--tn-border);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .yaml-dots { display: flex; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-red    { background: #f7768e; }
+  .dot-yellow { background: #e0af68; }
+  .dot-green  { background: #9ece6a; }
+
+  .yaml-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--tn-comment);
+    margin: 0 auto;
+  }
+
+  .yaml-body {
+    padding: 1.25rem 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.83rem;
+    line-height: 1.7;
+  }
+
+  .yaml-line { display: flex; flex-wrap: wrap; align-items: baseline; }
+  .yaml-line--empty { height: 1em; }
+
+  .yaml-key     { color: var(--tn-blue); }
+  .yaml-colon   { color: var(--tn-fg); }
+  .yaml-string  { color: var(--tn-green); }
+  .yaml-number  { color: var(--tn-orange); }
+  .yaml-comment { color: var(--tn-comment); font-size: 0.75rem; }
+
+  /* Config fields */
+  .config-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .config-field {
+    background: var(--tn-bg-card);
+    border: 1px solid var(--tn-border);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+
+  .field-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .field-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--tn-cyan);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .field-type {
+    font-size: 0.7rem;
+    color: var(--tn-orange);
+    background: rgba(255, 158, 100, 0.1);
+    border: 1px solid rgba(255, 158, 100, 0.2);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .field-desc {
+    font-size: 0.85rem;
+    color: var(--tn-fg-dark);
+    line-height: 1.6;
+  }
+
+  .field-desc code {
+    color: var(--tn-yellow);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+  }
+
+  .theme-swatches {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .theme-swatch {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .swatch-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .swatch-name {
+    font-size: 0.8rem;
+    color: var(--tn-fg);
+    font-family: 'JetBrains Mono', monospace;
+    margin-right: 0.4rem;
+  }
+
+  .swatch-desc {
+    font-size: 0.75rem;
+    color: var(--tn-comment);
+  }
+
+  /* Data layout tree */
+  .data-layout {
+    background: var(--tn-bg-card);
+    border: 1px solid var(--tn-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .layout-title {
+    padding: 1rem 1.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--tn-comment);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--tn-border);
+    background: var(--tn-bg-dark);
+  }
+
+  .layout-tree {
+    padding: 1.25rem 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.83rem;
+    line-height: 1.9;
+  }
+
+  .tree-sym   { color: var(--tn-border); }
+  .tree-file  { color: var(--tn-fg); }
+  .tree-dir   { color: var(--tn-blue); font-weight: 600; }
+  .tree-comment { color: var(--tn-comment); margin-left: 0.5rem; }
+
+  .tree-line { display: flex; align-items: center; }
+  .tree-line--indent  { padding-left: 1rem; }
+  .tree-line--indent2 { padding-left: 3rem; }
+
+  @media (max-width: 768px) {
+    .config-grid { grid-template-columns: 1fr; }
+  }
+</style>

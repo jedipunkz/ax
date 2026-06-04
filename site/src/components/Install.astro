@@ -1,0 +1,357 @@
+---
+---
+<section id="install" class="install-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <span class="section-tag">Installation</span>
+      <h2 class="section-title">Get started in <span class="gradient-text">seconds</span></h2>
+      <p class="section-desc">
+        Install ax with your preferred method. Requires Go 1.21+ or Homebrew.
+      </p>
+    </div>
+
+    <div class="install-methods">
+      <div class="install-card install-card--featured">
+        <div class="install-card-header">
+          <span class="install-icon">🍺</span>
+          <div>
+            <h3 class="install-title">Homebrew</h3>
+            <p class="install-subtitle">Recommended for macOS</p>
+          </div>
+          <span class="install-badge">Recommended</span>
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">shell</span>
+            <button class="copy-btn" data-copy="brew tap jedipunkz/ax && brew install ax">Copy</button>
+          </div>
+          <pre><code><span class="cmd-prompt">$</span> brew tap jedipunkz/ax <span class="cmd-op">&amp;&amp;</span> brew install ax</code></pre>
+        </div>
+      </div>
+
+      <div class="install-card">
+        <div class="install-card-header">
+          <span class="install-icon">🐹</span>
+          <div>
+            <h3 class="install-title">Go Install</h3>
+            <p class="install-subtitle">Requires Go 1.21+</p>
+          </div>
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">shell</span>
+            <button class="copy-btn" data-copy="go install github.com/jedipunkz/ax@latest">Copy</button>
+          </div>
+          <pre><code><span class="cmd-prompt">$</span> go install github.com/jedipunkz/ax@latest</code></pre>
+        </div>
+      </div>
+
+      <div class="install-card">
+        <div class="install-card-header">
+          <span class="install-icon">🔨</span>
+          <div>
+            <h3 class="install-title">Build from Source</h3>
+            <p class="install-subtitle">Latest development version</p>
+          </div>
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">shell</span>
+            <button class="copy-btn" data-copy="git clone https://github.com/jedipunkz/ax && cd ax && make install">Copy</button>
+          </div>
+          <pre><code><span class="cmd-prompt">$</span> git clone https://github.com/jedipunkz/ax
+<span class="cmd-prompt">$</span> cd ax <span class="cmd-op">&amp;&amp;</span> make install</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="prereqs">
+      <h3 class="prereqs-title">Prerequisites</h3>
+      <div class="prereqs-grid">
+        <div class="prereq">
+          <span class="prereq-icon">✓</span>
+          <div>
+            <strong>Agent binary on $PATH</strong>
+            <span>claude, codex, gemini, or opencode</span>
+          </div>
+        </div>
+        <div class="prereq">
+          <span class="prereq-icon">✓</span>
+          <div>
+            <strong>Git repository</strong>
+            <span>ax uses worktrees — run it inside a git repo</span>
+          </div>
+        </div>
+        <div class="prereq">
+          <span class="prereq-icon">✓</span>
+          <div>
+            <strong>macOS or Linux</strong>
+            <span>Windows is also supported</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .install-section {
+    padding: 6rem 2rem;
+    background: var(--tn-bg-dark);
+    border-top: 1px solid var(--tn-border);
+    border-bottom: 1px solid var(--tn-border);
+  }
+
+  .section-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--tn-green);
+    background: rgba(158, 206, 106, 0.1);
+    border: 1px solid rgba(158, 206, 106, 0.2);
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: var(--tn-fg);
+    margin-bottom: 1rem;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, var(--tn-green) 0%, var(--tn-teal) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .section-desc {
+    font-size: 1.05rem;
+    color: var(--tn-fg-dark);
+    max-width: 440px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .install-methods {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 3rem;
+  }
+
+  .install-card {
+    background: var(--tn-bg-card);
+    border: 1px solid var(--tn-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+
+  .install-card:hover {
+    border-color: var(--tn-comment);
+  }
+
+  .install-card--featured {
+    grid-column: 1 / -1;
+    border-color: rgba(158, 206, 106, 0.3);
+    background: linear-gradient(135deg, rgba(158, 206, 106, 0.04) 0%, var(--tn-bg-card) 60%);
+  }
+
+  .install-card--featured:hover {
+    border-color: var(--tn-green);
+    box-shadow: 0 8px 32px rgba(158, 206, 106, 0.1);
+  }
+
+  .install-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .install-icon {
+    font-size: 1.5rem;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--tn-bg-hi);
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  .install-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--tn-fg);
+    margin-bottom: 0.15rem;
+  }
+
+  .install-subtitle {
+    font-size: 0.8rem;
+    color: var(--tn-comment);
+  }
+
+  .install-badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tn-green);
+    background: rgba(158, 206, 106, 0.12);
+    border: 1px solid rgba(158, 206, 106, 0.25);
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+  }
+
+  .code-block {
+    background: var(--tn-bg-dark);
+    border: 1px solid var(--tn-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--tn-border);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .code-lang {
+    font-size: 0.7rem;
+    color: var(--tn-comment);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .copy-btn {
+    font-size: 0.72rem;
+    color: var(--tn-comment);
+    background: none;
+    border: 1px solid var(--tn-border);
+    border-radius: 4px;
+    padding: 0.2rem 0.6rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .copy-btn:hover {
+    color: var(--tn-fg);
+    border-color: var(--tn-comment);
+    background: var(--tn-bg-hi);
+  }
+  .copy-btn.copied {
+    color: var(--tn-green);
+    border-color: var(--tn-green);
+  }
+
+  .code-block pre {
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .code-block code {
+    font-size: 0.88rem;
+    color: var(--tn-fg);
+    line-height: 1.7;
+  }
+
+  .cmd-prompt { color: var(--tn-comment); user-select: none; }
+  .cmd-op     { color: var(--tn-blue); }
+
+  .prereqs {
+    background: var(--tn-bg-card);
+    border: 1px solid var(--tn-border);
+    border-radius: 12px;
+    padding: 1.75rem;
+  }
+
+  .prereqs-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--tn-comment);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 1.25rem;
+  }
+
+  .prereqs-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+
+  .prereq {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .prereq-icon {
+    color: var(--tn-green);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  .prereq strong {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--tn-fg);
+    margin-bottom: 0.2rem;
+  }
+
+  .prereq span {
+    font-size: 0.82rem;
+    color: var(--tn-fg-dark);
+  }
+
+  @media (max-width: 768px) {
+    .install-methods { grid-template-columns: 1fr; }
+    .install-card--featured { grid-column: 1; }
+    .prereqs-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+  document.querySelectorAll('.copy-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const text = btn.getAttribute('data-copy');
+      if (text) {
+        navigator.clipboard.writeText(text).then(() => {
+          btn.textContent = 'Copied!';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = 'Copy';
+            btn.classList.remove('copied');
+          }, 2000);
+        });
+      }
+    });
+  });
+</script>

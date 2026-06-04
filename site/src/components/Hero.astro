@@ -1,0 +1,466 @@
+---
+---
+<section class="hero">
+  <div class="hero-bg">
+    <div class="grid-lines"></div>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Multi-Agent Orchestration for AI Coding
+    </div>
+
+    <h1 class="hero-title">
+      Run AI agents<br />
+      <span class="gradient-text">in parallel</span>
+    </h1>
+
+    <p class="hero-desc">
+      <strong class="mono">ax</strong> spawns Claude, Codex, Gemini, and more in isolated git worktrees —
+      each agent on its own branch, all monitored from a single terminal dashboard.
+    </p>
+
+    <div class="hero-actions">
+      <a href="#install" class="btn btn-primary">
+        Get Started
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+      <a href="https://github.com/jedipunkz/ax" class="btn btn-secondary" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+        View on GitHub
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-value">4+</span>
+        <span class="stat-label">AI Agents</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-value">∞</span>
+        <span class="stat-label">Parallel Sessions</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-value">Go</span>
+        <span class="stat-label">Zero Dependencies</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-terminal">
+    <div class="terminal-window">
+      <div class="terminal-titlebar">
+        <div class="terminal-dots">
+          <span class="dot dot-red"></span>
+          <span class="dot dot-yellow"></span>
+          <span class="dot dot-green"></span>
+        </div>
+        <span class="terminal-title">ax dash</span>
+      </div>
+      <div class="terminal-body">
+        <div class="term-header">
+          <span class="term-label">ax</span>
+          <span class="term-version">v0.1.0</span>
+          <span class="term-sep">─────────────────────────────────</span>
+        </div>
+        <div class="term-rows">
+          <div class="term-row term-row--running">
+            <span class="term-status running">⠋ running</span>
+            <span class="term-id">ax-1717200000-a1b2</span>
+            <span class="term-name purple">refactor-auth</span>
+            <span class="term-repo cyan">myapp</span>
+            <span class="term-agent blue">claude</span>
+          </div>
+          <div class="term-row term-row--running">
+            <span class="term-status running">⠙ running</span>
+            <span class="term-id">ax-1717200120-c3d4</span>
+            <span class="term-name purple">add-tests</span>
+            <span class="term-repo cyan">myapp</span>
+            <span class="term-agent blue">codex</span>
+          </div>
+          <div class="term-row term-row--waiting">
+            <span class="term-status waiting">  waiting</span>
+            <span class="term-id">ax-1717200240-e5f6</span>
+            <span class="term-name purple">fix-bug-123</span>
+            <span class="term-repo cyan">api-server</span>
+            <span class="term-agent blue">claude</span>
+          </div>
+          <div class="term-row term-row--success">
+            <span class="term-status success">  success</span>
+            <span class="term-id">ax-1717199800-g7h8</span>
+            <span class="term-name purple">update-deps</span>
+            <span class="term-repo cyan">frontend</span>
+            <span class="term-agent blue">gemini</span>
+          </div>
+          <div class="term-row term-row--success">
+            <span class="term-status success">  success</span>
+            <span class="term-id">ax-1717199600-i9j0</span>
+            <span class="term-name purple">docs-update</span>
+            <span class="term-repo cyan">frontend</span>
+            <span class="term-agent blue">claude</span>
+          </div>
+        </div>
+        <div class="term-footer">
+          <span class="term-hint">j/k navigate</span>
+          <span class="term-hint-sep">·</span>
+          <span class="term-hint">Enter view logs</span>
+          <span class="term-hint-sep">·</span>
+          <span class="term-hint">K kill</span>
+          <span class="term-hint-sep">·</span>
+          <span class="term-hint">q quit</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    gap: 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 8rem 2rem 4rem;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .grid-lines {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--tn-border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--tn-border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.15;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 100%);
+  }
+
+  .glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.12;
+  }
+  .glow-1 {
+    width: 600px;
+    height: 600px;
+    background: var(--tn-blue);
+    top: -100px;
+    left: -200px;
+  }
+  .glow-2 {
+    width: 400px;
+    height: 400px;
+    background: var(--tn-purple);
+    bottom: -100px;
+    right: 100px;
+  }
+
+  .hero-content {
+    flex: 1;
+    min-width: 0;
+    z-index: 1;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(122, 162, 247, 0.1);
+    border: 1px solid rgba(122, 162, 247, 0.3);
+    color: var(--tn-blue);
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--tn-green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .hero-title {
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: var(--tn-fg);
+    margin-bottom: 1.25rem;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, var(--tn-blue) 0%, var(--tn-purple) 50%, var(--tn-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-desc {
+    font-size: 1.1rem;
+    color: var(--tn-fg-dark);
+    max-width: 480px;
+    margin-bottom: 2rem;
+    line-height: 1.7;
+  }
+
+  .hero-desc strong {
+    color: var(--tn-cyan);
+    font-weight: 600;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 3rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.4rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: var(--tn-blue);
+    color: var(--tn-bg-dark);
+    border: 1px solid var(--tn-blue);
+  }
+  .btn-primary:hover {
+    background: var(--tn-cyan);
+    border-color: var(--tn-cyan);
+    color: var(--tn-bg-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(122, 162, 247, 0.3);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--tn-fg);
+    border: 1px solid var(--tn-border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--tn-blue);
+    color: var(--tn-blue);
+    background: rgba(122, 162, 247, 0.05);
+    transform: translateY(-1px);
+  }
+
+  .hero-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--tn-fg);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--tn-comment);
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--tn-border);
+  }
+
+  /* Terminal */
+  .hero-terminal {
+    flex: 1;
+    min-width: 0;
+    max-width: 520px;
+    z-index: 1;
+  }
+
+  .terminal-window {
+    background: var(--tn-bg-dark);
+    border: 1px solid var(--tn-border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.04),
+      0 24px 64px rgba(0, 0, 0, 0.6),
+      0 0 40px rgba(122, 162, 247, 0.08);
+  }
+
+  .terminal-titlebar {
+    background: var(--tn-bg-hi);
+    border-bottom: 1px solid var(--tn-border);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .terminal-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .dot-red    { background: #f7768e; }
+  .dot-yellow { background: #e0af68; }
+  .dot-green  { background: #9ece6a; }
+
+  .terminal-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--tn-comment);
+    margin: 0 auto;
+  }
+
+  .terminal-body {
+    padding: 1.25rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.7;
+  }
+
+  .term-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--tn-comment);
+  }
+
+  .term-label {
+    color: var(--tn-blue);
+    font-weight: 700;
+  }
+
+  .term-version {
+    color: var(--tn-green);
+  }
+
+  .term-sep {
+    color: var(--tn-border);
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .term-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-bottom: 1rem;
+  }
+
+  .term-row {
+    display: grid;
+    grid-template-columns: 90px 170px 110px 80px 60px;
+    gap: 0.5rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    align-items: center;
+  }
+
+  .term-row--running {
+    background: rgba(122, 162, 247, 0.06);
+    border-left: 2px solid var(--tn-blue);
+  }
+
+  .term-row--waiting {
+    background: rgba(224, 175, 104, 0.06);
+    border-left: 2px solid var(--tn-yellow);
+  }
+
+  .term-row--success {
+    opacity: 0.6;
+    border-left: 2px solid transparent;
+  }
+
+  .term-status { font-size: 0.72rem; }
+  .term-status.running  { color: var(--tn-blue); }
+  .term-status.waiting  { color: var(--tn-yellow); }
+  .term-status.success  { color: var(--tn-green); }
+
+  .term-id { color: var(--tn-comment); font-size: 0.68rem; }
+
+  .term-name  { color: var(--tn-purple); }
+  .purple     { color: var(--tn-purple); }
+  .cyan       { color: var(--tn-cyan); }
+  .blue       { color: var(--tn-blue); }
+
+  .term-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--tn-comment);
+    font-size: 0.7rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--tn-border);
+  }
+
+  .term-hint-sep { opacity: 0.5; }
+
+  @media (max-width: 900px) {
+    .hero {
+      flex-direction: column;
+      min-height: auto;
+      padding-top: 6rem;
+    }
+    .hero-terminal {
+      max-width: 100%;
+      width: 100%;
+    }
+    .term-row {
+      grid-template-columns: 85px 140px 100px 1fr;
+    }
+    .term-agent { display: none; }
+  }
+</style>

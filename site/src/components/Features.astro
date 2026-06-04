@@ -1,0 +1,204 @@
+---
+const features = [
+  {
+    icon: '⚡',
+    title: 'Parallel Execution',
+    color: 'blue',
+    desc: 'Run multiple AI agents simultaneously on the same repository. Each agent works independently — no coordination overhead, no conflicts.',
+  },
+  {
+    icon: '🌿',
+    title: 'Isolated Worktrees',
+    color: 'green',
+    desc: 'Each agent gets its own git worktree on a separate branch (ax/<id>). Changes stay isolated until you decide to merge.',
+  },
+  {
+    icon: '📊',
+    title: 'Live Dashboard',
+    color: 'purple',
+    desc: 'Monitor all agents in real-time with the ax dash TUI. See status, logs, and output — keyboard-driven, no mouse needed.',
+  },
+  {
+    icon: '🔄',
+    title: 'Resumable Sessions',
+    color: 'cyan',
+    desc: 'Every session is persisted to ~/.ax/state.json. Resume any previous agent by ID or name, even after a reboot.',
+  },
+  {
+    icon: '🤖',
+    title: 'Multi-Agent Support',
+    color: 'yellow',
+    desc: 'Works with Claude Code, OpenAI Codex, Google Gemini CLI, and OpenCode out of the box. Easily extensible.',
+  },
+  {
+    icon: '🔍',
+    title: 'Diff & Review',
+    color: 'orange',
+    desc: 'Inspect every commit an agent made with ax agent diff. Pipe through your pager for a clean review workflow.',
+  },
+];
+---
+<section id="features" class="features-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <span class="section-tag">Features</span>
+      <h2 class="section-title">Everything you need to<br /><span class="gradient-text">orchestrate agents</span></h2>
+      <p class="section-desc">
+        ax is designed for developers who run AI agents daily —
+        built for speed, reliability, and visibility.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      {features.map((f) => (
+        <div class={`feature-card feature-card--${f.color}`}>
+          <div class={`feature-icon feature-icon--${f.color}`}>{f.icon}</div>
+          <h3 class="feature-title">{f.title}</h3>
+          <p class="feature-desc">{f.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .features-section {
+    padding: 6rem 2rem;
+    background: linear-gradient(180deg, var(--tn-bg) 0%, var(--tn-bg-dark) 100%);
+  }
+
+  .section-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--tn-blue);
+    background: rgba(122, 162, 247, 0.1);
+    border: 1px solid rgba(122, 162, 247, 0.2);
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: var(--tn-fg);
+    margin-bottom: 1rem;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, var(--tn-blue) 0%, var(--tn-purple) 50%, var(--tn-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .section-desc {
+    font-size: 1.05rem;
+    color: var(--tn-fg-dark);
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+
+  .feature-card {
+    background: var(--tn-bg-card);
+    border: 1px solid var(--tn-border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .feature-card--blue:hover  { border-color: var(--tn-blue);   box-shadow: 0 8px 32px rgba(122, 162, 247, 0.12); }
+  .feature-card--green:hover { border-color: var(--tn-green);  box-shadow: 0 8px 32px rgba(158, 206, 106, 0.12); }
+  .feature-card--purple:hover{ border-color: var(--tn-purple); box-shadow: 0 8px 32px rgba(187, 154, 247, 0.12); }
+  .feature-card--cyan:hover  { border-color: var(--tn-cyan);   box-shadow: 0 8px 32px rgba(125, 207, 255, 0.12); }
+  .feature-card--yellow:hover{ border-color: var(--tn-yellow); box-shadow: 0 8px 32px rgba(224, 175, 104, 0.12); }
+  .feature-card--orange:hover{ border-color: var(--tn-orange); box-shadow: 0 8px 32px rgba(255, 158, 100, 0.12); }
+
+  .feature-card--blue:hover::before  { background: linear-gradient(90deg, transparent, var(--tn-blue), transparent); opacity: 1; }
+  .feature-card--green:hover::before { background: linear-gradient(90deg, transparent, var(--tn-green), transparent); opacity: 1; }
+  .feature-card--purple:hover::before{ background: linear-gradient(90deg, transparent, var(--tn-purple), transparent); opacity: 1; }
+  .feature-card--cyan:hover::before  { background: linear-gradient(90deg, transparent, var(--tn-cyan), transparent); opacity: 1; }
+  .feature-card--yellow:hover::before{ background: linear-gradient(90deg, transparent, var(--tn-yellow), transparent); opacity: 1; }
+  .feature-card--orange:hover::before{ background: linear-gradient(90deg, transparent, var(--tn-orange), transparent); opacity: 1; }
+
+  .feature-icon {
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+    display: block;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    margin-bottom: 1.25rem;
+  }
+
+  .feature-icon--blue   { background: rgba(122, 162, 247, 0.1); }
+  .feature-icon--green  { background: rgba(158, 206, 106, 0.1); }
+  .feature-icon--purple { background: rgba(187, 154, 247, 0.1); }
+  .feature-icon--cyan   { background: rgba(125, 207, 255, 0.1); }
+  .feature-icon--yellow { background: rgba(224, 175, 104, 0.1); }
+  .feature-icon--orange { background: rgba(255, 158, 100, 0.1); }
+
+  .feature-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--tn-fg);
+    margin-bottom: 0.6rem;
+    letter-spacing: -0.01em;
+  }
+
+  .feature-desc {
+    font-size: 0.9rem;
+    color: var(--tn-fg-dark);
+    line-height: 1.65;
+  }
+
+  @media (max-width: 900px) {
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 600px) {
+    .features-grid { grid-template-columns: 1fr; }
+  }
+</style>

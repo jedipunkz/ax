@@ -1,0 +1,94 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'ax — parallel AI coding agent orchestrator. Run Claude, Codex, Gemini and more in isolated git worktrees, monitored from a single dashboard.' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jedipunkz.rocks" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <style is:global>
+      :root {
+        --tn-bg:        #1a1b26;
+        --tn-bg-dark:   #16161e;
+        --tn-bg-hi:     #292e42;
+        --tn-bg-card:   #1f2335;
+        --tn-border:    #2d3158;
+        --tn-fg:        #c0caf5;
+        --tn-fg-dark:   #a9b1d6;
+        --tn-comment:   #565f89;
+        --tn-blue:      #7aa2f7;
+        --tn-cyan:      #7dcfff;
+        --tn-purple:    #bb9af7;
+        --tn-green:     #9ece6a;
+        --tn-yellow:    #e0af68;
+        --tn-orange:    #ff9e64;
+        --tn-red:       #f7768e;
+        --tn-magenta:   #ff007c;
+        --tn-teal:      #73daca;
+      }
+
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background-color: var(--tn-bg);
+        color: var(--tn-fg);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      code, pre, .mono {
+        font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace;
+      }
+
+      a {
+        color: var(--tn-blue);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+      a:hover {
+        color: var(--tn-cyan);
+      }
+
+      ::selection {
+        background: var(--tn-purple);
+        color: var(--tn-bg);
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track { background: var(--tn-bg-dark); }
+      ::-webkit-scrollbar-thumb {
+        background: var(--tn-border);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover { background: var(--tn-comment); }
+    </style>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

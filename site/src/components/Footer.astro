@@ -1,0 +1,147 @@
+---
+---
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="/" class="brand-link">
+        <span class="brand-icon">⚡</span>
+        <span class="brand-name">ax</span>
+      </a>
+      <p class="brand-tagline">Multi-agent orchestration for AI coding workflows.</p>
+    </div>
+
+    <div class="footer-links">
+      <div class="footer-col">
+        <h4 class="col-title">Project</h4>
+        <ul>
+          <li><a href="https://github.com/jedipunkz/ax" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://github.com/jedipunkz/ax/releases" target="_blank" rel="noopener">Releases</a></li>
+          <li><a href="https://github.com/jedipunkz/ax/issues" target="_blank" rel="noopener">Issues</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4 class="col-title">Docs</h4>
+        <ul>
+          <li><a href="#install">Installation</a></li>
+          <li><a href="#usage">CLI Reference</a></li>
+          <li><a href="#config">Configuration</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4 class="col-title">Agents</h4>
+        <ul>
+          <li><a href="https://claude.ai/code" target="_blank" rel="noopener">Claude Code</a></li>
+          <li><a href="https://openai.com/codex" target="_blank" rel="noopener">OpenAI Codex</a></li>
+          <li><a href="https://gemini.google.com" target="_blank" rel="noopener">Gemini CLI</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p class="footer-copy">
+      Released under the MIT License &nbsp;·&nbsp;
+      Built with <a href="https://astro.build" target="_blank" rel="noopener">Astro</a>
+    </p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    background: var(--tn-bg-dark);
+    border-top: 1px solid var(--tn-border);
+    padding: 4rem 2rem 0;
+  }
+
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    gap: 3rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid var(--tn-border);
+  }
+
+  .footer-brand {
+    flex: 1;
+    max-width: 280px;
+  }
+
+  .brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--tn-fg);
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.75rem;
+  }
+  .brand-link:hover { color: var(--tn-blue); }
+
+  .brand-icon { font-size: 1rem; }
+  .brand-name {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--tn-blue);
+  }
+
+  .brand-tagline {
+    font-size: 0.875rem;
+    color: var(--tn-comment);
+    line-height: 1.6;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 3rem;
+  }
+
+  .footer-col h4 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--tn-fg-dark);
+    margin-bottom: 1rem;
+  }
+
+  .footer-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .footer-col a {
+    font-size: 0.875rem;
+    color: var(--tn-comment);
+    transition: color 0.2s;
+  }
+  .footer-col a:hover { color: var(--tn-blue); }
+
+  .footer-bottom {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 0;
+  }
+
+  .footer-copy {
+    font-size: 0.8rem;
+    color: var(--tn-comment);
+  }
+
+  .footer-copy a {
+    color: var(--tn-comment);
+  }
+  .footer-copy a:hover { color: var(--tn-blue); }
+
+  @media (max-width: 768px) {
+    .footer-inner {
+      flex-direction: column;
+      gap: 2rem;
+    }
+    .footer-brand { max-width: 100%; }
+    .footer-links { flex-wrap: wrap; gap: 2rem; }
+  }
+</style>
