@@ -1,0 +1,96 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'ax, short for agent cross, is an open source CLI for running AI coding agents in isolated git worktrees.' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jedipunkz.rocks" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <style is:global>
+      :root {
+        color-scheme: dark;
+        --tn-bg:        #16161d;
+        --tn-bg-dark:   #121218;
+        --tn-bg-hi:     #223249;
+        --tn-bg-card:   #1f1f28;
+        --tn-border:    #363646;
+        --tn-border-hi: #54546d;
+        --tn-fg:        #dcd7ba;
+        --tn-fg-dark:   #c8c093;
+        --tn-comment:   #727169;
+        --tn-blue:      #7e9cd8;
+        --tn-cyan:      #7aa89f;
+        --tn-purple:    #957fb8;
+        --tn-green:     #98bb6c;
+        --tn-yellow:    #e6c384;
+        --tn-orange:    #ffa066;
+        --tn-red:       #c34043;
+        --tn-teal:      #6a9589;
+        --tn-shadow:    0 20px 56px rgb(0 0 0 / 42%);
+      }
+
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+        background: var(--tn-bg);
+        color: var(--tn-fg);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      code, pre, .mono {
+        font-family: 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
+      }
+
+      a {
+        color: var(--tn-blue);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+      a:hover {
+        color: var(--tn-cyan);
+      }
+
+      ::selection {
+        background: var(--tn-purple);
+        color: var(--tn-bg);
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track { background: var(--tn-bg-dark); }
+      ::-webkit-scrollbar-thumb {
+        background: var(--tn-border);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover { background: var(--tn-comment); }
+    </style>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

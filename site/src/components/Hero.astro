@@ -1,0 +1,183 @@
+---
+---
+<section class="hero">
+  <div class="hero-content">
+    <p class="eyebrow">agent cross</p>
+    <h1>ax</h1>
+    <p class="hero-desc">
+      Cross Claude, Codex, Gemini, and OpenCode sessions in isolated git worktrees without crossing branches.
+    </p>
+
+    <div class="hero-actions">
+      <a href="#install" class="btn btn-primary">Install ax</a>
+      <a href="https://github.com/jedipunkz/ax" class="btn btn-secondary" target="_blank" rel="noopener">GitHub</a>
+    </div>
+
+    <div class="quick-command" aria-label="Install command">
+      <span class="prompt">$</span>
+      <code>brew tap jedipunkz/ax && brew install ax</code>
+    </div>
+  </div>
+
+  <figure class="hero-media">
+    <img
+      src="https://jedipunkz.rocks/pix/ax.png"
+      alt="ax terminal dashboard showing multiple agent sessions"
+      width="2988"
+      height="1642"
+      loading="eager"
+      decoding="async"
+    />
+  </figure>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: min(760px, 92vh);
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 7.5rem 2rem 4rem;
+    display: grid;
+    grid-template-columns: minmax(0, 0.82fr) minmax(360px, 1fr);
+    gap: 40px;
+    align-items: center;
+  }
+
+  .hero-content {
+    display: grid;
+    gap: 24px;
+    max-width: 780px;
+  }
+
+  .eyebrow {
+    color: var(--tn-blue);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    color: var(--tn-fg);
+    font-size: clamp(5.5rem, 16vw, 10rem);
+    font-weight: 820;
+    letter-spacing: 0;
+    line-height: 0.88;
+    max-width: 900px;
+  }
+
+  .hero-desc {
+    max-width: 620px;
+    color: var(--tn-fg-dark);
+    font-size: clamp(1.25rem, 2.8vw, 1.55rem);
+    line-height: 1.35;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-primary {
+    background: var(--tn-blue);
+    border: 1px solid var(--tn-blue);
+    color: var(--tn-bg-dark);
+  }
+
+  .btn-primary:hover {
+    color: var(--tn-bg-dark);
+    background: #a3c2f7;
+    border-color: #a3c2f7;
+  }
+
+  .btn-secondary {
+    color: var(--tn-fg);
+    border: 1px solid rgb(149 127 184 / 66%);
+    background: rgb(149 127 184 / 14%);
+  }
+
+  .btn-secondary:hover {
+    color: var(--tn-fg);
+    border-color: var(--tn-purple);
+    background: rgb(149 127 184 / 22%);
+  }
+
+  .quick-command {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    gap: 0.7rem;
+    width: min(100%, 520px);
+    padding: 18px;
+    border: 1px solid var(--tn-border);
+    border-radius: 8px;
+    background: var(--tn-bg-card);
+    color: var(--tn-fg-dark);
+    box-shadow: var(--tn-shadow);
+  }
+
+  .prompt {
+    color: var(--tn-orange);
+    font-family: 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .quick-command code {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--tn-green);
+    font-size: 1.02rem;
+    font-weight: 800;
+  }
+
+  .hero-media {
+    margin: 0;
+    min-width: 0;
+  }
+
+  .hero-media img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--tn-border);
+    border-radius: 8px;
+    background: var(--tn-bg-card);
+    box-shadow: var(--tn-shadow);
+  }
+
+  @media (max-width: 980px) {
+    .hero {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+
+    .hero-media {
+      max-width: 720px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .hero {
+      min-height: auto;
+      padding: 6.5rem 1.25rem 3rem;
+    }
+  }
+</style>
