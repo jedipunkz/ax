@@ -39,13 +39,6 @@ func newSessionMonitor(client *store.Client, initial store.AgentState) *sessionM
 	}
 }
 
-// snapshot returns a copy of the current state.
-func (m *sessionMonitor) snapshot() store.AgentState {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.state
-}
-
 // setPID records the OS PID of the spawned agent and returns the
 // updated snapshot for the caller to send as the initial state.
 func (m *sessionMonitor) setPID(pid int) store.AgentState {
