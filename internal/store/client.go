@@ -45,6 +45,19 @@ func (c *Client) Subscribe() error {
 	return c.encoder.Encode(msg)
 }
 
+// Attach asks the daemon to stream the agent's PTY output. When tail > 0, the
+// daemon first replays the last tail bytes of the log file.
+func (c *Client) Attach(agentID string, tail int) error {
+	msg := Message{Type: "attach", AgentID: agentID, Tail: tail}
+	return c.encoder.Encode(msg)
+}
+
+// Detach asks the daemon to stop streaming for the given agent.
+func (c *Client) Detach(agentID string) error {
+	msg := Message{Type: "detach", AgentID: agentID}
+	return c.encoder.Encode(msg)
+}
+
 // ReadMessage reads the next JSON-lines message from the socket.
 func (c *Client) ReadMessage() (Message, error) {
 	if !c.scanner.Scan() {

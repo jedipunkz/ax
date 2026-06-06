@@ -47,9 +47,20 @@ func (s Status) IsTerminal() bool {
 }
 
 // Message is the JSON-lines protocol message used over the Unix socket.
+//
+// Type values currently in use:
+//   - Client → Daemon: "update", "remove", "subscribe", "attach", "detach"
+//   - Daemon → Client: "snapshot", "update", "remove",
+//     "attach_ok", "attach_err", "output", "eof"
+//
+// Fields are populated as required by the message type; all are omitempty so
+// older payloads remain forward-compatible.
 type Message struct {
 	Type    string       `json:"type"`
 	Agent   *AgentState  `json:"agent,omitempty"`
 	Agents  []AgentState `json:"agents,omitempty"`
 	AgentID string       `json:"agent_id,omitempty"`
+	Data    string       `json:"data,omitempty"`  // base64 payload for "output" (and future "input")
+	Error   string       `json:"error,omitempty"` // populated on "*_err" responses
+	Tail    int          `json:"tail,omitempty"`  // attach: max bytes of log history to replay
 }
