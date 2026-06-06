@@ -16,16 +16,17 @@ type WaitResult struct {
 	ExitCode int
 }
 
-// Wait blocks until the agent identified by idOrName reaches a terminal
-// status, then returns the result. The exit code reflects the agent's own
-// exit_code when available; Killed agents return 130 (SIGINT convention).
+// Wait blocks until the agent identified by idOrName reaches a terminal status
+// or is idle at a user prompt, then returns the result. Terminal exit codes
+// reflect the agent's own exit_code when available; Killed agents return 130
+// (SIGINT convention). Waiting agents return 0 so shell continuations can run.
 func Wait(socketPath, idOrName string) (WaitResult, error) {
 	existing, err := findAgentByIDOrName(idOrName)
 	if err != nil {
 		return WaitResult{}, err
 	}
 
-	if existing.Status.IsTerminal() {
+	if isWaitComplete(existing) {
 		return resultFromAgent(existing), nil
 	}
 
@@ -72,12 +73,12 @@ func Wait(socketPath, idOrName string) (WaitResult, error) {
 			switch msg.Type {
 			case "snapshot":
 				for _, a := range msg.Agents {
-					if a.ID == existing.ID && a.Status.IsTerminal() {
+					if a.ID == existing.ID && isWaitComplete(a) {
 						return resultFromAgent(a), nil
 					}
 				}
 			case "update":
-				if msg.Agent != nil && msg.Agent.ID == existing.ID && msg.Agent.Status.IsTerminal() {
+				if msg.Agent != nil && msg.Agent.ID == existing.ID && isWaitComplete(*msg.Agent) {
 					return resultFromAgent(*msg.Agent), nil
 				}
 			case "remove":
@@ -90,7 +91,7 @@ func Wait(socketPath, idOrName string) (WaitResult, error) {
 				if latest.Status == store.StatusRunning && !store.IsPIDAlive(latest.PID) {
 					latest = staleAgentResult(latest)
 				}
-				if latest.Status.IsTerminal() {
+				if isWaitComplete(latest) {
 					return resultFromAgent(latest), nil
 				}
 			}
@@ -104,11 +105,15 @@ func Wait(socketPath, idOrName string) (WaitResult, error) {
 				latest = staleAgentResult(latest)
 				_ = client.SendUpdate(latest)
 			}
-			if latest.Status.IsTerminal() {
+			if isWaitComplete(latest) {
 				return resultFromAgent(latest), nil
 			}
 		}
 	}
+}
+
+func isWaitComplete(a store.AgentState) bool {
+	return a.Status.IsTerminal() || (a.Status == store.StatusRunning && a.WaitingUser)
 }
 
 func staleAgentResult(a store.AgentState) store.AgentState {

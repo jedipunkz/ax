@@ -149,7 +149,7 @@ var agentLogsCmd = &cobra.Command{
 
 var agentWaitCmd = &cobra.Command{
 	Use:                "wait -n <id|name>",
-	Short:              "Block until the agent reaches a terminal state; exit with its code",
+	Short:              "Block until the agent finishes or waits for input; exit with its code",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		idOrName, _, err := parseNameFlagRequired(args)
