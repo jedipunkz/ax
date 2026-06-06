@@ -11,7 +11,10 @@ import (
 )
 
 func TestUnauthenticatedSocketClientCannotInjectArbitraryLogPath(t *testing.T) {
-	dir, err := os.MkdirTemp("/tmp", "axsec")
+	// Use a short prefix in the system temp dir instead of t.TempDir(), whose
+	// generated path embeds the long test name and can exceed the platform
+	// Unix-socket path length limit (~104 bytes on macOS).
+	dir, err := os.MkdirTemp("", "ax")
 	if err != nil {
 		t.Fatal(err)
 	}

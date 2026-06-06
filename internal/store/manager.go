@@ -7,9 +7,16 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"time"
 )
+
+// agentIDPattern matches the canonical generated agent ID format
+// (`ax-<unix-minutes>-<4hex>`) and excludes anything containing path
+// separators or `.`/`..` segments that could be abused to redirect the
+// expected log-path computation.
+var agentIDPattern = regexp.MustCompile(`^ax-[0-9]+-[0-9a-f]+$`)
 
 // RunManager starts the state manager on the given Unix socket path.
 // It blocks until it encounters a fatal error.
@@ -243,7 +250,7 @@ func (m *manager) handleUpdate(msg Message) {
 }
 
 func (m *manager) validAgentState(agent AgentState) bool {
-	if agent.ID == "" {
+	if !agentIDPattern.MatchString(agent.ID) {
 		return false
 	}
 	if agent.LogFile == "" || m.dataDir == "" {
