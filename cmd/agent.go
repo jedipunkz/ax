@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -193,6 +194,39 @@ var agentWaitCmd = &cobra.Command{
 	},
 }
 
+var agentInputCmd = &cobra.Command{
+	Use:                "input -n <id|name> [text]",
+	Short:              "Send text to a waiting agent's stdin (reads from stdin if text is omitted)",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		idOrName, rest, err := parseNameFlagRequired(args)
+		if err != nil {
+			return err
+		}
+		var data string
+		if len(rest) > 0 {
+			data = strings.Join(rest, " ")
+		} else {
+			buf, readErr := io.ReadAll(os.Stdin)
+			if readErr != nil {
+				return fmt.Errorf("could not read stdin: %w", readErr)
+			}
+			data = string(buf)
+		}
+		if data == "" {
+			return fmt.Errorf("no input data provided")
+		}
+		socketPath, err := getSocketPath()
+		if err != nil {
+			return err
+		}
+		if err := ensureDaemon(socketPath); err != nil {
+			return fmt.Errorf("could not start daemon: %w", err)
+		}
+		return agent.SendInput(socketPath, idOrName, data)
+	},
+}
+
 func init() {
 	agentCmd.AddCommand(agentNewCmd)
 	agentCmd.AddCommand(agentCdCmd)
@@ -203,6 +237,7 @@ func init() {
 	agentCmd.AddCommand(agentLogsCmd)
 	agentCmd.AddCommand(agentAttachCmd)
 	agentCmd.AddCommand(agentWaitCmd)
+	agentCmd.AddCommand(agentInputCmd)
 }
 
 // parseAgentTypeAndNameFlag extracts -a/-m/--agent and -n/--name from args.
