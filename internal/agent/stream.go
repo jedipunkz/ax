@@ -1,9 +1,9 @@
 package agent
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
 	"regexp"
@@ -24,9 +24,15 @@ var attachStripRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z
 // the daemon (also stripped) until the agent terminates or the user
 // interrupts.
 func StreamLogs(socketPath, idOrName string, follow bool) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	existing, err := findAgentByIDOrName(idOrName)
 	if err != nil {
 		return err
+	}
+	if ctx.Err() != nil {
+		return nil
 	}
 
 	if existing.LogFile != "" {
@@ -35,6 +41,9 @@ func StreamLogs(socketPath, idOrName string, follow bool) error {
 		}
 	}
 
+	if ctx.Err() != nil {
+		return nil
+	}
 	if !follow {
 		return nil
 	}
@@ -42,25 +51,32 @@ func StreamLogs(socketPath, idOrName string, follow bool) error {
 		return nil
 	}
 
-	return runAttachLoop(socketPath, existing.ID, 0, true /* strip */)
+	return runAttachLoop(ctx, socketPath, existing.ID, 0, true /* strip */)
 }
 
 // AttachAgent implements `ax agent attach -n <id|name>`. The connection
 // streams raw PTY bytes (ANSI preserved) so callers see colours, prompts and
 // progress bars exactly as they were produced.
 func AttachAgent(socketPath, idOrName string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	existing, err := findAgentByIDOrName(idOrName)
 	if err != nil {
 		return err
 	}
-	return runAttachLoop(socketPath, existing.ID, 8192, false /* strip */)
+	if ctx.Err() != nil {
+		return nil
+	}
+
+	return runAttachLoop(ctx, socketPath, existing.ID, 8192, false /* strip */)
 }
 
 // runAttachLoop opens a daemon connection, attaches to the given agent and
-// writes incoming "output" payloads to stdout until "eof" arrives or the
-// process is interrupted. When strip is true, ANSI escapes are removed before
-// writing.
-func runAttachLoop(socketPath, agentID string, tail int, strip bool) error {
+// writes incoming "output" payloads to stdout until "eof" arrives or ctx is
+// cancelled (e.g. SIGINT). When strip is true, ANSI escapes are removed
+// before writing.
+func runAttachLoop(ctx context.Context, socketPath, agentID string, tail int, strip bool) error {
 	var client store.Client
 	if err := client.Connect(socketPath); err != nil {
 		return fmt.Errorf("could not connect to daemon: %w", err)
@@ -71,20 +87,17 @@ func runAttachLoop(socketPath, agentID string, tail int, strip bool) error {
 		return fmt.Errorf("could not send attach: %w", err)
 	}
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	defer signal.Stop(sigCh)
-
 	done := make(chan error, 1)
 	go func() {
 		for {
 			msg, err := client.ReadMessage()
 			if err != nil {
-				if err == io.EOF {
-					done <- nil
-					return
+				// Non-blocking send so we don't deadlock if main has already
+				// returned via the ctx.Done() path.
+				select {
+				case done <- err:
+				default:
 				}
-				done <- err
 				return
 			}
 			switch msg.Type {
@@ -102,11 +115,17 @@ func runAttachLoop(socketPath, agentID string, tail int, strip bool) error {
 					_, _ = os.Stdout.Write(raw)
 				}
 			case "attach_err":
-				done <- fmt.Errorf("attach failed: %s", msg.Error)
+				select {
+				case done <- fmt.Errorf("attach failed: %s", msg.Error):
+				default:
+				}
 				return
 			case "eof":
 				if msg.AgentID == agentID {
-					done <- nil
+					select {
+					case done <- nil:
+					default:
+					}
 					return
 				}
 			}
@@ -116,8 +135,11 @@ func runAttachLoop(socketPath, agentID string, tail int, strip bool) error {
 	select {
 	case err := <-done:
 		return err
-	case <-sigCh:
+	case <-ctx.Done():
+		// Best-effort detach (we don't wait for an ack), then close the
+		// connection so the reader goroutine unblocks immediately.
 		_ = client.Detach(agentID)
+		client.Close()
 		return nil
 	}
 }
