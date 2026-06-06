@@ -73,6 +73,12 @@ func (c *Client) Detach(agentID string) error {
 	return c.send(Message{Type: "detach", AgentID: agentID})
 }
 
+// Metrics asks the daemon to compute a point-in-time metrics summary for the
+// given agent. The response is a "metrics_result" or "metrics_err" message.
+func (c *Client) Metrics(agentID string) error {
+	return c.send(Message{Type: "metrics", AgentID: agentID})
+}
+
 // RegisterInput announces that this connection owns the input PTY for the
 // given agent. The daemon routes incoming "input" payloads for that agent
 // back over this connection.

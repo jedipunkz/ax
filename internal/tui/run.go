@@ -43,7 +43,7 @@ func Run(socketPath string, cfg *config.Config) error {
 	// Start background goroutine to periodically remove old worktrees.
 	go runWorktreeCleanup(socketPath, cfg.RemoveDurationDays)
 
-	m := newModel(client, sub, cfg.DurationDays)
+	m := newModel(client, socketPath, sub, cfg.DurationDays)
 	p := tea.NewProgram(m, tea.WithFPS(30))
 	_, err := p.Run()
 	client.Close()

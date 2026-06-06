@@ -214,9 +214,9 @@ func listView(m Model) string {
 
 	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
 
-	// Detail overview section: show selected group's Name, Agent, PID(s), Dir, Branch, Args.
+	// Detail overview section: show selected group's Name, Agent, PID(s), Dir, Branch, Args, Stats.
 	{
-		var name, agentType, pid, dir, branch, args string
+		var name, agentType, pid, dir, branch, args, stats string
 		if len(groups) > 0 && m.cursor < len(groups) {
 			g := groups[m.cursor]
 			name = g.groupLabel()
@@ -231,8 +231,9 @@ func listView(m Model) string {
 			if args == "" {
 				args = "-"
 			}
+			stats = formatMetricsSummary(m, g.Rep)
 		} else {
-			name, agentType, pid, dir, branch, args = "-", "-", "-", "-", "-", "-"
+			name, agentType, pid, dir, branch, args, stats = "-", "-", "-", "-", "-", "-", "-"
 		}
 		renderOverviewLine := func(label, value string) string {
 			styledLabel := OverviewLabelStyle.Render(label + " ")
@@ -247,6 +248,7 @@ func listView(m Model) string {
 		lines = append(lines, renderOverviewLine("Dir:  ", dir))
 		lines = append(lines, renderOverviewLine("Branch:", branch))
 		lines = append(lines, renderOverviewLine("Args: ", args))
+		lines = append(lines, renderOverviewLine("Stats:", stats))
 	}
 
 	// Fixed column widths: cursor(2) id(24) sp(1) agent(8) sp(1) repo(12) sp(1) status(9) sp(1) ended(11)
@@ -303,7 +305,7 @@ func listView(m Model) string {
 	}
 
 	// Compute available rows for agent entries.
-	// Fixed frame lines: topBorder + 6 overview + colHeader + 3 section divider-headers + bottom divider + help + bottomBorder = 14.
+	// Fixed frame lines: topBorder + 7 overview + colHeader + 3 section divider-headers + bottom divider + help + bottomBorder = 15.
 	emptyCount := 0
 	if len(running) == 0 {
 		emptyCount++
@@ -314,7 +316,7 @@ func listView(m Model) string {
 	if len(killed) == 0 {
 		emptyCount++
 	}
-	availableRows := max(0, height-14-emptyCount)
+	availableRows := max(0, height-15-emptyCount)
 
 	// Compute per-section slice bounds based on scroll offset.
 	// Flat visible list order: running[0..], success[0..], killed[0..]
@@ -460,6 +462,32 @@ func formatElapsed(agent store.AgentState) string {
 	h := int(d.Hours())
 	mn := int(d.Minutes()) % 60
 	s := int(d.Seconds()) % 60
+	return fmt.Sprintf("%d:%02d:%02d", h, mn, s)
+}
+
+func formatMetricsSummary(m Model, agent store.AgentState) string {
+	if err := m.metricsErr[agent.ID]; err != "" {
+		return "metrics error: " + err
+	}
+	metrics, ok := m.metrics[agent.ID]
+	if !ok {
+		return "loading..."
+	}
+	return fmt.Sprintf(
+		"%s  commits %d  output %d lines",
+		formatSeconds(metrics.DurationSec),
+		metrics.CommitCount,
+		metrics.OutputLines,
+	)
+}
+
+func formatSeconds(sec int64) string {
+	if sec < 0 {
+		sec = 0
+	}
+	h := sec / 3600
+	mn := (sec / 60) % 60
+	s := sec % 60
 	return fmt.Sprintf("%d:%02d:%02d", h, mn, s)
 }
 

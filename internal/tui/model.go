@@ -33,6 +33,13 @@ type logLoadedMsg struct {
 	content string
 }
 
+// metricsLoadedMsg carries the result of a daemon metrics request.
+type metricsLoadedMsg struct {
+	agentID string
+	metrics store.Message
+	err     string
+}
+
 // clearStatusMsg clears the status message after a short delay.
 type clearStatusMsg struct{}
 
@@ -55,6 +62,7 @@ type Model struct {
 	scrollOffset   int
 	view           ViewMode
 	client         *store.Client
+	socketPath     string
 	sub            chan store.Message
 	spinner        spinner.Model
 	viewport       viewport.Model
@@ -73,23 +81,30 @@ type Model struct {
 	removingDots   int
 	now            time.Time
 	durationDays   int
+	metrics        map[string]store.Message
+	metricsErr     map[string]string
+	metricsPolled  map[string]time.Time
 }
 
-func newModel(client *store.Client, sub chan store.Message, durationDays int) Model {
+func newModel(client *store.Client, socketPath string, sub chan store.Message, durationDays int) Model {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 
 	workDir, _ := os.Getwd()
 
 	return Model{
-		agents:       []store.AgentState{},
-		client:       client,
-		sub:          sub,
-		spinner:      sp,
-		view:         viewList,
-		workDir:      workDir,
-		now:          time.Now(),
-		durationDays: durationDays,
+		agents:        []store.AgentState{},
+		client:        client,
+		socketPath:    socketPath,
+		sub:           sub,
+		spinner:       sp,
+		view:          viewList,
+		workDir:       workDir,
+		now:           time.Now(),
+		durationDays:  durationDays,
+		metrics:       map[string]store.Message{},
+		metricsErr:    map[string]string{},
+		metricsPolled: map[string]time.Time{},
 	}
 }
 
@@ -109,6 +124,33 @@ func removingTickCmd() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		return removingTickMsg{}
 	})
+}
+
+func requestMetrics(socketPath, agentID string) tea.Cmd {
+	return func() tea.Msg {
+		if agentID == "" {
+			return metricsLoadedMsg{}
+		}
+		client := &store.Client{}
+		if err := client.Connect(socketPath); err != nil {
+			return metricsLoadedMsg{agentID: agentID, err: err.Error()}
+		}
+		defer client.Close()
+		if err := client.Metrics(agentID); err != nil {
+			return metricsLoadedMsg{agentID: agentID, err: err.Error()}
+		}
+		msg, err := client.ReadMessage()
+		if err != nil {
+			return metricsLoadedMsg{agentID: agentID, err: err.Error()}
+		}
+		if msg.Type == "metrics_err" {
+			return metricsLoadedMsg{agentID: agentID, err: msg.Error}
+		}
+		if msg.Type != "metrics_result" {
+			return metricsLoadedMsg{agentID: agentID, err: "unexpected metrics response: " + msg.Type}
+		}
+		return metricsLoadedMsg{agentID: agentID, metrics: msg}
+	}
 }
 
 // removeAgentCmd performs the (potentially slow) worktree removal and
@@ -146,6 +188,36 @@ func (m Model) Init() tea.Cmd {
 		waitForMsg(m.sub),
 		tickEverySecond(),
 	)
+}
+
+func (m Model) selectedGroups() []AgentGroup {
+	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
+	if m.searchMode {
+		groups = fuzzyFilterGroups(groups, m.searchQuery)
+	}
+	return groups
+}
+
+func (m Model) selectedAgent() (store.AgentState, bool) {
+	groups := m.selectedGroups()
+	if len(groups) == 0 || m.cursor >= len(groups) {
+		return store.AgentState{}, false
+	}
+	return groups[m.cursor].Rep, true
+}
+
+func (m *Model) pollSelectedMetrics(now time.Time, force bool) tea.Cmd {
+	agent, ok := m.selectedAgent()
+	if !ok {
+		return nil
+	}
+	if !force {
+		if last, ok := m.metricsPolled[agent.ID]; ok && now.Sub(last) < 5*time.Second {
+			return nil
+		}
+	}
+	m.metricsPolled[agent.ID] = now
+	return requestMetrics(m.socketPath, agent.ID)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -249,6 +321,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor--
 				}
 				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
+				if cmd := m.pollSelectedMetrics(m.now, true); cmd != nil {
+					cmds = append(cmds, cmd)
+				}
 			}
 
 		case "down", "j":
@@ -260,6 +335,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor++
 				}
 				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
+				if cmd := m.pollSelectedMetrics(m.now, true); cmd != nil {
+					cmds = append(cmds, cmd)
+				}
 			}
 
 		case "enter":
@@ -283,6 +361,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor = len(groups) - 1
 			}
 			m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
+			if cmd := m.pollSelectedMetrics(m.now, true); cmd != nil {
+				cmds = append(cmds, cmd)
+			}
 
 		case "/":
 			if m.view == viewList {
@@ -363,6 +444,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "snapshot":
 			m.agents = msg.Agents
 			sortAgents(m.agents)
+			if cmd := m.pollSelectedMetrics(m.now, true); cmd != nil {
+				cmds = append(cmds, cmd)
+			}
 		case "update":
 			if msg.Agent != nil {
 				updated := false
@@ -377,6 +461,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.agents = append(m.agents, *msg.Agent)
 				}
 				sortAgents(m.agents)
+				if selected, ok := m.selectedAgent(); ok && selected.ID == msg.Agent.ID {
+					if cmd := m.pollSelectedMetrics(m.now, false); cmd != nil {
+						cmds = append(cmds, cmd)
+					}
+				}
 			}
 		case "remove":
 			if msg.AgentID != "" {
@@ -386,6 +475,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						break
 					}
 				}
+				delete(m.metrics, msg.AgentID)
+				delete(m.metricsErr, msg.AgentID)
+				delete(m.metricsPolled, msg.AgentID)
 			}
 		}
 		// Clamp cursor to visible groups
@@ -403,6 +495,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		m.now = time.Time(msg)
 		cmds = append(cmds, tickEverySecond())
+		if cmd := m.pollSelectedMetrics(m.now, false); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+
+	case metricsLoadedMsg:
+		if msg.agentID != "" {
+			if msg.err != "" {
+				m.metricsErr[msg.agentID] = msg.err
+			} else {
+				m.metrics[msg.agentID] = msg.metrics
+				delete(m.metricsErr, msg.agentID)
+			}
+		}
 
 	case removingTickMsg:
 		if m.removing {
@@ -518,7 +623,7 @@ func (m Model) listAvailableRows() int {
 	if h < 10 {
 		h = 24
 	}
-	avail := h - 13 - emptyCount
+	avail := h - 14 - emptyCount
 	if avail < 0 {
 		avail = 0
 	}
