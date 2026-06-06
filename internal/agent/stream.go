@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -24,15 +23,11 @@ var attachStripRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z
 // the daemon (also stripped) until the agent terminates or the user
 // interrupts.
 func StreamLogs(socketPath, idOrName string, follow bool) error {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	installSignalExit()
 
 	existing, err := findAgentByIDOrName(idOrName)
 	if err != nil {
 		return err
-	}
-	if ctx.Err() != nil {
-		return nil
 	}
 
 	if existing.LogFile != "" {
@@ -41,9 +36,6 @@ func StreamLogs(socketPath, idOrName string, follow bool) error {
 		}
 	}
 
-	if ctx.Err() != nil {
-		return nil
-	}
 	if !follow {
 		return nil
 	}
@@ -51,96 +43,66 @@ func StreamLogs(socketPath, idOrName string, follow bool) error {
 		return nil
 	}
 
-	return runAttachLoop(ctx, socketPath, existing.ID, 0, true /* strip */)
+	return followStream(socketPath, existing.ID)
 }
 
-// AttachAgent implements `ax agent attach -n <id|name>`. The connection
-// streams raw PTY bytes (ANSI preserved) so callers see colours, prompts and
-// progress bars exactly as they were produced.
-func AttachAgent(socketPath, idOrName string) error {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	existing, err := findAgentByIDOrName(idOrName)
-	if err != nil {
-		return err
-	}
-	if ctx.Err() != nil {
-		return nil
-	}
-
-	return runAttachLoop(ctx, socketPath, existing.ID, 8192, false /* strip */)
+// installSignalExit registers a goroutine that immediately terminates the
+// process on SIGINT/SIGTERM. We use a hard os.Exit instead of a context to
+// guarantee termination even if a goroutine is blocked in a syscall (slow
+// stdout write, large file read, daemon stuck) at the moment the signal
+// arrives. The exit code follows the shell convention 128 + signal number.
+func installSignalExit() {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-sigCh
+		code := 130 // SIGINT
+		if sig == syscall.SIGTERM {
+			code = 143
+		}
+		os.Exit(code)
+	}()
 }
 
-// runAttachLoop opens a daemon connection, attaches to the given agent and
-// writes incoming "output" payloads to stdout until "eof" arrives or ctx is
-// cancelled (e.g. SIGINT). When strip is true, ANSI escapes are removed
-// before writing.
-func runAttachLoop(ctx context.Context, socketPath, agentID string, tail int, strip bool) error {
+// followStream connects to the daemon, attaches to the given agent and writes
+// each ANSI-stripped output chunk to stdout until "eof" arrives or the
+// connection drops. The signal watcher installed by installSignalExit ends
+// the process on Ctrl-C without needing extra plumbing here.
+func followStream(socketPath, agentID string) error {
 	var client store.Client
 	if err := client.Connect(socketPath); err != nil {
 		return fmt.Errorf("could not connect to daemon: %w", err)
 	}
 	defer client.Close()
 
-	if err := client.Attach(agentID, tail); err != nil {
+	if err := client.Attach(agentID, 0); err != nil {
 		return fmt.Errorf("could not send attach: %w", err)
 	}
 
-	done := make(chan error, 1)
-	go func() {
-		for {
-			msg, err := client.ReadMessage()
-			if err != nil {
-				// Non-blocking send so we don't deadlock if main has already
-				// returned via the ctx.Done() path.
-				select {
-				case done <- err:
-				default:
-				}
-				return
+	for {
+		msg, err := client.ReadMessage()
+		if err != nil {
+			// Daemon closed the connection or an I/O error occurred — treat
+			// it as end of stream.
+			return nil
+		}
+		switch msg.Type {
+		case "output":
+			if msg.AgentID != agentID {
+				continue
 			}
-			switch msg.Type {
-			case "output":
-				if msg.AgentID != agentID {
-					continue
-				}
-				raw, decErr := base64.StdEncoding.DecodeString(msg.Data)
-				if decErr != nil {
-					continue
-				}
-				if strip {
-					_, _ = os.Stdout.WriteString(stripANSI(raw))
-				} else {
-					_, _ = os.Stdout.Write(raw)
-				}
-			case "attach_err":
-				select {
-				case done <- fmt.Errorf("attach failed: %s", msg.Error):
-				default:
-				}
-				return
-			case "eof":
-				if msg.AgentID == agentID {
-					select {
-					case done <- nil:
-					default:
-					}
-					return
-				}
+			raw, decErr := base64.StdEncoding.DecodeString(msg.Data)
+			if decErr != nil {
+				continue
+			}
+			_, _ = os.Stdout.WriteString(stripANSI(raw))
+		case "attach_err":
+			return fmt.Errorf("attach failed: %s", msg.Error)
+		case "eof":
+			if msg.AgentID == agentID {
+				return nil
 			}
 		}
-	}()
-
-	select {
-	case err := <-done:
-		return err
-	case <-ctx.Done():
-		// Best-effort detach (we don't wait for an ack), then close the
-		// connection so the reader goroutine unblocks immediately.
-		_ = client.Detach(agentID)
-		client.Close()
-		return nil
 	}
 }
 

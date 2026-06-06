@@ -104,16 +104,10 @@ Dump the full output log with ANSI escapes stripped:
 ax agent logs -n <id|name>
 ```
 
-Follow new output in real time (the daemon streams it from any terminal):
+Follow new output in real time (the daemon streams it from any terminal). Press Ctrl-C to stop following:
 
 ```bash
 ax agent logs -f -n <id|name>
-```
-
-For a raw, real-time view that preserves colours, prompts and progress bars exactly as they were produced, use `attach`. The last 8 KB of history is replayed on connect, and Ctrl-C detaches without affecting the agent:
-
-```bash
-ax agent attach -n <id|name>
 ```
 
 ### Wait for an agent to finish

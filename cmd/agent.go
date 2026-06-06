@@ -147,26 +147,6 @@ var agentLogsCmd = &cobra.Command{
 	},
 }
 
-var agentAttachCmd = &cobra.Command{
-	Use:                "attach -n <id|name>",
-	Short:              "Attach to an agent's PTY output (raw, real-time)",
-	DisableFlagParsing: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		idOrName, _, err := parseNameFlagRequired(args)
-		if err != nil {
-			return err
-		}
-		socketPath, err := getSocketPath()
-		if err != nil {
-			return err
-		}
-		if err := ensureDaemon(socketPath); err != nil {
-			return fmt.Errorf("could not start daemon: %w", err)
-		}
-		return agent.AttachAgent(socketPath, idOrName)
-	},
-}
-
 var agentWaitCmd = &cobra.Command{
 	Use:                "wait -n <id|name>",
 	Short:              "Block until the agent reaches a terminal state; exit with its code",
@@ -235,7 +215,6 @@ func init() {
 	agentCmd.AddCommand(agentRmCmd)
 	agentCmd.AddCommand(agentDiffCmd)
 	agentCmd.AddCommand(agentLogsCmd)
-	agentCmd.AddCommand(agentAttachCmd)
 	agentCmd.AddCommand(agentWaitCmd)
 	agentCmd.AddCommand(agentInputCmd)
 }
