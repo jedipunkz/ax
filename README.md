@@ -83,9 +83,9 @@ Follow new output in real time (the daemon streams it from any terminal). Press 
 ax agent logs -f -n <id|name>
 ```
 
-### Wait for an agent to finish
+### Wait for an agent to finish or pause
 
-Block until the agent reaches a terminal state, then exit with the agent's own exit code (`130` for killed agents). Useful for shell pipelines and CI scripts:
+Block until the agent reaches a terminal state or pauses at a prompt. Terminal states exit with the agent's own exit code (`130` for killed agents); a paused `waiting` agent exits with `0`. Useful for shell pipelines and follow-up commands:
 
 ```bash
 ax agent wait -n <id|name> && ./deploy.sh
