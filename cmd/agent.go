@@ -6,12 +6,12 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jedipunkz/ax/internal/agent"
+	"github.com/jedipunkz/ax/internal/axfs"
 	"github.com/spf13/cobra"
 )
 
@@ -323,11 +323,7 @@ func parseNameAndFollowFlags(args []string) (name string, follow bool, rest []st
 }
 
 func getSocketPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("could not determine home directory: %w", err)
-	}
-	return filepath.Join(home, ".ax", "ax.sock"), nil
+	return axfs.Socket()
 }
 
 func ensureDaemon(socketPath string) error {
@@ -393,10 +389,8 @@ func isBinaryNewerThanSocket(socketPath string) bool {
 
 // killDaemon kills the running daemon process using the PID file and removes the socket.
 func killDaemon(socketPath string) {
-	home, err := os.UserHomeDir()
-	if err == nil {
-		pidFile := filepath.Join(home, ".ax", "daemon.pid")
-		if data, err := os.ReadFile(pidFile); err == nil {
+	if paths, err := axfs.New(); err == nil {
+		if data, err := os.ReadFile(paths.PIDFile()); err == nil {
 			if pid, err := strconv.Atoi(strings.TrimSpace(string(data))); err == nil {
 				killPID(pid)
 			}

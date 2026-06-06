@@ -12,17 +12,28 @@ import (
 	"github.com/jedipunkz/ax/internal/store"
 )
 
-// CleanupOldWorktrees removes git worktrees for agents that finished more than
-// removeDurationDays ago. It reads the agent state from statePath and removes
-// worktree directories under worktreesDir that belong to sufficiently old agents.
-func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int) error {
-	return CleanupOldWorktreesWithUpdate(statePath, worktreesDir, removeDurationDays, nil)
+// IsUnderWorktreesDir reports whether workDir lives under worktreesDir.
+// Used as a safety check before removing a directory so the user's real
+// working directories cannot be deleted by accident.
+func IsUnderWorktreesDir(worktreesDir, workDir string) bool {
+	if workDir == "" {
+		return false
+	}
+	cleanWorktrees := filepath.Clean(worktreesDir)
+	cleanWorkDir := filepath.Clean(workDir)
+	return strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator))
 }
 
-// CleanupOldWorktreesWithUpdate removes old worktrees and clears the removed
-// worktree metadata from state. When update is provided, the caller is
-// responsible for persisting each updated agent state.
-func CleanupOldWorktreesWithUpdate(statePath, worktreesDir string, removeDurationDays int, update func(store.AgentState) error) error {
+// CleanupOldWorktrees removes git worktrees for agents that finished
+// more than removeDurationDays ago. It reads the agent state from
+// statePath, removes worktree directories under worktreesDir for
+// sufficiently old agents, and clears their worktree metadata.
+//
+// When update is non-nil it is invoked for each cleared state entry so
+// the caller can forward the change to the daemon; in that case the
+// state file is *not* rewritten directly. When update is nil the
+// function persists the updated state file itself.
+func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int, update func(store.AgentState) error) error {
 	data, err := os.ReadFile(statePath)
 	if os.IsNotExist(err) {
 		return nil
@@ -68,11 +79,10 @@ func CleanupOldWorktreesWithUpdate(statePath, worktreesDir string, removeDuratio
 		}
 		// Only remove directories that live under ~/.ax/worktrees/ to avoid
 		// accidentally deleting the user's actual working directories.
-		cleanWorktrees := filepath.Clean(worktreesDir)
-		cleanWorkDir := filepath.Clean(a.WorkDir)
-		if !strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
+		if !IsUnderWorktreesDir(worktreesDir, a.WorkDir) {
 			continue
 		}
+		cleanWorkDir := filepath.Clean(a.WorkDir)
 		if _, err := os.Stat(cleanWorkDir); err != nil {
 			if os.IsNotExist(err) {
 				if err := clearWorktreeState(i, a); err != nil {

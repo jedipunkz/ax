@@ -7,18 +7,13 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"regexp"
-	"strings"
 	"sync"
 	"syscall"
 
 	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/ax/internal/textutil"
 	"golang.org/x/term"
 )
-
-// attachStripRe matches ANSI/VT escape sequences for the ANSI-stripped logs
-// flow. It mirrors the regex used in internal/agent/runner.go.
-var attachStripRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z\\^_@]|\][^\x07\x1b]*(?:\x07|\x1b\\))`)
 
 var signalExitCleanup = struct {
 	sync.Mutex
@@ -228,11 +223,5 @@ func followStream(socketPath, agentID string) error {
 	}
 }
 
-// stripANSI removes ANSI escape sequences and normalises CR/LF, returning a
-// UTF-8 string suitable for plain-text consumption.
-func stripANSI(b []byte) string {
-	s := attachStripRe.ReplaceAllString(string(b), "")
-	s = strings.ReplaceAll(s, "\r\n", "\n")
-	s = strings.ReplaceAll(s, "\r", "\n")
-	return s
-}
+// stripANSI is a local alias kept so call sites in this file read clearly.
+func stripANSI(b []byte) string { return textutil.StripANSI(b) }

@@ -9,22 +9,20 @@ import (
 	"syscall"
 )
 
-// isPIDAlive returns true if the given PID refers to a running process.
-func isPIDAlive(pid int) bool {
+// IsPIDAlive returns true if the given PID refers to a running, non-zombie process.
+func IsPIDAlive(pid int) bool {
 	if pid <= 0 {
 		return false
 	}
-	err := syscall.Kill(pid, 0)
-	if err != nil {
+	if err := syscall.Kill(pid, 0); err != nil {
 		return false
 	}
 	return !isPIDZombie(pid)
 }
 
-// IsPIDAlive returns true if the given PID refers to a running process.
-func IsPIDAlive(pid int) bool {
-	return isPIDAlive(pid)
-}
+// isPIDAlive is the internal alias used by the manager so existing
+// callers keep working without exposing the wrapper.
+func isPIDAlive(pid int) bool { return IsPIDAlive(pid) }
 
 func isPIDZombie(pid int) bool {
 	out, err := exec.Command("ps", "-o", "stat=", "-p", strconv.Itoa(pid)).Output()

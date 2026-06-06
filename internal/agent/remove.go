@@ -1,12 +1,11 @@
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"github.com/jedipunkz/ax/internal/axfs"
 	"github.com/jedipunkz/ax/internal/store"
 )
 
@@ -15,18 +14,18 @@ import (
 // If socketPath is non-empty and the daemon is reachable, state removal is
 // delegated to the daemon; otherwise state.json is updated directly.
 func RemoveAgent(idOrName, socketPath string) error {
-	home, err := os.UserHomeDir()
+	paths, err := axfs.New()
 	if err != nil {
-		return fmt.Errorf("could not determine home directory: %w", err)
+		return err
 	}
-	stateFile := filepath.Join(home, ".ax", "state.json")
+	stateFile := paths.StateFile()
 
 	agents, err := readAgents(stateFile)
 	if err != nil {
 		return err
 	}
 
-	target, idx := findAgent(agents, idOrName)
+	target, idx := FindAgent(agents, idOrName)
 	if idx < 0 {
 		return fmt.Errorf("agent %q not found", idOrName)
 	}
@@ -34,29 +33,7 @@ func RemoveAgent(idOrName, socketPath string) error {
 		return fmt.Errorf("agent %s is still running; stop it before removing", target.ID)
 	}
 
-	// Remove worktree directory if it lives under ~/.ax/worktrees/
-	worktreesDir := filepath.Join(home, ".ax", "worktrees")
-	if target.WorkDir != "" {
-		cleanWorktrees := filepath.Clean(worktreesDir)
-		cleanWorkDir := filepath.Clean(target.WorkDir)
-		if strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
-			if _, err := os.Stat(cleanWorkDir); err == nil {
-				if err := RemoveWorktree(cleanWorkDir); err != nil {
-					fmt.Fprintf(os.Stderr, "warning: could not remove worktree %s: %v\n", cleanWorkDir, err)
-				}
-			}
-		}
-	}
-
-	// Remove log file
-	if target.LogFile != "" {
-		if err := os.Remove(target.LogFile); err != nil && !os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "warning: could not remove log file %s: %v\n", target.LogFile, err)
-		}
-		// Remove parent agents/<id> directory if empty
-		logDir := filepath.Dir(target.LogFile)
-		_ = os.Remove(logDir)
-	}
+	RemoveAgentArtifacts(paths, target)
 
 	// Remove agent from state
 	if socketPath != "" {
@@ -81,55 +58,44 @@ func RemoveAgent(idOrName, socketPath string) error {
 	return nil
 }
 
-// findAgent returns the agent matching idOrName (by ID prefix or exact name) and its index.
-func findAgent(agents []store.AgentState, idOrName string) (store.AgentState, int) {
-	// Exact ID match first
-	for i, a := range agents {
-		if a.ID == idOrName {
-			return a, i
+// RemoveAgentArtifacts deletes the worktree (if it lives under
+// ~/.ax/worktrees/) and the log file/directory for the given agent.
+// Failures are reported as warnings; they do not stop the cleanup so
+// callers can complete state removal regardless.
+//
+// Shared by `ax agent remove` and the dashboard's deletion flow.
+func RemoveAgentArtifacts(paths axfs.Paths, ag store.AgentState) {
+	if ag.WorkDir != "" && IsUnderWorktreesDir(paths.WorktreesDir(), ag.WorkDir) {
+		cleanWorkDir := filepath.Clean(ag.WorkDir)
+		if _, err := os.Stat(cleanWorkDir); err == nil {
+			if err := RemoveWorktree(cleanWorkDir); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: could not remove worktree %s: %v\n", cleanWorkDir, err)
+			}
 		}
 	}
-	// Exact name match
-	for i, a := range agents {
-		if a.Name == idOrName {
-			return a, i
+	if ag.LogFile != "" {
+		if err := os.Remove(ag.LogFile); err != nil && !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "warning: could not remove log file %s: %v\n", ag.LogFile, err)
 		}
+		_ = os.Remove(filepath.Dir(ag.LogFile))
 	}
-	// ID prefix match
-	for i, a := range agents {
-		if strings.HasPrefix(a.ID, idOrName) {
-			return a, i
-		}
-	}
-	return store.AgentState{}, -1
 }
 
+// readAgents wraps store.ReadAgents with the package's "no agents found"
+// error for missing files. Other I/O failures bubble up unchanged.
 func readAgents(stateFile string) ([]store.AgentState, error) {
-	data, err := os.ReadFile(stateFile)
+	agents, err := store.ReadAgents(stateFile)
 	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("no agents found")
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not read state file: %w", err)
 	}
-	var agents []store.AgentState
-	if err := json.Unmarshal(data, &agents); err != nil {
-		return nil, fmt.Errorf("could not parse state file: %w", err)
-	}
 	return agents, nil
 }
 
+// writeAgents is a thin alias kept so the package's read/write helpers
+// remain a matched pair at the call sites.
 func writeAgents(stateFile string, agents []store.AgentState) error {
-	data, err := json.Marshal(agents)
-	if err != nil {
-		return fmt.Errorf("could not marshal state: %w", err)
-	}
-	tmp := stateFile + ".tmp"
-	if err := os.WriteFile(tmp, data, 0644); err != nil {
-		return fmt.Errorf("could not write state: %w", err)
-	}
-	if err := os.Rename(tmp, stateFile); err != nil {
-		return fmt.Errorf("could not rename state file: %w", err)
-	}
-	return nil
+	return store.WriteAgents(stateFile, agents)
 }

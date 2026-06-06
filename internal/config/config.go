@@ -3,9 +3,10 @@ package config
 import (
 	"bufio"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/jedipunkz/ax/internal/axfs"
 )
 
 // Config holds the ax configuration loaded from ~/.ax/ax.yaml.
@@ -142,13 +143,12 @@ const DefaultTheme = "tokyonight"
 func Load() (*Config, error) {
 	cfg := &Config{Theme: DefaultTheme, DurationDays: DefaultDurationDays, RemoveDurationDays: DefaultRemoveDurationDays}
 
-	home, err := os.UserHomeDir()
+	paths, err := axfs.New()
 	if err != nil {
 		return cfg, nil
 	}
 
-	path := filepath.Join(home, ".ax", "ax.yaml")
-	f, err := os.Open(path)
+	f, err := os.Open(paths.ConfigFile())
 	if os.IsNotExist(err) {
 		return cfg, nil
 	}

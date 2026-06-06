@@ -2,23 +2,19 @@ package agent
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
-	"sync"
-	"syscall"
 	"time"
-	"unicode"
 
 	"github.com/creack/pty"
+	"github.com/jedipunkz/ax/internal/axfs"
 	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/ax/internal/textutil"
 	"golang.org/x/term"
 )
 
@@ -26,17 +22,11 @@ import (
 // to be waiting for user input rather than processing.
 const waitingUserThreshold = 2 * time.Second
 
-// normalizeAgentType returns agentType unchanged if non-empty, or "claude" as default.
-// Delegates to store.AgentState.AgentTypeName for consistent behavior.
-func normalizeAgentType(agentType string) string {
-	return (store.AgentState{AgentType: agentType}).AgentTypeName()
-}
-
 // Run starts an interactive agent session and reports agent lifecycle
 // state to the store daemon. agentType is the binary to invoke (e.g. "claude",
 // "codex", "gemini"); an empty string defaults to "claude".
 func Run(args []string, socketPath string, name string, agentType string) error {
-	agentType = normalizeAgentType(agentType)
+	agentType = store.AgentState{AgentType: agentType}.AgentTypeName()
 
 	if name != "" {
 		if existing, err := findAgentByIDOrName(name); err == nil {
@@ -60,7 +50,7 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 			repoName = filepath.Base(repoRoot)
 			wt, branch, wtErr := setupWorktree(id, repoRoot, name)
 			if wtErr != nil {
-				fmt.Fprintf(os.Stderr, "warning: could not create worktree: %v\n", wtErr)
+				warnf("could not create worktree: %v", wtErr)
 			} else {
 				workDir = wt
 				worktreeBranch = branch
@@ -91,7 +81,7 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTy
 		return fmt.Errorf("worktree directory %q no longer exists: %w", existing.WorkDir, err)
 	}
 
-	agentType := normalizeAgentType(existing.AgentType)
+	agentType := existing.AgentTypeName()
 	if agentTypeOverride != "" {
 		agentType = agentTypeOverride
 	}
@@ -111,9 +101,7 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTy
 //
 // The leading "--" separator that cobra forwards is stripped before merging.
 func buildResumeArgs(agentType string, userArgs []string) []string {
-	if len(userArgs) > 0 && userArgs[0] == "--" {
-		userArgs = userArgs[1:]
-	}
+	userArgs = stripLeadingDoubleDash(userArgs)
 	prefix := resumePrefixArgs(agentType)
 	out := make([]string, 0, len(userArgs)+len(prefix))
 	out = append(out, userArgs...)
@@ -121,97 +109,46 @@ func buildResumeArgs(agentType string, userArgs []string) []string {
 	return out
 }
 
-// findAgentByIDOrName reads state.json and returns the agent matching the given ID exactly,
-// or falls back to the most recent agent matching by name.
-func findAgentByIDOrName(idOrName string) (store.AgentState, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return store.AgentState{}, fmt.Errorf("could not determine home directory: %w", err)
-	}
-	stateFile := filepath.Join(home, ".ax", "state.json")
-	data, err := os.ReadFile(stateFile)
-	if err != nil {
-		return store.AgentState{}, fmt.Errorf("could not read state file: %w", err)
-	}
-	var agents []store.AgentState
-	if err := json.Unmarshal(data, &agents); err != nil {
-		return store.AgentState{}, fmt.Errorf("could not parse state file: %w", err)
-	}
-
-	// Search by ID first (exact match).
-	for i := range agents {
-		if agents[i].ID == idOrName {
-			return agents[i], nil
-		}
-	}
-
-	// Fall back to name search (most recent match).
-	sanitized := sanitizeBranchName(idOrName)
-	var best *store.AgentState
-	for i := range agents {
-		a := &agents[i]
-		if a.Name == idOrName || (sanitized != "" && a.WorktreeBranch == sanitized) {
-			if best == nil || a.StartedAt.After(best.StartedAt) {
-				best = a
-			}
-		}
-	}
-	if best == nil {
-		return store.AgentState{}, fmt.Errorf("no agent found with ID or name %q", idOrName)
-	}
-	return *best, nil
-}
-
-// runSession is the shared implementation for Run and Resume.
+// runSession is the shared implementation for Run and Resume. It owns
+// the PTY, the log file, and the lifecycle goroutines (idle watcher,
+// commit watcher, daemon input pump), and produces the terminal state
+// update before returning.
 func runSession(args []string, socketPath, id, name, agentType, workDir, worktreeBranch, repoName string) error {
-	home, err := os.UserHomeDir()
+	paths, err := axfs.New()
 	if err != nil {
-		return fmt.Errorf("could not determine home directory: %w", err)
+		return err
 	}
-
-	agentDir := filepath.Join(home, ".ax", "agents", id)
-	if err := os.MkdirAll(agentDir, 0755); err != nil {
+	if err := os.MkdirAll(paths.AgentDir(id), 0755); err != nil {
 		return fmt.Errorf("could not create agent dir: %w", err)
 	}
+	logPath := paths.AgentLog(id)
 
-	logPath := filepath.Join(agentDir, "output.log")
-
-	// Connect to store
 	var client store.Client
 	if err := client.Connect(socketPath); err != nil {
 		return fmt.Errorf("could not connect to store: %w", err)
 	}
 	defer client.Close()
 
-	// Strip leading "--" separator if present (cobra passes it through)
-	agentArgs := args
-	if len(agentArgs) > 0 && agentArgs[0] == "--" {
-		agentArgs = agentArgs[1:]
-	}
-
-	// Record the HEAD commit before the session so we can diff afterwards.
+	agentArgs := stripLeadingDoubleDash(args)
 	initialHead := gitHeadCommit(workDir)
 
 	cmd := exec.Command(agentType, agentArgs...)
 	cmd.Dir = workDir
 
-	now := time.Now()
-	state := store.AgentState{
+	monitor := newSessionMonitor(&client, store.AgentState{
 		ID:             id,
 		Name:           name,
 		AgentType:      agentType,
 		Args:           agentArgs,
 		WorkDir:        workDir,
 		Status:         store.StatusRunning,
-		StartedAt:      now,
+		StartedAt:      time.Now(),
 		LastOutput:     "interactive session",
 		LogFile:        logPath,
 		WorktreeBranch: worktreeBranch,
 		RepoName:       repoName,
-	}
+	})
 
-	// Start the agent inside a PTY so it sees a real terminal while we can also
-	// monitor its output.
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
 		return fmt.Errorf("could not start %s: %w", agentType, err)
@@ -222,105 +159,25 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	done := make(chan struct{})
 	defer close(done)
 
-	// Propagate terminal resize events to the PTY (Unix only).
 	setupWinchHandler(ptmx, done)
-
-	// Put our own stdin in raw mode so keystrokes go straight through.
-	if term.IsTerminal(int(os.Stdin.Fd())) {
-		oldState, rawErr := term.MakeRaw(int(os.Stdin.Fd()))
-		if rawErr == nil {
-			defer func() { _ = term.Restore(int(os.Stdin.Fd()), oldState) }()
-		}
+	if restore := makeRawStdin(); restore != nil {
+		defer restore()
 	}
 
-	// Forward our stdin to the PTY (user keystrokes → Claude).
+	// Forward our stdin to the PTY (user keystrokes → agent).
 	go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
 
-	state.PID = cmd.Process.Pid
-	if err := client.SendUpdate(state); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not send initial state: %v\n", err)
+	initial := monitor.setPID(cmd.Process.Pid)
+	if err := client.SendUpdate(initial); err != nil {
+		warnf("could not send initial state: %v", err)
 	}
 	if err := client.RegisterInput(id); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not register input listener: %v\n", err)
+		warnf("could not register input listener: %v", err)
 	}
 
-	// Receive stdin forwarded by other clients via the daemon and write it
-	// into the PTY. The daemon only forwards while the agent is in a
-	// waiting_user state, so concurrent local keystrokes shouldn't interleave.
-	go func() {
-		for {
-			msg, err := client.ReadMessage()
-			if err != nil {
-				return
-			}
-			if msg.Type != "input" || msg.AgentID != id {
-				continue
-			}
-			data, decErr := base64.StdEncoding.DecodeString(msg.Data)
-			if decErr != nil {
-				continue
-			}
-			_, _ = ptmx.Write(data)
-		}
-	}()
-
-	// --- activity monitoring ---
-	var (
-		mu           sync.Mutex
-		lastActivity = time.Now()
-		waitingUser  bool
-	)
-
-	// Periodically check whether Claude has been idle long enough to be
-	// considered "waiting for user input".
-	go func() {
-		ticker := time.NewTicker(500 * time.Millisecond)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				mu.Lock()
-				idle := time.Since(lastActivity) > waitingUserThreshold
-				changed := idle != waitingUser
-				if changed {
-					waitingUser = idle
-					state.WaitingUser = waitingUser
-					s := state
-					mu.Unlock()
-					_ = client.SendUpdate(s)
-				} else {
-					mu.Unlock()
-				}
-			}
-		}
-	}()
-
-	// Periodically collect new git commits made during the session so that
-	// ax dash reflects them even while the agent is still running.
-	go func() {
-		ticker := time.NewTicker(10 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				commits := gitNewCommits(workDir, initialHead)
-				mu.Lock()
-				changed := !stringSliceEqual(state.Commits, commits)
-				if changed {
-					state.Commits = commits
-					s := state
-					mu.Unlock()
-					_ = client.SendUpdate(s)
-				} else {
-					mu.Unlock()
-				}
-			}
-		}
-	}()
+	go forwardDaemonInput(&client, ptmx, id)
+	go monitor.runIdleWatcher(done, waitingUserThreshold)
+	go monitor.runCommitWatcher(done, workDir, initialHead)
 
 	logFile, err := os.Create(logPath)
 	if err != nil {
@@ -328,87 +185,29 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	}
 	defer logFile.Close()
 
-	out := io.MultiWriter(os.Stdout, logFile)
+	forwardPTYOutput(ptmx, logFile, monitor)
 
-	// Forward PTY output to our stdout while tracking activity time.
-	buf := make([]byte, 32*1024)
-	for {
-		n, readErr := ptmx.Read(buf)
-		if n > 0 {
-			mu.Lock()
-			lastActivity = time.Now()
-			if waitingUser {
-				waitingUser = false
-				state.WaitingUser = false
-				s := state
-				mu.Unlock()
-				_ = client.SendUpdate(s)
-			} else {
-				mu.Unlock()
-			}
-			_, _ = out.Write(buf[:n])
-
-			if line := lastMeaningfulLine(buf[:n]); line != "" {
-				mu.Lock()
-				changed := state.LastOutput != line
-				if changed {
-					state.LastOutput = line
-				}
-				s := state
-				mu.Unlock()
-				if changed {
-					_ = client.SendUpdate(s)
-				}
-			}
-
-		}
-		if readErr != nil {
-			break
-		}
+	final := monitor.finalise(cmd.Wait(), workDir, initialHead)
+	if err := client.SendUpdate(final); err != nil {
+		warnf("could not send final state: %v", err)
 	}
-
-	// Wait for the process to finish.
-	exitErr := cmd.Wait()
-
-	finishedAt := time.Now()
-	state.FinishedAt = &finishedAt
-	state.WaitingUser = false
-
-	exitCode := 0
-	signaled := false
-	if exitErr != nil {
-		if ee, ok := exitErr.(*exec.ExitError); ok {
-			exitCode = ee.ExitCode()
-			if ws, ok := ee.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
-				signaled = true
-			}
-		} else {
-			exitCode = 1
-		}
-	}
-	state.ExitCode = &exitCode
-
-	switch {
-	case signaled:
-		state.Status = store.StatusKilled
-	case exitCode == 0:
-		state.Status = store.StatusSuccess
-	default:
-		state.Status = store.StatusFailed
-	}
-
-	// Collect any git commits made during the session by comparing HEAD now
-	// against the HEAD recorded before the session started.
-	state.Commits = gitNewCommits(workDir, initialHead)
-
-	if err := client.SendUpdate(state); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not send final state: %v\n", err)
-	}
-
 	return nil
 }
 
-var outputCleanRe = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|[)(][AB012]|[A-Z\\^_@]|\][^\x07\x1b]*(?:\x07|\x1b\\))`)
+// makeRawStdin puts the controlling terminal into raw mode and returns
+// a restore function. Returns nil when stdin is not a TTY or raw mode
+// could not be entered — the caller treats that as "nothing to undo".
+func makeRawStdin() func() {
+	fd := int(os.Stdin.Fd())
+	if !term.IsTerminal(fd) {
+		return nil
+	}
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		return nil
+	}
+	return func() { _ = term.Restore(fd, oldState) }
+}
 
 // gitHeadCommit returns the full SHA of HEAD in workDir, or "" if not a git repo.
 func gitHeadCommit(workDir string) string {
@@ -446,35 +245,7 @@ func gitNewCommits(workDir, before string) []string {
 
 // lastMeaningfulLine extracts the last readable text line from a raw PTY output chunk.
 func lastMeaningfulLine(chunk []byte) string {
-	s := outputCleanRe.ReplaceAllString(string(chunk), "")
-	s = strings.ReplaceAll(s, "\r\n", "\n")
-	s = strings.ReplaceAll(s, "\r", "\n")
-	lines := strings.Split(s, "\n")
-	for i := len(lines) - 1; i >= 0; i-- {
-		line := strings.TrimSpace(lines[i])
-		alpha := 0
-		for _, r := range line {
-			if unicode.IsLetter(r) || unicode.IsDigit(r) {
-				alpha++
-			}
-		}
-		if alpha >= 4 {
-			return line
-		}
-	}
-	return ""
-}
-
-func stringSliceEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+	return textutil.LastMeaningfulLine(chunk)
 }
 
 func generateID() string {
