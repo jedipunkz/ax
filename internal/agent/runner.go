@@ -2,6 +2,7 @@ package agent
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -94,9 +95,8 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTy
 	if agentTypeOverride != "" {
 		agentType = agentTypeOverride
 	}
-	id := generateID()
 	resumeArgs := append(resumePrefixArgs(agentType), args...)
-	return runSession(resumeArgs, socketPath, id, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
+	return runSession(resumeArgs, socketPath, existing.ID, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
 }
 
 // findAgentByIDOrName reads state.json and returns the agent matching the given ID exactly,
@@ -218,6 +218,29 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	if err := client.SendUpdate(state); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not send initial state: %v\n", err)
 	}
+	if err := client.RegisterInput(id); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not register input listener: %v\n", err)
+	}
+
+	// Receive stdin forwarded by other clients via the daemon and write it
+	// into the PTY. The daemon only forwards while the agent is in a
+	// waiting_user state, so concurrent local keystrokes shouldn't interleave.
+	go func() {
+		for {
+			msg, err := client.ReadMessage()
+			if err != nil {
+				return
+			}
+			if msg.Type != "input" || msg.AgentID != id {
+				continue
+			}
+			data, decErr := base64.StdEncoding.DecodeString(msg.Data)
+			if decErr != nil {
+				continue
+			}
+			_, _ = ptmx.Write(data)
+		}
+	}()
 
 	// --- activity monitoring ---
 	var (

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -121,6 +122,91 @@ var agentDiffCmd = &cobra.Command{
 	},
 }
 
+var agentLogsCmd = &cobra.Command{
+	Use:                "logs -n <id|name> [-f]",
+	Short:              "Show agent output (use -f to follow new output, ANSI stripped)",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		idOrName, follow, rest, err := parseNameAndFollowFlags(args)
+		if err != nil {
+			return err
+		}
+		if len(rest) > 0 {
+			return fmt.Errorf("unexpected arguments: %v", rest)
+		}
+		socketPath, err := getSocketPath()
+		if err != nil {
+			return err
+		}
+		if follow {
+			if err := ensureDaemon(socketPath); err != nil {
+				return fmt.Errorf("could not start daemon: %w", err)
+			}
+		}
+		return agent.StreamLogs(socketPath, idOrName, follow)
+	},
+}
+
+var agentWaitCmd = &cobra.Command{
+	Use:                "wait -n <id|name>",
+	Short:              "Block until the agent reaches a terminal state; exit with its code",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		idOrName, _, err := parseNameFlagRequired(args)
+		if err != nil {
+			return err
+		}
+		socketPath, err := getSocketPath()
+		if err != nil {
+			return err
+		}
+		if err := ensureDaemon(socketPath); err != nil {
+			return fmt.Errorf("could not start daemon: %w", err)
+		}
+		result, err := agent.Wait(socketPath, idOrName)
+		if err != nil {
+			return err
+		}
+		if result.ExitCode != 0 {
+			os.Exit(result.ExitCode)
+		}
+		return nil
+	},
+}
+
+var agentInputCmd = &cobra.Command{
+	Use:                "input -n <id|name> [text]",
+	Short:              "Send text to a waiting agent's stdin (reads from stdin if text is omitted)",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		idOrName, rest, err := parseNameFlagRequired(args)
+		if err != nil {
+			return err
+		}
+		var data string
+		if len(rest) > 0 {
+			data = strings.Join(rest, " ")
+		} else {
+			buf, readErr := io.ReadAll(os.Stdin)
+			if readErr != nil {
+				return fmt.Errorf("could not read stdin: %w", readErr)
+			}
+			data = string(buf)
+		}
+		if data == "" {
+			return fmt.Errorf("no input data provided")
+		}
+		socketPath, err := getSocketPath()
+		if err != nil {
+			return err
+		}
+		if err := ensureDaemon(socketPath); err != nil {
+			return fmt.Errorf("could not start daemon: %w", err)
+		}
+		return agent.SendInput(socketPath, idOrName, data)
+	},
+}
+
 func init() {
 	agentCmd.AddCommand(agentNewCmd)
 	agentCmd.AddCommand(agentCdCmd)
@@ -128,6 +214,9 @@ func init() {
 	agentCmd.AddCommand(agentResumeCmd)
 	agentCmd.AddCommand(agentRmCmd)
 	agentCmd.AddCommand(agentDiffCmd)
+	agentCmd.AddCommand(agentLogsCmd)
+	agentCmd.AddCommand(agentWaitCmd)
+	agentCmd.AddCommand(agentInputCmd)
 }
 
 // parseAgentTypeAndNameFlag extracts -a/-m/--agent and -n/--name from args.
@@ -198,6 +287,35 @@ func parseNameFlag(args []string) (name string, rest []string) {
 // parseNameFlagRequired is like parseNameFlag but returns an error if -n/--name is absent.
 func parseNameFlagRequired(args []string) (name string, rest []string, err error) {
 	name, rest = parseNameFlag(args)
+	if name == "" {
+		err = fmt.Errorf("requires -n/--name to specify the agent ID or name")
+	}
+	return
+}
+
+// parseNameAndFollowFlags extracts -n/--name and -f/--follow from args. The
+// name is required.
+func parseNameAndFollowFlags(args []string) (name string, follow bool, rest []string, err error) {
+	i := 0
+	for i < len(args) {
+		switch {
+		case args[i] == "--":
+			rest = append(rest, args[i+1:]...)
+			i = len(args)
+		case (args[i] == "-n" || args[i] == "--name") && i+1 < len(args):
+			name = args[i+1]
+			i += 2
+		case strings.HasPrefix(args[i], "--name="):
+			name = strings.TrimPrefix(args[i], "--name=")
+			i++
+		case args[i] == "-f" || args[i] == "--follow":
+			follow = true
+			i++
+		default:
+			rest = append(rest, args[i])
+			i++
+		}
+	}
 	if name == "" {
 		err = fmt.Errorf("requires -n/--name to specify the agent ID or name")
 	}
