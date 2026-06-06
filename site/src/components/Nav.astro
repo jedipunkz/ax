@@ -28,17 +28,17 @@ const base = import.meta.env.BASE_URL;
     left: 0;
     right: 0;
     z-index: 100;
-    background: rgba(18, 18, 24, 0.88);
+    background: rgb(26 27 38 / 82%);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border-bottom: 1px solid rgb(54 54 70 / 92%);
+    border-bottom: 1px solid rgb(59 66 97 / 72%);
   }
 
   .nav-inner {
     max-width: 1120px;
     margin: 0 auto;
     padding: 0 2rem;
-    height: 64px;
+    height: 68px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -47,6 +47,7 @@ const base = import.meta.env.BASE_URL;
   .nav-brand {
     display: flex;
     align-items: center;
+    gap: 0.65rem;
     color: var(--tn-fg);
     font-weight: 700;
     font-size: 1rem;
@@ -56,7 +57,7 @@ const base = import.meta.env.BASE_URL;
 
   .brand-name {
     font-family: 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
-    color: var(--tn-blue);
+    color: var(--tn-fg-strong);
   }
 
   .nav-links {
@@ -69,30 +70,36 @@ const base = import.meta.env.BASE_URL;
   .nav-links a {
     color: var(--tn-fg-dark);
     font-size: 0.9rem;
-    padding: 0.4rem 0.75rem;
+    padding: 0.48rem 0.78rem;
     border-radius: 6px;
-    transition: color 0.2s, background 0.2s;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
   }
   .nav-links a:hover {
-    color: var(--tn-fg);
-    background: rgb(126 156 216 / 12%);
+    color: var(--tn-cyan);
+    background: rgb(122 162 247 / 10%);
   }
 
   .nav-github {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    background: rgb(149 127 184 / 16%) !important;
-    border: 1px solid var(--tn-border) !important;
-    color: var(--tn-fg) !important;
-    padding: 0.4rem 0.9rem !important;
+    background: rgb(36 40 59 / 88%) !important;
+    border: 1px solid rgb(122 162 247 / 24%) !important;
+    color: var(--tn-fg-strong) !important;
+    padding: 0.48rem 0.9rem !important;
+    box-shadow: var(--tn-ring);
   }
   .nav-github:hover {
-    border-color: var(--tn-blue) !important;
-    color: var(--tn-blue) !important;
+    border-color: rgb(125 207 255 / 52%) !important;
+    color: var(--tn-cyan) !important;
+    background: rgb(41 46 66 / 92%) !important;
   }
 
   @media (max-width: 640px) {
+    .nav-inner {
+      padding: 0 1.25rem;
+    }
+
     .nav-links li:not(:last-child) {
       display: none;
     }
