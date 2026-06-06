@@ -10,9 +10,62 @@ import (
 	"time"
 )
 
+// subscriberSendBuf bounds how many messages can be queued for a single
+// subscriber before the manager treats it as too slow and drops it. The
+// buffer absorbs short bursts (e.g. snapshot followed by a flurry of updates)
+// without letting one stalled client block fan-out to the others.
+const subscriberSendBuf = 256
+
 type subscriber struct {
-	conn    net.Conn
-	encoder *json.Encoder
+	conn   net.Conn
+	enc    *json.Encoder
+	sendCh chan Message
+	done   chan struct{}
+}
+
+func newSubscriber(conn net.Conn, enc *json.Encoder) *subscriber {
+	return &subscriber{
+		conn:   conn,
+		enc:    enc,
+		sendCh: make(chan Message, subscriberSendBuf),
+		done:   make(chan struct{}),
+	}
+}
+
+// run drains sendCh and writes to the connection. Returns when sendCh is
+// closed (orderly shutdown) or a write fails (the connection's reader loop
+// will see EOF shortly and clean up the subscriber).
+func (s *subscriber) run() {
+	for msg := range s.sendCh {
+		if err := s.enc.Encode(msg); err != nil {
+			_ = s.conn.Close()
+			return
+		}
+	}
+}
+
+// trySend delivers a message non-blockingly. Returns false when the buffer
+// is full, signaling that the caller should drop the subscriber.
+func (s *subscriber) trySend(msg Message) bool {
+	select {
+	case <-s.done:
+		return false
+	case s.sendCh <- msg:
+		return true
+	default:
+		return false
+	}
+}
+
+// close is idempotent: closes sendCh exactly once so run() exits cleanly.
+func (s *subscriber) close() {
+	select {
+	case <-s.done:
+		return
+	default:
+		close(s.done)
+		close(s.sendCh)
+	}
 }
 
 // RunManager starts the state manager on the given Unix socket path.
@@ -128,9 +181,10 @@ func (m *manager) agentSlice() []AgentState {
 func (m *manager) broadcast(msg Message) {
 	dead := make([]int, 0)
 	for i, sub := range m.subscribers {
-		if err := sub.encoder.Encode(msg); err != nil {
+		if !sub.trySend(msg) {
 			dead = append(dead, i)
-			sub.conn.Close()
+			sub.close()
+			_ = sub.conn.Close()
 		}
 	}
 	// Remove dead subscribers (in reverse order)
@@ -189,14 +243,15 @@ func (m *manager) handleConn(conn net.Conn) {
 
 		case "subscribe":
 			m.mu.Lock()
-			sub := &subscriber{conn: conn, encoder: enc}
-			// Send initial snapshot
+			sub := newSubscriber(conn, enc)
+			go sub.run()
 			snapshot := Message{
 				Type:   "snapshot",
 				Agents: m.agentSlice(),
 			}
-			if err := enc.Encode(snapshot); err != nil {
-				conn.Close()
+			if !sub.trySend(snapshot) {
+				sub.close()
+				_ = conn.Close()
 				m.mu.Unlock()
 				return
 			}
@@ -210,6 +265,7 @@ func (m *manager) handleConn(conn net.Conn) {
 	m.mu.Lock()
 	for i, sub := range m.subscribers {
 		if sub.conn == conn {
+			sub.close()
 			m.subscribers = append(m.subscribers[:i], m.subscribers[i+1:]...)
 			break
 		}
