@@ -118,7 +118,7 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(paths.AgentDir(id), 0755); err != nil {
+	if err := os.MkdirAll(paths.AgentDir(id), 0700); err != nil {
 		return fmt.Errorf("could not create agent dir: %w", err)
 	}
 	logPath := paths.AgentLog(id)
@@ -179,7 +179,7 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	go monitor.runIdleWatcher(done, waitingUserThreshold)
 	go monitor.runCommitWatcher(done, workDir, initialHead)
 
-	logFile, err := os.Create(logPath)
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		return fmt.Errorf("could not create log file: %w", err)
 	}

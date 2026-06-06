@@ -50,8 +50,11 @@ func NewForHome(home string) Paths {
 
 // EnsureDir creates ~/.ax (and any missing parents).
 func (p Paths) EnsureDir() error {
-	if err := os.MkdirAll(p.Dir, 0755); err != nil {
+	if err := os.MkdirAll(p.Dir, 0700); err != nil {
 		return fmt.Errorf("could not create %s: %w", p.Dir, err)
+	}
+	if err := os.Chmod(p.Dir, 0700); err != nil {
+		return fmt.Errorf("could not secure %s: %w", p.Dir, err)
 	}
 	return nil
 }

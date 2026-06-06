@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -16,6 +17,7 @@ func RunManager(socketPath, stateFilePath string) error {
 	mgr := &manager{
 		agents:         make(map[string]AgentState),
 		stateFilePath:  stateFilePath,
+		dataDir:        filepath.Dir(stateFilePath),
 		attachers:      make(map[string]map[*subscriber]bool),
 		streams:        make(map[string]*outputStream),
 		inputListeners: make(map[string]*subscriber),
@@ -43,6 +45,9 @@ func RunManager(socketPath, stateFilePath string) error {
 		return fmt.Errorf("could not listen on socket: %w", err)
 	}
 	defer ln.Close()
+	if err := os.Chmod(socketPath, 0600); err != nil {
+		return fmt.Errorf("could not secure socket: %w", err)
+	}
 
 	for {
 		conn, err := ln.Accept()
@@ -58,6 +63,7 @@ type manager struct {
 	agents        map[string]AgentState
 	subscribers   []*subscriber
 	stateFilePath string
+	dataDir       string
 
 	// attachers tracks output streaming subscribers per agent ID. A single
 	// subscriber can be in both subscribers (state updates) and attachers
@@ -205,6 +211,9 @@ func (m *manager) handleUpdate(msg Message) {
 	if msg.Agent == nil {
 		return
 	}
+	if !m.validAgentState(*msg.Agent) {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -231,6 +240,18 @@ func (m *manager) handleUpdate(msg Message) {
 			m.signalStreamEOFLocked(s)
 		}
 	}
+}
+
+func (m *manager) validAgentState(agent AgentState) bool {
+	if agent.ID == "" {
+		return false
+	}
+	if agent.LogFile == "" || m.dataDir == "" {
+		return true
+	}
+	want := filepath.Clean(filepath.Join(m.dataDir, "agents", agent.ID, "output.log"))
+	got := filepath.Clean(agent.LogFile)
+	return got == want
 }
 
 func (m *manager) handleRemove(msg Message) {

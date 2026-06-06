@@ -34,7 +34,7 @@ var daemonCmd = &cobra.Command{
 
 		// Write PID file
 		pid := os.Getpid()
-		_ = os.WriteFile(pidFilePath, []byte(strconv.Itoa(pid)), 0644)
+		_ = os.WriteFile(pidFilePath, []byte(strconv.Itoa(pid)), 0600)
 		defer os.Remove(pidFilePath)
 
 		return store.RunManager(socketPath, stateFilePath)
