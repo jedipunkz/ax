@@ -7,15 +7,14 @@
 
 Run multiple AI coding agents in parallel, each isolated in its own git worktree, and monitor them all from a single terminal dashboard.
 
-Supported agents: [Claude Code](https://claude.ai/code) (`claude`, default), [Codex CLI](https://github.com/openai/codex) (`codex`), [Gemini CLI](https://github.com/google-gemini/gemini-cli) (`gemini`), [OpenCode](https://opencode.ai/) (`opencode`).
+Supported agents: [Claude Code](https://claude.ai/code), [Codex CLI](https://github.com/openai/codex), [Gemini CLI](https://github.com/google-gemini/gemini-cli) , [OpenCode](https://opencode.ai/).
 
 ## Installation
 
 ### Homebrew (macOS / Linux)
 
 ```bash
-brew tap jedipunkz/ax
-brew install ax
+brew tap jedipunkz/ax && brew install ax
 ```
 
 ## Usage
@@ -48,8 +47,8 @@ ax agent new -a codex -n feat/foo
 You can also pass agent-specific options after `--`:
 
 ```bash
-ax agent new -n my-feature -- --model sonnet --dangerously-skip-permissions
-ax agent new -a codex -n my-feature -- --approval-mode full-auto
+ax agent new -n feat/foo -- --model sonnet --dangerously-skip-permissions
+ax agent new -a codex -n feat/foo -- --approval-mode full-auto
 ```
 
 ### Resume an agent
@@ -65,7 +64,7 @@ ax agent resume -a gemini -n feat/foo
 To open a new shell in the agent's worktree directory:
 
 ```bash
-ax agent cd -n <id|name>
+ax agent cd -n <name|id>
 ```
 
 
@@ -74,13 +73,13 @@ ax agent cd -n <id|name>
 Dump the full output log with ANSI escapes stripped:
 
 ```bash
-ax agent logs -n <id|name>
+ax agent logs -n <name|id>
 ```
 
 Follow new output in real time (the daemon streams it from any terminal). Press Ctrl-C to stop following:
 
 ```bash
-ax agent logs -f -n <id|name>
+ax agent logs -f -n <name|id>
 ```
 
 ### Wait for an agent to finish or pause
@@ -88,7 +87,7 @@ ax agent logs -f -n <id|name>
 Block until the agent reaches a terminal state or pauses at a prompt. Terminal states exit with the agent's own exit code (`130` for killed agents); a paused `waiting` agent exits with `0`. Useful for shell pipelines and follow-up commands:
 
 ```bash
-ax agent wait -n <id|name> && ./deploy.sh
+ax agent wait -n <name|id> && ./deploy.sh
 ```
 
 ### Send input to a waiting agent
@@ -96,7 +95,7 @@ ax agent wait -n <id|name> && ./deploy.sh
 When an agent is paused at a prompt (`waiting` status), you can answer it from any terminal without returning to the runner's session:
 
 ```bash
-ax agent input -n <id|name> "y\n"
+ax agent input -n <name|id> "y\n"
 ```
 
 Input is only accepted while the agent is actually waiting for user input; the daemon rejects requests sent during active processing to avoid interleaving with local keystrokes.
@@ -114,10 +113,9 @@ ax agent list   # or: ax agent ls
 To remove a terminated agent's worktree, log file, and state entry:
 
 ```bash
-ax agent remove -n <id|name>   # or: ax agent rm -n <id|name>
+ax agent remove -n <name|id>   # or: ax agent rm -n <id|name>
 ```
 
-Running agents are refused; stop them first. Accepts full ID, name, or ID prefix.
 
 ### Open the dashboard
 
