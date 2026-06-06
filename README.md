@@ -1,5 +1,9 @@
 # ax - agent cross
 
+<p align="center">
+  <img src="site/public/icon.png" alt="ax official icon" width="160" height="160">
+</p>
+
 [![CI](https://github.com/jedipunkz/ax/actions/workflows/ci.yml/badge.svg)](https://github.com/jedipunkz/ax/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jedipunkz/ax)](https://goreportcard.com/report/github.com/jedipunkz/ax)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

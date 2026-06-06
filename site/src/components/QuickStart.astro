@@ -3,17 +3,32 @@ const steps = [
   {
     label: '1. Start in a repo',
     cmd: 'cd /path/to/repo && ax agent new',
-    desc: 'ax detects the current git repository and creates a dedicated worktree for the agent.',
+    desc: 'ax detects the current git repository and creates an isolated worktree for the new agent.',
   },
   {
     label: '2. Pick an agent',
-    cmd: 'ax agent new -a codex -n my-feature',
-    desc: 'Claude is the default. Codex, Gemini, and OpenCode are supported with the same workflow.',
+    cmd: 'ax agent new -a codex -n feat/foo',
+    desc: 'Claude Code is the default; use -a for Codex, Gemini, or OpenCode and -n to name the branch.',
   },
   {
     label: '3. Watch the work',
     cmd: 'ax dash',
-    desc: 'Monitor status, open logs, resume sessions, and clean up finished worktrees from the dashboard.',
+    desc: 'Open the dashboard to inspect status, search sessions, copy worktree paths, and kill stuck agents.',
+  },
+  {
+    label: '4. Follow logs',
+    cmd: 'ax agent logs -f -n <name|id>',
+    desc: 'Stream agent output from any terminal, or omit -f to dump the full stripped log.',
+  },
+  {
+    label: '5. Wait or answer',
+    cmd: 'ax agent wait -n <name|id>',
+    desc: 'Block scripts until a session exits or pauses, then use ax agent input when it is waiting.',
+  },
+  {
+    label: '6. Resume or clean up',
+    cmd: 'ax agent resume -n feat/foo',
+    desc: 'Resume previous sessions, cd into their worktrees, list them, or remove finished work when done.',
   },
 ];
 ---
@@ -21,7 +36,7 @@ const steps = [
   <div class="section-inner">
     <div class="section-header">
       <p class="section-tag">Quick start</p>
-      <h2>Run agents without mixing changes.</h2>
+      <h2>Run, inspect, resume, and clean up agents.</h2>
     </div>
 
     <div class="steps-grid">
@@ -36,15 +51,16 @@ const steps = [
 
     <p class="state-note">
       Session state, logs, and worktrees live under <code>~/.ax/</code>.
-      Finished sessions stay visible in the dashboard for 7 days by default.
+      Configure dashboard themes, finished-session retention, and automatic worktree cleanup in <code>~/.ax/ax.yaml</code>.
     </p>
   </div>
 </section>
 
 <style>
   .quickstart-section {
-    padding: 4.5rem 2rem 5.25rem;
-    border-top: 1px solid var(--tn-border);
+    padding: 4.75rem 2rem 5.5rem;
+    border-top: 1px solid rgb(59 66 97 / 72%);
+    background: var(--tn-bg-soft);
   }
 
   .section-inner {
@@ -54,7 +70,7 @@ const steps = [
 
   .section-header {
     max-width: 700px;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.35rem;
   }
 
   .section-tag {
@@ -65,7 +81,7 @@ const steps = [
   }
 
   h2 {
-    color: var(--tn-fg);
+    color: var(--tn-fg-strong);
     font-size: clamp(2rem, 4vw, 3.2rem);
     font-weight: 720;
     letter-spacing: 0;
@@ -75,15 +91,15 @@ const steps = [
   .steps-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    gap: 1.05rem;
   }
 
   .step-card {
     min-height: 220px;
     padding: 22px;
-    border: 1px solid var(--tn-border);
+    border: 1px solid rgb(59 66 97 / 78%);
     border-radius: 8px;
-    background: var(--tn-bg-card);
+    background: rgb(36 40 59 / 86%);
     box-shadow: var(--tn-shadow);
   }
 
@@ -102,6 +118,10 @@ const steps = [
     line-height: 1.55;
     overflow-wrap: anywhere;
     margin-bottom: 14px;
+    padding: 10px 12px;
+    border: 1px solid rgb(86 95 137 / 54%);
+    border-radius: 6px;
+    background: rgb(22 22 30 / 58%);
   }
 
   .step-card p:last-child,
@@ -113,7 +133,9 @@ const steps = [
 
   .state-note {
     max-width: 720px;
-    margin-top: 1.25rem;
+    margin-top: 1.4rem;
+    padding-left: 14px;
+    border-left: 2px solid var(--tn-blue);
   }
 
   .state-note code {

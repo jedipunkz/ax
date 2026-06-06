@@ -5,7 +5,7 @@
     <div>
       <p class="section-tag">Install</p>
       <h2>One command to start.</h2>
-      <p class="section-desc">Install ax with Homebrew.</p>
+      <p class="section-desc">Install ax with Homebrew on macOS or Linux, then run it inside any git repository.</p>
     </div>
 
     <div class="install-panel">
@@ -19,8 +19,9 @@
 
 <style>
   .install-section {
-    padding: 4.5rem 2rem 6rem;
-    border-top: 1px solid var(--tn-border);
+    padding: 4.75rem 2rem 6rem;
+    border-top: 1px solid rgb(59 66 97 / 72%);
+    background: var(--tn-bg);
   }
 
   .section-inner {
@@ -38,7 +39,7 @@
   }
 
   h2 {
-    color: var(--tn-fg);
+    color: var(--tn-fg-strong);
     font-size: clamp(2rem, 4vw, 3.2rem);
     font-weight: 720;
     letter-spacing: 0;
@@ -55,9 +56,9 @@
 
   .install-panel {
     max-width: 720px;
-    border: 1px solid var(--tn-border);
+    border: 1px solid rgb(86 95 137 / 70%);
     border-radius: 8px;
-    background: var(--tn-bg-card);
+    background: rgb(22 22 30 / 72%);
     overflow: hidden;
     box-shadow: var(--tn-shadow);
   }
@@ -67,7 +68,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 1rem;
     align-items: center;
-    padding: 1rem;
+    padding: 1rem 1.1rem;
   }
 
   .code-row code {
@@ -80,21 +81,23 @@
   }
 
   .copy-btn {
-    min-height: 34px;
-    padding: 0.35rem 0.75rem;
-    border: 1px solid var(--tn-border-hi);
+    min-height: 36px;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid rgb(122 162 247 / 30%);
     border-radius: 6px;
-    background: var(--tn-bg-hi);
-    color: var(--tn-fg);
+    background: rgb(41 46 66 / 92%);
+    color: var(--tn-fg-strong);
     cursor: pointer;
     font: inherit;
     font-size: 0.85rem;
+    transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
   }
 
   .copy-btn:hover,
   .copy-btn.copied {
-    border-color: var(--tn-orange);
-    color: var(--tn-orange);
+    border-color: var(--tn-cyan);
+    color: var(--tn-cyan);
+    background: rgb(122 162 247 / 12%);
   }
 
   @media (max-width: 760px) {

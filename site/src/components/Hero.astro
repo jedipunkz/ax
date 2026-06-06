@@ -1,11 +1,15 @@
 ---
+const base = import.meta.env.BASE_URL;
 ---
 <section class="hero">
   <div class="hero-content">
     <p class="eyebrow">agent cross</p>
-    <h1>ax</h1>
+    <div class="hero-title">
+      <img src={`${base}icon.png`} alt="ax official icon" width="128" height="128" class="hero-icon" />
+      <h1>ax</h1>
+    </div>
     <p class="hero-desc">
-      Cross Claude, Codex, Gemini, and OpenCode sessions in isolated git worktrees without crossing branches.
+      Run Claude Code, Codex CLI, Gemini CLI, and OpenCode in parallel git worktrees, then monitor, resume, inspect, and clean up every session from one terminal workflow.
     </p>
 
     <div class="hero-actions">
@@ -34,44 +38,71 @@
 <style>
   .hero {
     position: relative;
-    min-height: min(760px, 92vh);
+    min-height: min(760px, 90vh);
     max-width: 1180px;
     margin: 0 auto;
-    padding: 7.5rem 2rem 4rem;
+    padding: 8rem 2rem 4.75rem;
     display: grid;
-    grid-template-columns: minmax(0, 0.82fr) minmax(360px, 1fr);
-    gap: 40px;
+    grid-template-columns: minmax(0, 0.86fr) minmax(380px, 1fr);
+    gap: 44px;
     align-items: center;
   }
 
   .hero-content {
     display: grid;
-    gap: 24px;
+    gap: 26px;
     max-width: 780px;
   }
 
   .eyebrow {
-    color: var(--tn-blue);
+    width: fit-content;
+    padding: 5px 10px;
+    border: 1px solid rgb(122 162 247 / 24%);
+    border-radius: 999px;
+    background: rgb(122 162 247 / 8%);
+    color: var(--tn-cyan);
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0;
     text-transform: uppercase;
   }
 
+  .hero-title {
+    display: grid;
+    grid-template-columns: auto minmax(0, auto);
+    align-items: center;
+    gap: clamp(18px, 3vw, 30px);
+    width: fit-content;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .hero-icon {
+    display: block;
+    width: clamp(82px, 13vw, 128px);
+    height: clamp(82px, 13vw, 128px);
+    flex: 0 0 auto;
+    border: 1px solid rgb(122 162 247 / 20%);
+    border-radius: 20px;
+    box-shadow: var(--tn-shadow);
+    transform: translateY(0.08em);
+  }
+
   h1 {
-    color: var(--tn-fg);
-    font-size: clamp(5.5rem, 16vw, 10rem);
+    color: var(--tn-fg-strong);
+    font-size: clamp(5.5rem, 15vw, 9.5rem);
     font-weight: 820;
     letter-spacing: 0;
     line-height: 0.88;
     max-width: 900px;
+    margin: 0;
   }
 
   .hero-desc {
     max-width: 620px;
     color: var(--tn-fg-dark);
-    font-size: clamp(1.25rem, 2.8vw, 1.55rem);
-    line-height: 1.35;
+    font-size: clamp(1.18rem, 2.6vw, 1.45rem);
+    line-height: 1.42;
   }
 
   .hero-actions {
@@ -89,7 +120,7 @@
     font-size: 0.95rem;
     font-weight: 700;
     text-decoration: none;
-    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
   }
 
   .btn:hover {
@@ -98,26 +129,27 @@
 
   .btn-primary {
     background: var(--tn-blue);
-    border: 1px solid var(--tn-blue);
+    border: 1px solid rgb(125 207 255 / 42%);
     color: var(--tn-bg-dark);
+    box-shadow: 0 14px 28px rgb(122 162 247 / 18%);
   }
 
   .btn-primary:hover {
     color: var(--tn-bg-dark);
-    background: #a3c2f7;
-    border-color: #a3c2f7;
+    background: var(--tn-cyan);
+    border-color: var(--tn-cyan);
   }
 
   .btn-secondary {
-    color: var(--tn-fg);
-    border: 1px solid rgb(149 127 184 / 66%);
-    background: rgb(149 127 184 / 14%);
+    color: var(--tn-fg-strong);
+    border: 1px solid rgb(187 154 247 / 44%);
+    background: rgb(187 154 247 / 10%);
   }
 
   .btn-secondary:hover {
-    color: var(--tn-fg);
+    color: var(--tn-purple);
     border-color: var(--tn-purple);
-    background: rgb(149 127 184 / 22%);
+    background: rgb(187 154 247 / 16%);
   }
 
   .quick-command {
@@ -126,10 +158,10 @@
     max-width: 100%;
     gap: 0.7rem;
     width: min(100%, 520px);
-    padding: 18px;
-    border: 1px solid var(--tn-border);
+    padding: 18px 20px;
+    border: 1px solid rgb(86 95 137 / 74%);
     border-radius: 8px;
-    background: var(--tn-bg-card);
+    background: rgb(22 22 30 / 72%);
     color: var(--tn-fg-dark);
     box-shadow: var(--tn-shadow);
   }
@@ -157,7 +189,7 @@
     display: block;
     width: 100%;
     height: auto;
-    border: 1px solid var(--tn-border);
+    border: 1px solid rgb(86 95 137 / 70%);
     border-radius: 8px;
     background: var(--tn-bg-card);
     box-shadow: var(--tn-shadow);
@@ -167,6 +199,7 @@
     .hero {
       grid-template-columns: 1fr;
       gap: 32px;
+      min-height: auto;
     }
 
     .hero-media {
@@ -178,6 +211,20 @@
     .hero {
       min-height: auto;
       padding: 6.5rem 1.25rem 3rem;
+    }
+
+    .hero-title {
+      gap: 14px;
+    }
+
+    .hero-icon {
+      width: 74px;
+      height: 74px;
+      border-radius: 16px;
+    }
+
+    .quick-command {
+      padding: 14px 16px;
     }
   }
 </style>
