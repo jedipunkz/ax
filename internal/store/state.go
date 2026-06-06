@@ -60,7 +60,90 @@ type Message struct {
 	Agent   *AgentState  `json:"agent,omitempty"`
 	Agents  []AgentState `json:"agents,omitempty"`
 	AgentID string       `json:"agent_id,omitempty"`
-	Data    string       `json:"data,omitempty"`  // base64 payload for "output" (and future "input")
-	Error   string       `json:"error,omitempty"` // populated on "*_err" responses
-	Tail    int          `json:"tail,omitempty"`  // attach: max bytes of log history to replay
+	Data    string       `json:"data,omitempty"`   // base64 payload for "output" (and future "input")
+	Error   string       `json:"error,omitempty"`  // populated on "*_err" responses
+	Tail    int          `json:"tail,omitempty"`   // attach: max bytes of log history to replay
+	Filter  *Filter      `json:"filter,omitempty"` // subscribe: limit fan-out to matching agents
+}
+
+// Filter narrows which state events a subscriber receives. An empty Filter
+// matches everything; a nil Filter likewise. Conditions are AND-combined.
+type Filter struct {
+	AgentIDs []string `json:"agent_ids,omitempty"`
+	Statuses []Status `json:"statuses,omitempty"`
+}
+
+// Match reports whether msg passes the filter. nil filters accept everything.
+func (f *Filter) Match(msg Message) bool {
+	if f == nil {
+		return true
+	}
+	if len(f.AgentIDs) > 0 {
+		id := msg.AgentID
+		if msg.Agent != nil {
+			id = msg.Agent.ID
+		}
+		if id == "" {
+			return false
+		}
+		hit := false
+		for _, want := range f.AgentIDs {
+			if want == id {
+				hit = true
+				break
+			}
+		}
+		if !hit {
+			return false
+		}
+	}
+	if len(f.Statuses) > 0 {
+		if msg.Agent == nil {
+			return false
+		}
+		hit := false
+		for _, want := range f.Statuses {
+			if want == msg.Agent.Status {
+				hit = true
+				break
+			}
+		}
+		if !hit {
+			return false
+		}
+	}
+	return true
+}
+
+// MatchAgent reports whether the given agent passes the filter's AgentID and
+// Status constraints, used when filtering snapshot payloads.
+func (f *Filter) MatchAgent(a AgentState) bool {
+	if f == nil {
+		return true
+	}
+	if len(f.AgentIDs) > 0 {
+		hit := false
+		for _, want := range f.AgentIDs {
+			if want == a.ID {
+				hit = true
+				break
+			}
+		}
+		if !hit {
+			return false
+		}
+	}
+	if len(f.Statuses) > 0 {
+		hit := false
+		for _, want := range f.Statuses {
+			if want == a.Status {
+				hit = true
+				break
+			}
+		}
+		if !hit {
+			return false
+		}
+	}
+	return true
 }

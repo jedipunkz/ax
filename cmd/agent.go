@@ -166,6 +166,33 @@ var agentAttachCmd = &cobra.Command{
 	},
 }
 
+var agentWaitCmd = &cobra.Command{
+	Use:                "wait -n <id|name>",
+	Short:              "Block until the agent reaches a terminal state; exit with its code",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		idOrName, _, err := parseNameFlagRequired(args)
+		if err != nil {
+			return err
+		}
+		socketPath, err := getSocketPath()
+		if err != nil {
+			return err
+		}
+		if err := ensureDaemon(socketPath); err != nil {
+			return fmt.Errorf("could not start daemon: %w", err)
+		}
+		result, err := agent.Wait(socketPath, idOrName)
+		if err != nil {
+			return err
+		}
+		if result.ExitCode != 0 {
+			os.Exit(result.ExitCode)
+		}
+		return nil
+	},
+}
+
 func init() {
 	agentCmd.AddCommand(agentNewCmd)
 	agentCmd.AddCommand(agentCdCmd)
@@ -175,6 +202,7 @@ func init() {
 	agentCmd.AddCommand(agentDiffCmd)
 	agentCmd.AddCommand(agentLogsCmd)
 	agentCmd.AddCommand(agentAttachCmd)
+	agentCmd.AddCommand(agentWaitCmd)
 }
 
 // parseAgentTypeAndNameFlag extracts -a/-m/--agent and -n/--name from args.

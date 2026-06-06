@@ -45,6 +45,13 @@ func (c *Client) Subscribe() error {
 	return c.encoder.Encode(msg)
 }
 
+// SubscribeWithFilter is like Subscribe but instructs the daemon to deliver
+// only events matching the filter (nil = same as Subscribe).
+func (c *Client) SubscribeWithFilter(f *Filter) error {
+	msg := Message{Type: "subscribe", Filter: f}
+	return c.encoder.Encode(msg)
+}
+
 // Attach asks the daemon to stream the agent's PTY output. When tail > 0, the
 // daemon first replays the last tail bytes of the log file.
 func (c *Client) Attach(agentID string, tail int) error {

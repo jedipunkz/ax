@@ -26,6 +26,7 @@ type subscriber struct {
 	// Fields below are guarded by manager.mu.
 	subscribed bool            // true while this sub is in manager.subscribers
 	attached   map[string]bool // agent IDs this sub is attached to (output streaming)
+	filter     *Filter         // subscribe filter; nil = receive everything
 }
 
 func newSubscriber(conn net.Conn, enc *json.Encoder) *subscriber {
@@ -194,9 +195,27 @@ func (m *manager) agentSlice() []AgentState {
 	return result
 }
 
+// filteredSnapshotLocked returns a snapshot of all agents that pass the given
+// filter. Caller must hold m.mu.
+func (m *manager) filteredSnapshotLocked(f *Filter) []AgentState {
+	if f == nil {
+		return m.agentSlice()
+	}
+	result := make([]AgentState, 0, len(m.agents))
+	for _, a := range m.agents {
+		if f.MatchAgent(a) {
+			result = append(result, a)
+		}
+	}
+	return result
+}
+
 func (m *manager) broadcast(msg Message) {
 	dead := make([]int, 0)
 	for i, sub := range m.subscribers {
+		if !sub.filter.Match(msg) {
+			continue
+		}
 		if !sub.trySend(msg) {
 			dead = append(dead, i)
 			sub.close()
@@ -277,9 +296,10 @@ func (m *manager) handleConn(conn net.Conn) {
 				m.mu.Unlock()
 				continue
 			}
+			sub.filter = msg.Filter
 			snapshot := Message{
 				Type:   "snapshot",
-				Agents: m.agentSlice(),
+				Agents: m.filteredSnapshotLocked(sub.filter),
 			}
 			if !sub.trySend(snapshot) {
 				m.mu.Unlock()
