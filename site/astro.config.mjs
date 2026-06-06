@@ -6,4 +6,9 @@ export default defineConfig({
   base: '/ax/',
   output: 'static',
   integrations: [sitemap()],
+  vite: {
+    ssr: {
+      external: ['@resvg/resvg-js'],
+    },
+  },
 });
