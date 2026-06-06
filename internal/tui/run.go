@@ -3,11 +3,11 @@ package tui
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/jedipunkz/ax/internal/agent"
+	"github.com/jedipunkz/ax/internal/axfs"
 	"github.com/jedipunkz/ax/internal/config"
 	"github.com/jedipunkz/ax/internal/store"
 )
@@ -43,7 +43,7 @@ func Run(socketPath string, cfg *config.Config) error {
 	// Start background goroutine to periodically remove old worktrees.
 	go runWorktreeCleanup(socketPath, cfg.RemoveDurationDays)
 
-	m := newModel(client, sub, cfg.DurationDays)
+	m := newModel(client, socketPath, sub, cfg.DurationDays)
 	p := tea.NewProgram(m, tea.WithFPS(30))
 	_, err := p.Run()
 	client.Close()
@@ -52,12 +52,12 @@ func Run(socketPath string, cfg *config.Config) error {
 
 // runWorktreeCleanup runs worktree cleanup immediately and then every 24 hours.
 func runWorktreeCleanup(socketPath string, removeDurationDays int) {
-	home, err := os.UserHomeDir()
+	paths, err := axfs.New()
 	if err != nil {
 		return
 	}
-	statePath := filepath.Join(home, ".ax", "state.json")
-	worktreesDir := filepath.Join(home, ".ax", "worktrees")
+	statePath := paths.StateFile()
+	worktreesDir := paths.WorktreesDir()
 
 	doCleanup := func() {
 		update := func(ag store.AgentState) error {
@@ -68,7 +68,7 @@ func runWorktreeCleanup(socketPath string, removeDurationDays int) {
 			defer c.Close()
 			return c.SendUpdate(ag)
 		}
-		if err := agent.CleanupOldWorktreesWithUpdate(statePath, worktreesDir, removeDurationDays, update); err != nil {
+		if err := agent.CleanupOldWorktrees(statePath, worktreesDir, removeDurationDays, update); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: worktree cleanup error: %v\n", err)
 		}
 	}

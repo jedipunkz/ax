@@ -1,17 +1,15 @@
 package tui
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/jedipunkz/ax/internal/agent"
+	"github.com/jedipunkz/ax/internal/axfs"
 	"github.com/jedipunkz/ax/internal/store"
 )
 
@@ -31,6 +29,13 @@ type agentUpdateMsg struct {
 // logLoadedMsg carries the content of a loaded log file.
 type logLoadedMsg struct {
 	content string
+}
+
+// metricsLoadedMsg carries the result of a daemon metrics request.
+type metricsLoadedMsg struct {
+	agentID string
+	metrics store.Message
+	err     string
 }
 
 // clearStatusMsg clears the status message after a short delay.
@@ -55,6 +60,7 @@ type Model struct {
 	scrollOffset   int
 	view           ViewMode
 	client         *store.Client
+	socketPath     string
 	sub            chan store.Message
 	spinner        spinner.Model
 	viewport       viewport.Model
@@ -73,23 +79,30 @@ type Model struct {
 	removingDots   int
 	now            time.Time
 	durationDays   int
+	metrics        map[string]store.Message
+	metricsErr     map[string]string
+	metricsPolled  map[string]time.Time
 }
 
-func newModel(client *store.Client, sub chan store.Message, durationDays int) Model {
+func newModel(client *store.Client, socketPath string, sub chan store.Message, durationDays int) Model {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 
 	workDir, _ := os.Getwd()
 
 	return Model{
-		agents:       []store.AgentState{},
-		client:       client,
-		sub:          sub,
-		spinner:      sp,
-		view:         viewList,
-		workDir:      workDir,
-		now:          time.Now(),
-		durationDays: durationDays,
+		agents:        []store.AgentState{},
+		client:        client,
+		socketPath:    socketPath,
+		sub:           sub,
+		spinner:       sp,
+		view:          viewList,
+		workDir:       workDir,
+		now:           time.Now(),
+		durationDays:  durationDays,
+		metrics:       map[string]store.Message{},
+		metricsErr:    map[string]string{},
+		metricsPolled: map[string]time.Time{},
 	}
 }
 
@@ -111,27 +124,42 @@ func removingTickCmd() tea.Cmd {
 	})
 }
 
+func requestMetrics(socketPath, agentID string) tea.Cmd {
+	return func() tea.Msg {
+		if agentID == "" {
+			return metricsLoadedMsg{}
+		}
+		client := &store.Client{}
+		if err := client.Connect(socketPath); err != nil {
+			return metricsLoadedMsg{agentID: agentID, err: err.Error()}
+		}
+		defer client.Close()
+		if err := client.Metrics(agentID); err != nil {
+			return metricsLoadedMsg{agentID: agentID, err: err.Error()}
+		}
+		msg, err := client.ReadMessage()
+		if err != nil {
+			return metricsLoadedMsg{agentID: agentID, err: err.Error()}
+		}
+		if msg.Type == "metrics_err" {
+			return metricsLoadedMsg{agentID: agentID, err: msg.Error}
+		}
+		if msg.Type != "metrics_result" {
+			return metricsLoadedMsg{agentID: agentID, err: "unexpected metrics response: " + msg.Type}
+		}
+		return metricsLoadedMsg{agentID: agentID, metrics: msg}
+	}
+}
+
 // removeAgentCmd performs the (potentially slow) worktree removal and
 // associated cleanup off the UI thread, returning a removeDoneMsg when done.
 func removeAgentCmd(ag store.AgentState, client *store.Client) tea.Cmd {
 	return func() tea.Msg {
 		var firstErr error
-		if ag.WorkDir != "" {
-			home, _ := os.UserHomeDir()
-			worktreesDir := filepath.Join(home, ".ax", "worktrees")
-			cleanWorktrees := filepath.Clean(worktreesDir)
-			cleanWorkDir := filepath.Clean(ag.WorkDir)
-			if strings.HasPrefix(cleanWorkDir, cleanWorktrees+string(filepath.Separator)) {
-				if _, err := os.Stat(cleanWorkDir); err == nil {
-					if err := agent.RemoveWorktree(cleanWorkDir); err != nil {
-						firstErr = fmt.Errorf("worktree remove: %w", err)
-					}
-				}
+		if paths, err := axfs.New(); err == nil {
+			if err := agent.RemoveAgentArtifacts(paths, ag); err != nil {
+				firstErr = err
 			}
-		}
-		if ag.LogFile != "" {
-			_ = os.Remove(ag.LogFile)
-			_ = os.Remove(filepath.Dir(ag.LogFile))
 		}
 		if err := client.SendRemove(ag.ID); err != nil && firstErr == nil {
 			firstErr = err
@@ -148,303 +176,62 @@ func (m Model) Init() tea.Cmd {
 	)
 }
 
+func (m Model) selectedGroups() []AgentGroup {
+	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
+	if m.searchMode {
+		groups = fuzzyFilterGroups(groups, m.searchQuery)
+	}
+	return groups
+}
+
+func (m Model) selectedAgent() (store.AgentState, bool) {
+	groups := m.selectedGroups()
+	if len(groups) == 0 || m.cursor >= len(groups) {
+		return store.AgentState{}, false
+	}
+	return groups[m.cursor].Rep, true
+}
+
+func (m *Model) pollSelectedMetrics(now time.Time, force bool) tea.Cmd {
+	agent, ok := m.selectedAgent()
+	if !ok {
+		return nil
+	}
+	if !force {
+		if last, ok := m.metricsPolled[agent.ID]; ok && now.Sub(last) < 5*time.Second {
+			return nil
+		}
+	}
+	m.metricsPolled[agent.ID] = now
+	return requestMetrics(m.socketPath, agent.ID)
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		// While a removal is in progress, ignore key inputs so the user
-		// cannot trigger conflicting actions mid-deletion.
-		if m.removing {
-			return m, tea.Batch(cmds...)
-		}
-
-		// In confirm-remove mode, only handle y/n/esc
-		if m.confirmRemove {
-			switch msg.String() {
-			case "y", "enter":
-				ag := m.confirmTarget
-				m.confirmRemove = false
-				m.removing = true
-				m.removingTarget = ag
-				m.removingDots = 1
-				cmds = append(cmds, removeAgentCmd(ag, m.client), removingTickCmd())
-			case "n", "esc", "q":
-				m.confirmRemove = false
-			}
-			return m, tea.Batch(cmds...)
-		}
-
-		// In search mode, handle text input specially
-		if m.searchMode {
-			switch msg.String() {
-			case "esc":
-				m.searchMode = false
-				m.searchQuery = ""
-				m.cursor = 0
-				m.scrollOffset = 0
-			case "enter":
-				// Map filtered cursor back to full groups cursor before exiting search mode
-				allGroups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-				filtered := fuzzyFilterGroups(allGroups, m.searchQuery)
-				if len(filtered) > 0 && m.cursor < len(filtered) {
-					selectedID := filtered[m.cursor].Rep.ID
-					for i, g := range allGroups {
-						if g.Rep.ID == selectedID {
-							m.cursor = i
-							break
-						}
-					}
-				}
-				m.searchMode = false
-				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
-			case "ctrl+n":
-				allGroups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-				filtered := fuzzyFilterGroups(allGroups, m.searchQuery)
-				if m.cursor < len(filtered)-1 {
-					m.cursor++
-				}
-				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
-			case "ctrl+p":
-				if m.cursor > 0 {
-					m.cursor--
-				}
-				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
-			case "backspace", "ctrl+h":
-				if len(m.searchQuery) > 0 {
-					runes := []rune(m.searchQuery)
-					m.searchQuery = string(runes[:len(runes)-1])
-					m.cursor = 0
-					m.scrollOffset = 0
-				}
-			default:
-				if msg.Text != "" {
-					m.searchQuery += msg.Text
-					m.cursor = 0
-					m.scrollOffset = 0
-				}
-			}
-			return m, tea.Batch(cmds...)
-		}
-
-		switch msg.String() {
-		case "q", "ctrl+c":
-			if m.view == viewDetail {
-				m.view = viewList
-				return m, nil
-			}
-			return m, tea.Quit
-
-		case "esc":
-			if m.view == viewDetail {
-				m.view = viewList
-			}
-			return m, nil
-
-		case "up", "k":
-			if m.view == viewDetail {
-				m.viewport.ScrollUp(1)
-			} else {
-				if m.cursor > 0 {
-					m.cursor--
-				}
-				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
-			}
-
-		case "down", "j":
-			if m.view == viewDetail {
-				m.viewport.ScrollDown(1)
-			} else {
-				groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-				if m.cursor < len(groups)-1 {
-					m.cursor++
-				}
-				m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
-			}
-
-		case "enter":
-			if m.view == viewDetail {
-				m.view = viewList
-			} else {
-				groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-				if len(groups) > 0 && m.cursor < len(groups) {
-					m.view = viewDetail
-					agent := groups[m.cursor].Rep
-					m.viewport = viewport.New(viewport.WithWidth(m.width-4), viewport.WithHeight(m.height-13))
-					cmds = append(cmds, loadLog(agent.LogFile))
-				}
-			}
-
-		case "o":
-			m.showExpired = !m.showExpired
-			// Clamp cursor after toggling visibility
-			groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-			if m.cursor >= len(groups) && len(groups) > 0 {
-				m.cursor = len(groups) - 1
-			}
-			m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
-
-		case "/":
-			if m.view == viewList {
-				m.searchMode = true
-				m.searchQuery = ""
-			}
-
-		case "K":
-			groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-			if len(groups) > 0 && m.cursor < len(groups) {
-				g := groups[m.cursor]
-				// Kill all running agents in the group
-				for _, ag := range m.agents {
-					ag := ag
-					if ag.Status != store.StatusRunning {
-						continue
-					}
-					label := ag.ID
-					if ag.Name != "" {
-						label = ag.Name
-					}
-					if label != g.groupLabel() {
-						continue
-					}
-					if ag.PID > 0 {
-						killProcess(ag.PID)
-						now := time.Now()
-						ag.Status = store.StatusKilled
-						ag.FinishedAt = &now
-						for i, a := range m.agents {
-							if a.ID == ag.ID {
-								m.agents[i] = ag
-								break
-							}
-						}
-						_ = m.client.SendUpdate(ag) // persist to daemon (best-effort)
-					}
-				}
-			}
-
-		case "y":
-			groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-			if m.view == viewList && len(groups) > 0 && m.cursor < len(groups) {
-				ag := groups[m.cursor].Rep
-				if ag.WorkDir != "" {
-					cdCmd := fmt.Sprintf("cd %s", ag.WorkDir)
-					if err := copyToClipboard(cdCmd); err != nil {
-						m.statusMsg = fmt.Sprintf("clipboard error: %v", err)
-					} else {
-						m.statusMsg = fmt.Sprintf("yanked: %s", cdCmd)
-					}
-					cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
-						return clearStatusMsg{}
-					}))
-				}
-			}
-
-		case "r":
-			if m.view == viewList {
-				groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-				if len(groups) > 0 && m.cursor < len(groups) {
-					ag := groups[m.cursor].Rep
-					if !ag.Status.IsTerminal() {
-						m.statusMsg = "cannot remove running agent; stop it first"
-						cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
-							return clearStatusMsg{}
-						}))
-					} else {
-						m.confirmRemove = true
-						m.confirmTarget = ag
-					}
-				}
-			}
-		}
-
+		m, cmds = m.handleKey(msg, cmds)
 	case agentUpdateMsg:
-		switch msg.Type {
-		case "snapshot":
-			m.agents = msg.Agents
-			sortAgents(m.agents)
-		case "update":
-			if msg.Agent != nil {
-				updated := false
-				for i, a := range m.agents {
-					if a.ID == msg.Agent.ID {
-						m.agents[i] = *msg.Agent
-						updated = true
-						break
-					}
-				}
-				if !updated {
-					m.agents = append(m.agents, *msg.Agent)
-				}
-				sortAgents(m.agents)
-			}
-		case "remove":
-			if msg.AgentID != "" {
-				for i, a := range m.agents {
-					if a.ID == msg.AgentID {
-						m.agents = append(m.agents[:i], m.agents[i+1:]...)
-						break
-					}
-				}
-			}
-		}
-		// Clamp cursor to visible groups
-		groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-		if m.cursor >= len(groups) && len(groups) > 0 {
-			m.cursor = len(groups) - 1
-		}
-		m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
-		// If in detail view, reload log for selected group's representative
-		if m.view == viewDetail && len(groups) > 0 && m.cursor < len(groups) {
-			cmds = append(cmds, loadLog(groups[m.cursor].Rep.LogFile))
-		}
-		cmds = append(cmds, waitForMsg(m.sub))
-
+		m, cmds = m.handleAgentMsg(msg, cmds)
 	case tickMsg:
-		m.now = time.Time(msg)
-		cmds = append(cmds, tickEverySecond())
-
+		m, cmds = m.handleTick(msg, cmds)
+	case metricsLoadedMsg:
+		m, cmds = m.handleMetricsLoaded(msg, cmds)
 	case removingTickMsg:
-		if m.removing {
-			m.removingDots = (m.removingDots % 3) + 1
-			cmds = append(cmds, removingTickCmd())
-		}
-
+		m, cmds = m.handleRemovingTick(cmds)
 	case removeDoneMsg:
-		m.removing = false
-		m.removingDots = 0
-		m.removingTarget = store.AgentState{}
-		if msg.err != nil {
-			m.statusMsg = fmt.Sprintf("remove error: %v", msg.err)
-			cmds = append(cmds, tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
-				return clearStatusMsg{}
-			}))
-		}
-
+		m, cmds = m.handleRemoveDone(msg, cmds)
 	case clearStatusMsg:
 		m.statusMsg = ""
-
 	case logLoadedMsg:
-		m.logContent = msg.content
-		m.viewport.SetContent(m.logContent)
-		m.viewport.GotoBottom()
-
+		m = m.handleLogLoaded(msg)
 	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		cmds = append(cmds, cmd)
-
+		m, cmds = m.handleSpinnerTick(msg, cmds)
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		if m.view == viewDetail {
-			m.viewport = viewport.New(viewport.WithWidth(m.width-4), viewport.WithHeight(m.height-13))
-			m.viewport.SetContent(m.logContent)
-			m.viewport.GotoBottom()
-		}
+		m = m.handleWindowSize(msg)
 	}
 
-	// Update viewport in detail view
 	if m.view == viewDetail {
 		var cmd tea.Cmd
 		m.viewport, cmd = m.viewport.Update(msg)
@@ -518,7 +305,7 @@ func (m Model) listAvailableRows() int {
 	if h < 10 {
 		h = 24
 	}
-	avail := h - 13 - emptyCount
+	avail := h - 14 - emptyCount
 	if avail < 0 {
 		avail = 0
 	}

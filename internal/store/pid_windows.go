@@ -2,23 +2,20 @@
 
 package store
 
-import (
-	"os"
-)
+import "os"
 
-// isPIDAlive returns true if the given PID refers to a running process.
-func isPIDAlive(pid int) bool {
+// IsPIDAlive returns true if the given PID refers to a running process.
+// On Windows we rely on os.FindProcess; a real liveness check would
+// require OpenProcess which we avoid here.
+func IsPIDAlive(pid int) bool {
 	if pid <= 0 {
 		return false
 	}
-	p, err := os.FindProcess(pid)
-	if err != nil {
+	if _, err := os.FindProcess(pid); err != nil {
 		return false
 	}
-	// On Windows, FindProcess always succeeds; OpenProcess is the real check.
-	// We attempt to send signal 0 via the process handle as a best-effort.
-	// os.Process.Signal is not available without reflect tricks, so we rely
-	// on the fact that FindProcess failing means the process is gone.
-	_ = p
 	return true
 }
+
+// isPIDAlive is the internal alias used by the manager.
+func isPIDAlive(pid int) bool { return IsPIDAlive(pid) }

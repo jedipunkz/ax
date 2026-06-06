@@ -3,11 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 
-	"github.com/spf13/cobra"
+	"github.com/jedipunkz/ax/internal/axfs"
 	"github.com/jedipunkz/ax/internal/store"
+	"github.com/spf13/cobra"
 )
 
 var daemonCmd = &cobra.Command{
@@ -15,19 +15,17 @@ var daemonCmd = &cobra.Command{
 	Short:  "Start the state manager daemon",
 	Hidden: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		home, err := os.UserHomeDir()
+		paths, err := axfs.New()
 		if err != nil {
-			return fmt.Errorf("could not determine home directory: %w", err)
+			return err
+		}
+		if err := paths.EnsureDir(); err != nil {
+			return err
 		}
 
-		ccoDir := filepath.Join(home, ".ax")
-		if err := os.MkdirAll(ccoDir, 0755); err != nil {
-			return fmt.Errorf("could not create ~/.ax dir: %w", err)
-		}
-
-		socketPath := filepath.Join(ccoDir, "ax.sock")
-		stateFilePath := filepath.Join(ccoDir, "state.json")
-		pidFilePath := filepath.Join(ccoDir, "daemon.pid")
+		socketPath := paths.Socket()
+		stateFilePath := paths.StateFile()
+		pidFilePath := paths.PIDFile()
 
 		// Remove stale socket if it exists
 		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {

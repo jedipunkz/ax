@@ -4,8 +4,27 @@ interface Props {
   description?: string;
 }
 
-const { title, description = 'ax, short for agent cross, is an open source CLI for running AI coding agents in isolated git worktrees.' } = Astro.props;
+const {
+  title,
+  description = 'ax, short for agent cross, runs Claude Code, Codex CLI, Gemini CLI, and OpenCode agents in isolated git worktrees with a terminal dashboard.',
+} = Astro.props;
 const base = import.meta.env.BASE_URL;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site).toString();
+const ogImageURL = new URL(`${base}og.png`, Astro.site).toString();
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'ax',
+  alternateName: 'agent cross',
+  description,
+  url: canonicalURL,
+  applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'macOS, Linux',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  author: { '@type': 'Person', name: 'jedipunkz' },
+  codeRepository: 'https://github.com/jedipunkz/ax',
+};
 ---
 
 <!doctype html>
@@ -13,34 +32,54 @@ const base = import.meta.env.BASE_URL;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1a1b26" />
     <meta name="description" content={description} />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href={canonicalURL} />
+    <meta property="og:site_name" content="ax" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://jedipunkz.rocks/ax/" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={ogImageURL} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageURL} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <link rel="icon" type="image/png" href={`${base}icon.png`} />
+    <link rel="apple-touch-icon" href={`${base}icon.png`} />
+    <link rel="sitemap" type="application/xml" href={`${base}sitemap-index.xml`} />
     <title>{title}</title>
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     <style is:global>
       :root {
         color-scheme: dark;
-        --tn-bg:        #16161d;
-        --tn-bg-dark:   #121218;
-        --tn-bg-hi:     #223249;
-        --tn-bg-card:   #1f1f28;
-        --tn-border:    #363646;
-        --tn-border-hi: #54546d;
-        --tn-fg:        #dcd7ba;
-        --tn-fg-dark:   #c8c093;
-        --tn-comment:   #727169;
-        --tn-blue:      #7e9cd8;
-        --tn-cyan:      #7aa89f;
-        --tn-purple:    #957fb8;
-        --tn-green:     #98bb6c;
-        --tn-yellow:    #e6c384;
-        --tn-orange:    #ffa066;
-        --tn-red:       #c34043;
-        --tn-teal:      #6a9589;
-        --tn-shadow:    0 20px 56px rgb(0 0 0 / 42%);
+        --tn-bg:        #1a1b26;
+        --tn-bg-dark:   #16161e;
+        --tn-bg-soft:   #1f2335;
+        --tn-bg-hi:     #292e42;
+        --tn-bg-card:   #24283b;
+        --tn-border:    #3b4261;
+        --tn-border-hi: #565f89;
+        --tn-fg:        #c0caf5;
+        --tn-fg-strong: #dbe4ff;
+        --tn-fg-dark:   #a9b1d6;
+        --tn-comment:   #565f89;
+        --tn-blue:      #7aa2f7;
+        --tn-cyan:      #7dcfff;
+        --tn-purple:    #bb9af7;
+        --tn-green:     #9ece6a;
+        --tn-yellow:    #e0af68;
+        --tn-orange:    #ff9e64;
+        --tn-red:       #f7768e;
+        --tn-teal:      #73daca;
+        --tn-shadow:    0 18px 44px rgb(0 0 0 / 34%);
+        --tn-ring:      0 0 0 1px rgb(122 162 247 / 16%);
       }
 
       *, *::before, *::after {
@@ -55,10 +94,14 @@ const base = import.meta.env.BASE_URL;
 
       body {
         font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
-        background: var(--tn-bg);
+        min-width: 320px;
+        background:
+          linear-gradient(180deg, rgb(31 35 53 / 84%) 0, var(--tn-bg) 360px),
+          var(--tn-bg);
         color: var(--tn-fg);
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
       }
 
       code, pre, .mono {
@@ -89,6 +132,11 @@ const base = import.meta.env.BASE_URL;
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover { background: var(--tn-comment); }
+
+      :focus-visible {
+        outline: 2px solid var(--tn-cyan);
+        outline-offset: 3px;
+      }
     </style>
   </head>
   <body>

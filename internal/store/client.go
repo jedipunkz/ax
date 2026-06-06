@@ -2,15 +2,21 @@ package store
 
 import (
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
+	"sync"
 )
 
-// Client is a connection to the state manager over a Unix socket.
+// Client is a connection to the state manager over a Unix socket. Writes are
+// serialised internally so callers may safely invoke Send* methods from
+// multiple goroutines (e.g. the runner sends state updates from several
+// monitoring tickers concurrently).
 type Client struct {
 	conn    net.Conn
 	encoder *json.Encoder
+	encMu   sync.Mutex
 	scanner *bufio.Scanner
 }
 
@@ -27,22 +33,68 @@ func (c *Client) Connect(socketPath string) error {
 	return nil
 }
 
+// send serialises encoder access so concurrent callers don't interleave
+// partial JSON-Lines payloads on the socket.
+func (c *Client) send(msg Message) error {
+	c.encMu.Lock()
+	defer c.encMu.Unlock()
+	return c.encoder.Encode(msg)
+}
+
 // SendUpdate sends an agent state update to the manager.
 func (c *Client) SendUpdate(agent AgentState) error {
-	msg := Message{Type: "update", Agent: &agent}
-	return c.encoder.Encode(msg)
+	return c.send(Message{Type: "update", Agent: &agent})
 }
 
 // SendRemove sends a remove request for the agent with the given ID.
 func (c *Client) SendRemove(agentID string) error {
-	msg := Message{Type: "remove", AgentID: agentID}
-	return c.encoder.Encode(msg)
+	return c.send(Message{Type: "remove", AgentID: agentID})
 }
 
 // Subscribe sends a subscribe message so the client receives snapshots and updates.
 func (c *Client) Subscribe() error {
-	msg := Message{Type: "subscribe"}
-	return c.encoder.Encode(msg)
+	return c.send(Message{Type: "subscribe"})
+}
+
+// SubscribeWithFilter is like Subscribe but instructs the daemon to deliver
+// only events matching the filter (nil = same as Subscribe).
+func (c *Client) SubscribeWithFilter(f *Filter) error {
+	return c.send(Message{Type: "subscribe", Filter: f})
+}
+
+// Attach asks the daemon to stream the agent's PTY output. When tail > 0, the
+// daemon first replays the last tail bytes of the log file.
+func (c *Client) Attach(agentID string, tail int) error {
+	return c.send(Message{Type: "attach", AgentID: agentID, Tail: tail})
+}
+
+// Detach asks the daemon to stop streaming for the given agent.
+func (c *Client) Detach(agentID string) error {
+	return c.send(Message{Type: "detach", AgentID: agentID})
+}
+
+// Metrics asks the daemon to compute a point-in-time metrics summary for the
+// given agent. The response is a "metrics_result" or "metrics_err" message.
+func (c *Client) Metrics(agentID string) error {
+	return c.send(Message{Type: "metrics", AgentID: agentID})
+}
+
+// RegisterInput announces that this connection owns the input PTY for the
+// given agent. The daemon routes incoming "input" payloads for that agent
+// back over this connection.
+func (c *Client) RegisterInput(agentID string) error {
+	return c.send(Message{Type: "register_input", AgentID: agentID})
+}
+
+// SendInput delivers stdin data to the agent identified by agentID. The
+// daemon forwards it to the registered runner only when the agent is in a
+// waiting_user state; otherwise it responds with an input_err.
+func (c *Client) SendInput(agentID string, data []byte) error {
+	return c.send(Message{
+		Type:    "input",
+		AgentID: agentID,
+		Data:    base64.StdEncoding.EncodeToString(data),
+	})
 }
 
 // ReadMessage reads the next JSON-lines message from the socket.

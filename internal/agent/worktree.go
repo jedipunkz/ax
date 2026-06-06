@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/jedipunkz/ax/internal/axfs"
 )
 
 // detectGitRepo returns the repository root if dir is inside a git repository.
@@ -50,13 +52,13 @@ func sanitizeBranchName(name string) string {
 // otherwise the branch defaults to "ax/<agentID>".
 // Returns the worktree path and branch name on success.
 func setupWorktree(agentID, repoRoot, branchHint string) (worktreePath, branchName string, err error) {
-	home, err := os.UserHomeDir()
+	paths, err := axfs.New()
 	if err != nil {
-		return "", "", fmt.Errorf("could not determine home directory: %w", err)
+		return "", "", err
 	}
 
 	repoName := filepath.Base(repoRoot)
-	worktreePath = filepath.Join(home, ".ax", "worktrees", repoName+"-"+agentID)
+	worktreePath = paths.WorktreePath(repoName, agentID)
 	if branchHint != "" {
 		if s := sanitizeBranchName(branchHint); s != "" {
 			branchName = s
