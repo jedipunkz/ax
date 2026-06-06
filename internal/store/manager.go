@@ -169,6 +169,10 @@ func (m *manager) persistState() {
 	}
 }
 
+func isResumeRestart(existing, next AgentState) bool {
+	return existing.FinishedAt != nil && next.StartedAt.After(*existing.FinishedAt)
+}
+
 // reconcileStaleRunning marks running agents whose PIDs are no longer alive as failed.
 func (m *manager) reconcileStaleRunning() {
 	m.mu.Lock()
@@ -261,8 +265,10 @@ func (m *manager) handleConn(conn net.Conn) {
 					m.mu.Unlock()
 					continue
 				}
-				// Don't allow a terminal state to regress to running.
-				if existing.Status.IsTerminal() && msg.Agent.Status == StatusRunning {
+				// Don't allow stale updates to regress a terminal state to
+				// running. A resumed session reuses the same agent ID with a
+				// fresh StartedAt after FinishedAt, so that transition is valid.
+				if existing.Status.IsTerminal() && msg.Agent.Status == StatusRunning && !isResumeRestart(existing, *msg.Agent) {
 					m.mu.Unlock()
 					continue
 				}

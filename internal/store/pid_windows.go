@@ -22,3 +22,8 @@ func isPIDAlive(pid int) bool {
 	_ = p
 	return true
 }
+
+// IsPIDAlive returns true if the given PID refers to a running process.
+func IsPIDAlive(pid int) bool {
+	return isPIDAlive(pid)
+}

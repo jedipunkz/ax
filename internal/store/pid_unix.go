@@ -12,3 +12,8 @@ func isPIDAlive(pid int) bool {
 	err := syscall.Kill(pid, 0)
 	return err == nil
 }
+
+// IsPIDAlive returns true if the given PID refers to a running process.
+func IsPIDAlive(pid int) bool {
+	return isPIDAlive(pid)
+}

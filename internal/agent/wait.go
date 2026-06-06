@@ -2,6 +2,9 @@ package agent
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/jedipunkz/ax/internal/store"
 )
@@ -37,28 +40,103 @@ func Wait(socketPath, idOrName string) (WaitResult, error) {
 		return WaitResult{}, fmt.Errorf("could not subscribe: %w", err)
 	}
 
-	for {
-		msg, err := client.ReadMessage()
-		if err != nil {
-			return WaitResult{}, fmt.Errorf("subscription closed: %w", err)
+	done := make(chan struct{})
+	defer close(done)
+
+	msgCh := make(chan store.Message)
+	errCh := make(chan error, 1)
+	go func() {
+		for {
+			msg, err := client.ReadMessage()
+			if err != nil {
+				select {
+				case errCh <- err:
+				case <-done:
+				}
+				return
+			}
+			select {
+			case msgCh <- msg:
+			case <-done:
+				return
+			}
 		}
-		switch msg.Type {
-		case "snapshot":
-			for _, a := range msg.Agents {
-				if a.ID == existing.ID && a.Status.IsTerminal() {
-					return resultFromAgent(a), nil
+	}()
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case msg := <-msgCh:
+			switch msg.Type {
+			case "snapshot":
+				for _, a := range msg.Agents {
+					if a.ID == existing.ID && a.Status.IsTerminal() {
+						return resultFromAgent(a), nil
+					}
+				}
+			case "update":
+				if msg.Agent != nil && msg.Agent.ID == existing.ID && msg.Agent.Status.IsTerminal() {
+					return resultFromAgent(*msg.Agent), nil
+				}
+			case "remove":
+				if msg.AgentID == existing.ID {
+					return WaitResult{}, fmt.Errorf("agent %q was removed before reaching a terminal state", existing.ID)
 				}
 			}
-		case "update":
-			if msg.Agent != nil && msg.Agent.ID == existing.ID && msg.Agent.Status.IsTerminal() {
-				return resultFromAgent(*msg.Agent), nil
+		case err := <-errCh:
+			if latest, latestErr := findAgentByExactID(existing.ID); latestErr == nil {
+				if latest.Status == store.StatusRunning && !store.IsPIDAlive(latest.PID) {
+					latest = staleAgentResult(latest)
+				}
+				if latest.Status.IsTerminal() {
+					return resultFromAgent(latest), nil
+				}
 			}
-		case "remove":
-			if msg.AgentID == existing.ID {
-				return WaitResult{}, fmt.Errorf("agent %q was removed before reaching a terminal state", existing.ID)
+			return WaitResult{}, fmt.Errorf("subscription closed: %w", err)
+		case <-ticker.C:
+			latest, latestErr := findAgentByExactID(existing.ID)
+			if latestErr != nil {
+				return WaitResult{}, latestErr
+			}
+			if latest.Status == store.StatusRunning && !store.IsPIDAlive(latest.PID) {
+				latest = staleAgentResult(latest)
+				_ = client.SendUpdate(latest)
+			}
+			if latest.Status.IsTerminal() {
+				return resultFromAgent(latest), nil
 			}
 		}
 	}
+}
+
+func staleAgentResult(a store.AgentState) store.AgentState {
+	now := time.Now()
+	exitCode := 1
+	a.Status = store.StatusFailed
+	a.FinishedAt = &now
+	a.WaitingUser = false
+	a.ExitCode = &exitCode
+	return a
+}
+
+func findAgentByExactID(id string) (store.AgentState, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return store.AgentState{}, fmt.Errorf("could not determine home directory: %w", err)
+	}
+	stateFile := filepath.Join(home, ".ax", "state.json")
+	agents, err := readAgents(stateFile)
+	if err != nil {
+		return store.AgentState{}, err
+	}
+	for _, a := range agents {
+		if a.ID == id {
+			return a, nil
+		}
+	}
+	return store.AgentState{}, fmt.Errorf("agent %q was removed before reaching a terminal state", id)
 }
 
 // resultFromAgent maps an AgentState to its shell exit code:

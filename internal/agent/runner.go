@@ -95,9 +95,8 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTy
 	if agentTypeOverride != "" {
 		agentType = agentTypeOverride
 	}
-	id := generateID()
 	resumeArgs := append(resumePrefixArgs(agentType), args...)
-	return runSession(resumeArgs, socketPath, id, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
+	return runSession(resumeArgs, socketPath, existing.ID, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
 }
 
 // findAgentByIDOrName reads state.json and returns the agent matching the given ID exactly,
