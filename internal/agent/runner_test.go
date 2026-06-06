@@ -144,28 +144,6 @@ func TestLastMeaningfulLine(t *testing.T) {
 	}
 }
 
-func TestStringSliceEqual(t *testing.T) {
-	tests := []struct {
-		name string
-		a    []string
-		b    []string
-		want bool
-	}{
-		{name: "both nil", a: nil, b: nil, want: true},
-		{name: "equal slices", a: []string{"x", "y"}, b: []string{"x", "y"}, want: true},
-		{name: "different length", a: []string{"x"}, b: []string{"x", "y"}, want: false},
-		{name: "different content", a: []string{"x", "y"}, b: []string{"x", "z"}, want: false},
-		{name: "empty vs nil", a: []string{}, b: nil, want: true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := stringSliceEqual(tt.a, tt.b); got != tt.want {
-				t.Errorf("stringSliceEqual(%v, %v) = %v, want %v", tt.a, tt.b, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestGenerateID(t *testing.T) {
 	id := generateID()
 	if !strings.HasPrefix(id, "ax-") {

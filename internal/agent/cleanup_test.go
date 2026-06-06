@@ -52,7 +52,7 @@ func TestCleanupOldWorktreesClearsRemovedWorktreeState(t *testing.T) {
 	}
 	writeState(t, statePath, agents)
 
-	if err := CleanupOldWorktrees(statePath, worktreesDir, 30); err != nil {
+	if err := CleanupOldWorktrees(statePath, worktreesDir, 30, nil); err != nil {
 		t.Fatalf("CleanupOldWorktrees() error = %v", err)
 	}
 

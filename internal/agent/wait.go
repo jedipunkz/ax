@@ -2,10 +2,9 @@ package agent
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
+	"github.com/jedipunkz/ax/internal/axfs"
 	"github.com/jedipunkz/ax/internal/store"
 )
 
@@ -127,14 +126,13 @@ func staleAgentResult(a store.AgentState) store.AgentState {
 }
 
 func findAgentByExactID(id string) (store.AgentState, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return store.AgentState{}, fmt.Errorf("could not determine home directory: %w", err)
-	}
-	stateFile := filepath.Join(home, ".ax", "state.json")
-	agents, err := readAgents(stateFile)
+	paths, err := axfs.New()
 	if err != nil {
 		return store.AgentState{}, err
+	}
+	agents, err := store.ReadAgents(paths.StateFile())
+	if err != nil {
+		return store.AgentState{}, fmt.Errorf("could not read state file: %w", err)
 	}
 	for _, a := range agents {
 		if a.ID == id {
