@@ -95,8 +95,30 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTy
 	if agentTypeOverride != "" {
 		agentType = agentTypeOverride
 	}
-	resumeArgs := append(resumePrefixArgs(agentType), args...)
+	resumeArgs := buildResumeArgs(agentType, args)
 	return runSession(resumeArgs, socketPath, existing.ID, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
+}
+
+// buildResumeArgs assembles the final argv for resuming an agent session.
+//
+// User-supplied args (everything after `--` on the ax CLI) are placed BEFORE
+// the agent's resume tokens so they act as agent-level global flags rather
+// than as arguments to the resume subcommand. For example, with codex:
+//
+//	ax agent resume -a codex -n NAME -- -a never
+//	→ codex -a never resume --last        (correct: -a is codex's approval flag)
+//	NOT codex resume --last -- -a never  (wrong: codex parses -a as SESSION_ID)
+//
+// The leading "--" separator that cobra forwards is stripped before merging.
+func buildResumeArgs(agentType string, userArgs []string) []string {
+	if len(userArgs) > 0 && userArgs[0] == "--" {
+		userArgs = userArgs[1:]
+	}
+	prefix := resumePrefixArgs(agentType)
+	out := make([]string, 0, len(userArgs)+len(prefix))
+	out = append(out, userArgs...)
+	out = append(out, prefix...)
+	return out
 }
 
 // findAgentByIDOrName reads state.json and returns the agent matching the given ID exactly,
