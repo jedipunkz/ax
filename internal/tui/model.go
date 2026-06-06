@@ -157,7 +157,9 @@ func removeAgentCmd(ag store.AgentState, client *store.Client) tea.Cmd {
 	return func() tea.Msg {
 		var firstErr error
 		if paths, err := axfs.New(); err == nil {
-			agent.RemoveAgentArtifacts(paths, ag)
+			if err := agent.RemoveAgentArtifacts(paths, ag); err != nil {
+				firstErr = err
+			}
 		}
 		if err := client.SendRemove(ag.ID); err != nil && firstErr == nil {
 			firstErr = err

@@ -33,7 +33,11 @@ func RemoveAgent(idOrName, socketPath string) error {
 		return fmt.Errorf("agent %s is still running; stop it before removing", target.ID)
 	}
 
-	RemoveAgentArtifacts(paths, target)
+	if err := RemoveAgentArtifacts(paths, target); err != nil {
+		// Match prior CLI behavior: artifact failures are surfaced as
+		// warnings but never block state removal.
+		warnf("%v", err)
+	}
 
 	// Remove agent from state
 	if socketPath != "" {
@@ -60,25 +64,28 @@ func RemoveAgent(idOrName, socketPath string) error {
 
 // RemoveAgentArtifacts deletes the worktree (if it lives under
 // ~/.ax/worktrees/) and the log file/directory for the given agent.
-// Failures are reported as warnings; they do not stop the cleanup so
-// callers can complete state removal regardless.
+// Returns the first failure (worktree errors take precedence over log
+// errors) so callers can decide whether to surface it; cleanup of the
+// remaining artifacts proceeds regardless.
 //
 // Shared by `ax agent remove` and the dashboard's deletion flow.
-func RemoveAgentArtifacts(paths axfs.Paths, ag store.AgentState) {
+func RemoveAgentArtifacts(paths axfs.Paths, ag store.AgentState) error {
+	var firstErr error
 	if ag.WorkDir != "" && IsUnderWorktreesDir(paths.WorktreesDir(), ag.WorkDir) {
 		cleanWorkDir := filepath.Clean(ag.WorkDir)
 		if _, err := os.Stat(cleanWorkDir); err == nil {
 			if err := RemoveWorktree(cleanWorkDir); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: could not remove worktree %s: %v\n", cleanWorkDir, err)
+				firstErr = fmt.Errorf("worktree remove %s: %w", cleanWorkDir, err)
 			}
 		}
 	}
 	if ag.LogFile != "" {
-		if err := os.Remove(ag.LogFile); err != nil && !os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "warning: could not remove log file %s: %v\n", ag.LogFile, err)
+		if err := os.Remove(ag.LogFile); err != nil && !os.IsNotExist(err) && firstErr == nil {
+			firstErr = fmt.Errorf("log remove %s: %w", ag.LogFile, err)
 		}
 		_ = os.Remove(filepath.Dir(ag.LogFile))
 	}
+	return firstErr
 }
 
 // readAgents wraps store.ReadAgents with the package's "no agents found"
