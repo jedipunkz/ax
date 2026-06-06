@@ -96,6 +96,50 @@ ax agent cd -n <id|name>
 
 This spawns a subshell (`$SHELL`) with the working directory set to the agent's worktree. Type `exit` to return to your original shell.
 
+### View an agent's output
+
+Dump the full output log with ANSI escapes stripped:
+
+```bash
+ax agent logs -n <id|name>
+```
+
+Follow new output in real time (the daemon streams it from any terminal):
+
+```bash
+ax agent logs -f -n <id|name>
+```
+
+For a raw, real-time view that preserves colours, prompts and progress bars exactly as they were produced, use `attach`. The last 8 KB of history is replayed on connect, and Ctrl-C detaches without affecting the agent:
+
+```bash
+ax agent attach -n <id|name>
+```
+
+### Wait for an agent to finish
+
+Block until the agent reaches a terminal state, then exit with the agent's own exit code (`130` for killed agents). Useful for shell pipelines and CI scripts:
+
+```bash
+ax agent wait -n <id|name> && ./deploy.sh
+```
+
+### Send input to a waiting agent
+
+When an agent is paused at a prompt (`waiting` status), you can answer it from any terminal without returning to the runner's session:
+
+```bash
+ax agent input -n <id|name> "y\n"
+```
+
+If no positional text is given, the input is read from stdin:
+
+```bash
+echo "yes" | ax agent input -n <id|name>
+```
+
+Input is only accepted while the agent is actually waiting for user input; the daemon rejects requests sent during active processing to avoid interleaving with local keystrokes.
+
 ### List agents
 
 To list all agents with their ID, name, repo, ended time, and worktree directory:
