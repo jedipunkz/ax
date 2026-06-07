@@ -52,7 +52,7 @@ func showBranchDiff(workDir string) error {
 		c.Dir = workDir
 		out, err2 := c.Output()
 		if err2 != nil {
-			return fmt.Errorf("could not compute diff: %w", err)
+			return fmt.Errorf("could not compute diff: %w", err2)
 		}
 		return runPager(out)
 	}

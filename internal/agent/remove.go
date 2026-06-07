@@ -44,15 +44,16 @@ func RemoveAgent(idOrName, socketPath string) error {
 		var c store.Client
 		if err := c.Connect(socketPath); err == nil {
 			defer c.Close()
-			if err := c.SendRemove(target.ID); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: could not notify daemon: %v\n", err)
+			if err := c.SendRemove(target.ID); err == nil {
+				fmt.Printf("removed agent %s\n", target.ID)
+				return nil
 			}
-			fmt.Printf("removed agent %s\n", target.ID)
-			return nil
+			// SendRemove failed: fall through to update state.json directly so
+			// the stale entry is not left behind even though artifacts are gone.
 		}
 	}
 
-	// Daemon not reachable — update state.json directly.
+	// Daemon not reachable (or send failed) — update state.json directly.
 	updated := append(agents[:idx], agents[idx+1:]...)
 	if err := writeAgents(stateFile, updated); err != nil {
 		return err

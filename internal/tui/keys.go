@@ -245,7 +245,7 @@ func (m Model) yankCdCommand(cmds []tea.Cmd) (Model, []tea.Cmd) {
 	if ag.WorkDir == "" {
 		return m, cmds
 	}
-	cdCmd := fmt.Sprintf("cd %s", ag.WorkDir)
+	cdCmd := "cd " + ag.WorkDir
 	if err := copyToClipboard(cdCmd); err != nil {
 		m.statusMsg = fmt.Sprintf("clipboard error: %v", err)
 	} else {
