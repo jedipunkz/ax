@@ -50,10 +50,10 @@ func (s Status) IsTerminal() bool {
 //
 // Type values currently in use:
 //   - Client → Daemon: "update", "remove", "subscribe", "attach", "detach",
-//     "metrics"
+//     "register_input", "input", "raw_input", "metrics"
 //   - Daemon → Client: "snapshot", "update", "remove",
-//     "attach_ok", "attach_err", "output", "eof", "metrics_result",
-//     "metrics_err"
+//     "attach_ok", "attach_err", "output", "eof",
+//     "input_ok", "input_err", "metrics_result", "metrics_err"
 //
 // Fields are populated as required by the message type; all are omitempty so
 // older payloads remain forward-compatible.

@@ -26,9 +26,9 @@ const steps = [
     desc: 'Block scripts until a session exits or pauses, then use ax agent input when it is waiting.',
   },
   {
-    label: '6. Resume or clean up',
-    cmd: 'ax agent resume -n feat/foo',
-    desc: 'Resume previous sessions, cd into their worktrees, list them, or remove finished work when done.',
+    label: '6. Attach, resume, or clean up',
+    cmd: 'ax agent attach -n feat/foo',
+    desc: 'Attach to a running session for full interactive control, resume finished sessions, or remove completed work when done.',
   },
 ];
 ---

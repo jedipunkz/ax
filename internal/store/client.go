@@ -86,6 +86,17 @@ func (c *Client) RegisterInput(agentID string) error {
 	return c.send(Message{Type: "register_input", AgentID: agentID})
 }
 
+// SendRawInput forwards raw keystroke bytes to the agent's PTY bypassing the
+// waiting_user gate. Intended for interactive attach sessions where keystrokes
+// must reach the agent immediately regardless of its idle state.
+func (c *Client) SendRawInput(agentID string, data []byte) error {
+	return c.send(Message{
+		Type:    "raw_input",
+		AgentID: agentID,
+		Data:    base64.StdEncoding.EncodeToString(data),
+	})
+}
+
 // SendInput delivers stdin data to the agent identified by agentID. The
 // daemon forwards it to the registered runner only when the agent is in a
 // waiting_user state; otherwise it responds with an input_err.

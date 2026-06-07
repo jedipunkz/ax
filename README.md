@@ -55,6 +55,18 @@ ax agent new -n feat/foo -- --model sonnet --dangerously-skip-permissions
 ax agent new -a codex -n feat/foo -- --approval-mode full-auto
 ```
 
+### Attach to a running agent
+
+To connect interactively to a running agent's terminal session:
+
+```bash
+ax agent attach -n <name|id>
+```
+
+All keystrokes — including Ctrl-C — are forwarded directly to the agent. The session ends automatically when the agent exits. The last 50 KB of output is replayed on attach so you have immediate context.
+
+Use `ax agent resume` instead when the agent has already finished.
+
 ### Resume an agent
 
 To resume a previous session by ID or name:

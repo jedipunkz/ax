@@ -196,6 +196,8 @@ func (m *manager) dispatch(sub *subscriber, msg Message) {
 		m.handleRegisterInput(sub, msg)
 	case "input":
 		m.handleInput(sub, msg)
+	case "raw_input":
+		m.handleRawInput(sub, msg)
 	case "metrics":
 		m.handleMetrics(sub, msg)
 	}

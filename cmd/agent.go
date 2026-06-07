@@ -82,6 +82,26 @@ var agentListCmd = &cobra.Command{
 	},
 }
 
+var agentAttachCmd = &cobra.Command{
+	Use:                "attach -n <id|name>",
+	Short:              "Attach to a running agent's interactive session",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		idOrName, _, err := parseNameFlagRequired(args)
+		if err != nil {
+			return err
+		}
+		socketPath, err := getSocketPath()
+		if err != nil {
+			return err
+		}
+		if err := ensureDaemon(socketPath); err != nil {
+			return fmt.Errorf("could not start daemon: %w", err)
+		}
+		return agent.AttachToAgent(socketPath, idOrName)
+	},
+}
+
 var agentResumeCmd = &cobra.Command{
 	Use:                "resume [-a <agent>] -n <id|name> [-- <agent-args>...]",
 	Short:              "Resume a previous agent session by ID or name (-a overrides stored agent type)",
@@ -211,6 +231,7 @@ func init() {
 	agentCmd.AddCommand(agentNewCmd)
 	agentCmd.AddCommand(agentCdCmd)
 	agentCmd.AddCommand(agentListCmd)
+	agentCmd.AddCommand(agentAttachCmd)
 	agentCmd.AddCommand(agentResumeCmd)
 	agentCmd.AddCommand(agentRmCmd)
 	agentCmd.AddCommand(agentDiffCmd)
