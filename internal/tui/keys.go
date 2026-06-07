@@ -283,8 +283,11 @@ func clearStatusAfter(d time.Duration) tea.Cmd {
 	})
 }
 
-// shellQuote wraps s in single quotes for safe use in POSIX shell commands,
-// escaping any single quotes within s.
+// shellQuote wraps s in double quotes, escaping characters that are special
+// inside double-quoted strings in bash, zsh, and fish (\, $, ").
 func shellQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `$`, `\$`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return `"` + s + `"`
 }
