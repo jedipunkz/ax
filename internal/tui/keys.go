@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/viewport"
@@ -245,7 +246,7 @@ func (m Model) yankCdCommand(cmds []tea.Cmd) (Model, []tea.Cmd) {
 	if ag.WorkDir == "" {
 		return m, cmds
 	}
-	cdCmd := fmt.Sprintf("cd %s", ag.WorkDir)
+	cdCmd := "cd " + shellQuote(ag.WorkDir)
 	if err := copyToClipboard(cdCmd); err != nil {
 		m.statusMsg = fmt.Sprintf("clipboard error: %v", err)
 	} else {
@@ -280,4 +281,10 @@ func clearStatusAfter(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(time.Time) tea.Msg {
 		return clearStatusMsg{}
 	})
+}
+
+// shellQuote wraps s in single quotes for safe use in POSIX shell commands,
+// escaping any single quotes within s.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }
