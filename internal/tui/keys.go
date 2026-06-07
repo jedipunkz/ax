@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/viewport"
@@ -246,7 +245,7 @@ func (m Model) yankCdCommand(cmds []tea.Cmd) (Model, []tea.Cmd) {
 	if ag.WorkDir == "" {
 		return m, cmds
 	}
-	cdCmd := "cd " + shellQuote(ag.WorkDir)
+	cdCmd := "cd " + ag.WorkDir
 	if err := copyToClipboard(cdCmd); err != nil {
 		m.statusMsg = fmt.Sprintf("clipboard error: %v", err)
 	} else {
@@ -281,13 +280,4 @@ func clearStatusAfter(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(time.Time) tea.Msg {
 		return clearStatusMsg{}
 	})
-}
-
-// shellQuote wraps s in double quotes, escaping characters that are special
-// inside double-quoted strings in bash, zsh, and fish (\, $, ").
-func shellQuote(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, `$`, `\$`)
-	s = strings.ReplaceAll(s, `"`, `\"`)
-	return `"` + s + `"`
 }
