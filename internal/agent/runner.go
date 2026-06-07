@@ -30,10 +30,13 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 
 	if name != "" {
 		if existing, err := findAgentByIDOrName(name); err == nil {
-			return fmt.Errorf(
-				"agent %q already exists (status: %s)\nhint: use 'ax agent resume -n %s' to resume it",
-				name, existing.Status, name,
-			)
+			if existing.Status == store.StatusRunning {
+				return fmt.Errorf(
+					"agent %q is already running\nhint: use 'ax agent resume -n %s' to resume it",
+					name, name,
+				)
+			}
+			// Terminal state (killed/failed/success): allow reuse of the name.
 		}
 	}
 
