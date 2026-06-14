@@ -47,10 +47,13 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 		workDir = ""
 	}
 
-	var worktreeBranch, repoName string
+	var worktreeBranch, repoName, initialHead string
 	if workDir != "" {
-		if repoRoot, ok := detectGitRepo(workDir); ok {
+		// detectGitRepoAndHead fetches both the repo root and HEAD in one git call,
+		// avoiding a second subprocess later in runSession.
+		if repoRoot, head, ok := detectGitRepoAndHead(workDir); ok {
 			repoName = filepath.Base(repoRoot)
+			initialHead = head
 			wt, branch, wtErr := setupWorktree(id, repoRoot, name)
 			if wtErr != nil {
 				warnf("could not create worktree: %v", wtErr)
@@ -61,7 +64,7 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 		}
 	}
 
-	return runSession(args, socketPath, id, name, agentType, workDir, worktreeBranch, repoName)
+	return runSession(args, socketPath, id, name, agentType, workDir, worktreeBranch, repoName, initialHead)
 }
 
 // resumePrefixArgs returns the arguments that should be prepended to resume a
@@ -89,7 +92,8 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTy
 		agentType = agentTypeOverride
 	}
 	resumeArgs := buildResumeArgs(agentType, args)
-	return runSession(resumeArgs, socketPath, existing.ID, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
+	initialHead := gitHeadCommit(existing.WorkDir)
+	return runSession(resumeArgs, socketPath, existing.ID, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName, initialHead)
 }
 
 // buildResumeArgs assembles the final argv for resuming an agent session.
@@ -116,7 +120,7 @@ func buildResumeArgs(agentType string, userArgs []string) []string {
 // the PTY, the log file, and the lifecycle goroutines (idle watcher,
 // commit watcher, daemon input pump), and produces the terminal state
 // update before returning.
-func runSession(args []string, socketPath, id, name, agentType, workDir, worktreeBranch, repoName string) error {
+func runSession(args []string, socketPath, id, name, agentType, workDir, worktreeBranch, repoName, initialHead string) error {
 	paths, err := axfs.New()
 	if err != nil {
 		return err
@@ -133,7 +137,6 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	defer client.Close()
 
 	agentArgs := stripLeadingDoubleDash(args)
-	initialHead := gitHeadCommit(workDir)
 
 	cmd := exec.Command(agentType, agentArgs...)
 	cmd.Dir = workDir

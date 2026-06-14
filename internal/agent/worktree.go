@@ -19,6 +19,20 @@ func detectGitRepo(dir string) (repoRoot string, ok bool) {
 	return strings.TrimSpace(string(out)), true
 }
 
+// detectGitRepoAndHead returns the repository root and HEAD commit SHA in a
+// single git invocation, avoiding a second subprocess call for gitHeadCommit.
+func detectGitRepoAndHead(dir string) (repoRoot, headCommit string, ok bool) {
+	out, err := exec.Command("git", "-C", dir, "rev-parse", "--show-toplevel", "HEAD").Output()
+	if err != nil {
+		return "", "", false
+	}
+	lines := strings.SplitN(strings.TrimSpace(string(out)), "\n", 2)
+	if len(lines) != 2 {
+		return "", "", false
+	}
+	return lines[0], lines[1], true
+}
+
 // branchExists reports whether a branch with the given name exists in the repo.
 func branchExists(repoRoot, branchName string) bool {
 	out, err := exec.Command("git", "-C", repoRoot, "branch", "--list", branchName).Output()
@@ -59,8 +73,10 @@ func setupWorktree(agentID, repoRoot, branchHint string) (worktreePath, branchNa
 
 	repoName := filepath.Base(repoRoot)
 	worktreePath = paths.WorktreePath(repoName, agentID)
+	// Use the hint-based name only when it's available and not already taken;
+	// agentID-based names are always unique so they never need a collision check.
 	if branchHint != "" {
-		if s := sanitizeBranchName(branchHint); s != "" {
+		if s := sanitizeBranchName(branchHint); s != "" && !branchExists(repoRoot, s) {
 			branchName = s
 		}
 	}
@@ -70,11 +86,6 @@ func setupWorktree(agentID, repoRoot, branchHint string) (worktreePath, branchNa
 
 	if err := os.MkdirAll(filepath.Dir(worktreePath), 0755); err != nil {
 		return "", "", fmt.Errorf("could not create worktrees dir: %w", err)
-	}
-
-	// If the desired branch already exists, fall back to a unique branch name.
-	if branchExists(repoRoot, branchName) {
-		branchName = "ax/" + agentID
 	}
 
 	cmd := exec.Command("git", "worktree", "add", "-b", branchName, worktreePath, "HEAD")
