@@ -21,7 +21,7 @@ export const GET: APIRoute = async () => {
           flexDirection: 'column',
           width: '1200px',
           height: '630px',
-          backgroundColor: '#16161d',
+          backgroundColor: '#1e1e2e',
         },
         children: [
           // Top accent bar
@@ -30,7 +30,7 @@ export const GET: APIRoute = async () => {
             props: {
               style: {
                 height: '6px',
-                background: 'linear-gradient(to right, #7e9cd8, #957fb8)',
+                background: 'linear-gradient(to right, #89b4fa, #cba6f7)',
                 width: '100%',
                 flexShrink: 0,
               },
@@ -64,7 +64,7 @@ export const GET: APIRoute = async () => {
                             display: 'flex',
                             fontSize: 128,
                             fontWeight: 700,
-                            color: '#e6c384',
+                            color: '#cdd6f4',
                             lineHeight: 1,
                             letterSpacing: '-4px',
                           },
@@ -76,23 +76,9 @@ export const GET: APIRoute = async () => {
                         props: {
                           style: {
                             display: 'flex',
-                            fontSize: 28,
-                            fontWeight: 400,
-                            color: '#7e9cd8',
-                            marginTop: '18px',
-                            letterSpacing: '6px',
-                          },
-                          children: 'agent cross',
-                        },
-                      },
-                      {
-                        type: 'div',
-                        props: {
-                          style: {
-                            display: 'flex',
                             fontSize: 22,
                             fontWeight: 400,
-                            color: '#727169',
+                            color: '#a6adc8',
                             marginTop: '32px',
                             lineHeight: 1.6,
                           },
@@ -110,7 +96,7 @@ export const GET: APIRoute = async () => {
                       display: 'flex',
                       fontSize: 20,
                       fontWeight: 400,
-                      color: '#54546d',
+                      color: '#6c7086',
                     },
                     children: 'github.com/jedipunkz/ax',
                   },

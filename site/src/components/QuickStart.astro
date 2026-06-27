@@ -31,6 +31,34 @@ const steps = [
     desc: 'Resume previous sessions, cd into their worktrees, list them, or remove finished work when done.',
   },
 ];
+
+const OPERATORS = new Set(['&&', '||', '|', ';']);
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// fish-style tokenizer: command / argument / flag / operator
+function highlight(cmd: string): string {
+  let atCommand = true;
+  return cmd
+    .split(' ')
+    .map((tok) => {
+      if (tok === '') return '';
+      const esc = escapeHtml(tok);
+      if (OPERATORS.has(tok)) {
+        atCommand = true;
+        return `<span class="sh-op">${esc}</span>`;
+      }
+      if (atCommand) {
+        atCommand = false;
+        return `<span class="sh-cmd">${esc}</span>`;
+      }
+      if (tok.startsWith('-')) return `<span class="sh-flag">${esc}</span>`;
+      return `<span class="sh-arg">${esc}</span>`;
+    })
+    .join(' ');
+}
 ---
 <section class="quickstart-section" aria-label="Quick start">
   <div class="section-inner">
@@ -43,7 +71,7 @@ const steps = [
       {steps.map((step) => (
         <article class="step-card">
           <p class="step-label">{step.label}</p>
-          <code>{step.cmd}</code>
+          <code set:html={highlight(step.cmd)}></code>
           <p>{step.desc}</p>
         </article>
       ))}
@@ -59,7 +87,7 @@ const steps = [
 <style>
   .quickstart-section {
     padding: 4.75rem 2rem 5.5rem;
-    border-top: 1px solid rgb(59 66 97 / 72%);
+    border-top: 1px solid rgb(49 50 68 / 72%);
     background: var(--tn-bg-soft);
   }
 
@@ -82,10 +110,11 @@ const steps = [
 
   h2 {
     color: var(--tn-fg-strong);
-    font-size: clamp(2rem, 4vw, 3.2rem);
-    font-weight: 720;
-    letter-spacing: 0;
-    line-height: 1.05;
+    font-family: var(--tn-mono);
+    font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
   }
 
   .steps-grid {
@@ -97,9 +126,9 @@ const steps = [
   .step-card {
     min-height: 220px;
     padding: 22px;
-    border: 1px solid rgb(59 66 97 / 78%);
+    border: 1px solid rgb(49 50 68 / 78%);
     border-radius: 8px;
-    background: rgb(36 40 59 / 86%);
+    background: rgb(49 50 68 / 86%);
     box-shadow: var(--tn-shadow);
   }
 
@@ -112,16 +141,16 @@ const steps = [
 
   .step-card code {
     display: block;
-    color: var(--tn-green);
+    color: var(--tn-blue);
     font-size: 0.9rem;
     font-weight: 800;
     line-height: 1.55;
     overflow-wrap: anywhere;
     margin-bottom: 14px;
     padding: 10px 12px;
-    border: 1px solid rgb(86 95 137 / 54%);
+    border: 1px solid var(--tn-border);
     border-radius: 6px;
-    background: rgb(22 22 30 / 58%);
+    background: var(--tn-bg-dark);
   }
 
   .step-card p:last-child,
@@ -139,7 +168,7 @@ const steps = [
   }
 
   .state-note code {
-    color: var(--tn-green);
+    color: var(--tn-blue);
     font-weight: 800;
   }
 
