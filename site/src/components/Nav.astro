@@ -4,7 +4,7 @@ const base = import.meta.env.BASE_URL;
 <nav class="nav">
   <div class="nav-inner">
     <a href={base} class="nav-brand">
-      <span class="brand-name">ax - agent cross</span>
+      <span class="brand-name">ax - Manage Multi AI Agents with Parallel Git Worktrees</span>
     </a>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
@@ -28,10 +28,10 @@ const base = import.meta.env.BASE_URL;
     left: 0;
     right: 0;
     z-index: 100;
-    background: rgb(26 27 38 / 82%);
+    background: rgb(30 30 46 / 82%);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border-bottom: 1px solid rgb(59 66 97 / 72%);
+    border-bottom: 1px solid rgb(49 50 68 / 72%);
   }
 
   .nav-inner {
@@ -48,16 +48,27 @@ const base = import.meta.env.BASE_URL;
     display: flex;
     align-items: center;
     gap: 0.65rem;
+    min-width: 0;
+    margin-right: 1rem;
     color: var(--tn-fg);
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.92rem;
     letter-spacing: 0;
   }
   .nav-brand:hover { color: var(--tn-blue); }
 
   .brand-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-family: 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
     color: var(--tn-fg-strong);
+  }
+
+  @media (max-width: 860px) {
+    .nav-brand {
+      font-size: 0.82rem;
+    }
   }
 
   .nav-links {
@@ -76,23 +87,23 @@ const base = import.meta.env.BASE_URL;
   }
   .nav-links a:hover {
     color: var(--tn-cyan);
-    background: rgb(122 162 247 / 10%);
+    background: rgb(137 180 250 / 10%);
   }
 
   .nav-github {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    background: rgb(36 40 59 / 88%) !important;
-    border: 1px solid rgb(122 162 247 / 24%) !important;
+    background: rgb(49 50 68 / 88%) !important;
+    border: 1px solid rgb(137 180 250 / 24%) !important;
     color: var(--tn-fg-strong) !important;
     padding: 0.48rem 0.9rem !important;
     box-shadow: var(--tn-ring);
   }
   .nav-github:hover {
-    border-color: rgb(125 207 255 / 52%) !important;
+    border-color: rgb(137 220 235 / 52%) !important;
     color: var(--tn-cyan) !important;
-    background: rgb(41 46 66 / 92%) !important;
+    background: rgb(69 71 90 / 92%) !important;
   }
 
   @media (max-width: 640px) {

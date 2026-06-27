@@ -53,7 +53,7 @@ const features = [
 <style>
   .features-section {
     padding: 3rem 2rem 5.5rem;
-    border-top: 1px solid rgb(59 66 97 / 72%);
+    border-top: 1px solid rgb(49 50 68 / 72%);
     background: var(--tn-bg);
   }
 
@@ -73,10 +73,11 @@ const features = [
   h2 {
     max-width: 620px;
     color: var(--tn-fg-strong);
-    font-size: clamp(2rem, 4vw, 3.2rem);
-    font-weight: 720;
-    letter-spacing: 0;
-    line-height: 1.05;
+    font-family: var(--tn-mono);
+    font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
   }
 
   .features-grid {
@@ -88,25 +89,25 @@ const features = [
   .feature-card {
     min-height: 230px;
     padding: 24px;
-    border: 1px solid rgb(59 66 97 / 78%);
+    border: 1px solid rgb(49 50 68 / 78%);
     border-radius: 8px;
-    background: rgb(36 40 59 / 78%);
+    background: rgb(49 50 68 / 78%);
     box-shadow: var(--tn-shadow);
     transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
   }
 
   .feature-card:hover {
     transform: translateY(-2px);
-    border-color: rgb(122 162 247 / 40%);
-    background: rgb(41 46 66 / 86%);
+    border-color: rgb(137 180 250 / 40%);
+    background: rgb(69 71 90 / 86%);
   }
 
   .feature-label {
     width: fit-content;
     padding: 5px 10px;
     border-radius: 999px;
-    border: 1px solid rgb(122 162 247 / 24%);
-    background: rgb(122 162 247 / 9%);
+    border: 1px solid rgb(137 180 250 / 24%);
+    background: rgb(137 180 250 / 9%);
     color: var(--tn-cyan);
     font-size: 0.8rem;
     font-weight: 900;

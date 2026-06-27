@@ -10,7 +10,7 @@
 
     <div class="install-panel">
       <div class="code-row">
-        <code>brew tap jedipunkz/ax && brew install ax</code>
+        <code><span class="sh-cmd">brew</span> <span class="sh-arg">tap jedipunkz/ax</span> <span class="sh-op">&amp;&amp;</span> <span class="sh-cmd">brew</span> <span class="sh-arg">install ax</span></code>
         <button class="copy-btn" data-copy="brew tap jedipunkz/ax && brew install ax">Copy</button>
       </div>
     </div>
@@ -20,7 +20,7 @@
 <style>
   .install-section {
     padding: 4.75rem 2rem 6rem;
-    border-top: 1px solid rgb(59 66 97 / 72%);
+    border-top: 1px solid rgb(49 50 68 / 72%);
     background: var(--tn-bg);
   }
 
@@ -40,10 +40,11 @@
 
   h2 {
     color: var(--tn-fg-strong);
-    font-size: clamp(2rem, 4vw, 3.2rem);
-    font-weight: 720;
-    letter-spacing: 0;
-    line-height: 1.05;
+    font-family: var(--tn-mono);
+    font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
     margin-bottom: 1rem;
     white-space: nowrap;
   }
@@ -56,9 +57,9 @@
 
   .install-panel {
     max-width: 720px;
-    border: 1px solid rgb(86 95 137 / 70%);
+    border: 1px solid var(--tn-border);
     border-radius: 8px;
-    background: rgb(22 22 30 / 72%);
+    background: var(--tn-bg-dark);
     overflow: hidden;
     box-shadow: var(--tn-shadow);
   }
@@ -72,7 +73,7 @@
   }
 
   .code-row code {
-    color: var(--tn-green);
+    color: var(--tn-blue);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -83,9 +84,9 @@
   .copy-btn {
     min-height: 36px;
     padding: 0.35rem 0.85rem;
-    border: 1px solid rgb(122 162 247 / 30%);
+    border: 1px solid rgb(137 180 250 / 30%);
     border-radius: 6px;
-    background: rgb(41 46 66 / 92%);
+    background: rgb(69 71 90 / 92%);
     color: var(--tn-fg-strong);
     cursor: pointer;
     font: inherit;
@@ -97,7 +98,7 @@
   .copy-btn.copied {
     border-color: var(--tn-cyan);
     color: var(--tn-cyan);
-    background: rgb(122 162 247 / 12%);
+    background: rgb(137 180 250 / 12%);
   }
 
   @media (max-width: 760px) {

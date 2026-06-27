@@ -3,7 +3,6 @@ const base = import.meta.env.BASE_URL;
 ---
 <section class="hero">
   <div class="hero-content">
-    <p class="eyebrow">agent cross</p>
     <div class="hero-title">
       <img src={`${base}icon.png`} alt="ax official icon" width="128" height="128" class="hero-icon" />
       <h1>ax</h1>
@@ -19,21 +18,33 @@ const base = import.meta.env.BASE_URL;
 
     <div class="quick-command" aria-label="Install command">
       <span class="prompt">$</span>
-      <code>brew tap jedipunkz/ax && brew install ax</code>
+      <code><span class="sh-cmd">brew</span> <span class="sh-arg">tap jedipunkz/ax</span> <span class="sh-op">&amp;&amp;</span> <span class="sh-cmd">brew</span> <span class="sh-arg">install ax</span></code>
+      <button type="button" class="quick-copy" data-copy="brew tap jedipunkz/ax && brew install ax" aria-label="Copy install command">Copy</button>
     </div>
   </div>
 
   <figure class="hero-media">
-    <img
-      src="https://jedipunkz.rocks/pix/ax.png"
-      alt="ax terminal dashboard showing multiple agent sessions"
-      width="2988"
-      height="1642"
-      loading="eager"
-      decoding="async"
-    />
+    <button type="button" class="hero-shot-trigger" aria-label="Enlarge dashboard screenshot">
+      <img
+        src="https://jedipunkz.rocks/pix/ax.png"
+        alt="ax terminal dashboard showing multiple agent sessions"
+        width="2988"
+        height="1642"
+        loading="eager"
+        decoding="async"
+      />
+    </button>
   </figure>
 </section>
+
+<div class="lightbox" id="hero-lightbox" role="dialog" aria-modal="true" aria-label="Enlarged dashboard screenshot" hidden>
+  <button type="button" class="lightbox-close" aria-label="Close">&times;</button>
+  <img
+    src="https://jedipunkz.rocks/pix/ax.png"
+    alt="ax terminal dashboard showing multiple agent sessions"
+    decoding="async"
+  />
+</div>
 
 <style>
   .hero {
@@ -54,24 +65,11 @@ const base = import.meta.env.BASE_URL;
     max-width: 780px;
   }
 
-  .eyebrow {
-    width: fit-content;
-    padding: 5px 10px;
-    border: 1px solid rgb(122 162 247 / 24%);
-    border-radius: 999px;
-    background: rgb(122 162 247 / 8%);
-    color: var(--tn-cyan);
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0;
-    text-transform: uppercase;
-  }
-
   .hero-title {
     display: grid;
     grid-template-columns: auto minmax(0, auto);
     align-items: center;
-    gap: clamp(18px, 3vw, 30px);
+    gap: clamp(14px, 2vw, 20px);
     width: fit-content;
     max-width: 100%;
     min-width: 0;
@@ -79,21 +77,22 @@ const base = import.meta.env.BASE_URL;
 
   .hero-icon {
     display: block;
-    width: clamp(82px, 13vw, 128px);
-    height: clamp(82px, 13vw, 128px);
+    width: clamp(56px, 8vw, 80px);
+    height: clamp(56px, 8vw, 80px);
     flex: 0 0 auto;
-    border: 1px solid rgb(122 162 247 / 20%);
-    border-radius: 20px;
+    border: 1px solid rgb(137 180 250 / 20%);
+    border-radius: 16px;
     box-shadow: var(--tn-shadow);
-    transform: translateY(0.08em);
+    transform: translateY(0.04em);
   }
 
   h1 {
     color: var(--tn-fg-strong);
-    font-size: clamp(5.5rem, 15vw, 9.5rem);
-    font-weight: 820;
-    letter-spacing: 0;
-    line-height: 0.88;
+    font-family: var(--tn-mono);
+    font-size: clamp(2.6rem, 6vw, 4.4rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
     max-width: 900px;
     margin: 0;
   }
@@ -101,8 +100,8 @@ const base = import.meta.env.BASE_URL;
   .hero-desc {
     max-width: 620px;
     color: var(--tn-fg-dark);
-    font-size: clamp(1.18rem, 2.6vw, 1.45rem);
-    line-height: 1.42;
+    font-size: clamp(1rem, 1.8vw, 1.2rem);
+    line-height: 1.6;
   }
 
   .hero-actions {
@@ -114,10 +113,10 @@ const base = import.meta.env.BASE_URL;
   .btn {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
-    padding: 0 18px;
-    border-radius: 8px;
-    font-size: 0.95rem;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 7px;
+    font-size: 0.85rem;
     font-weight: 700;
     text-decoration: none;
     transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
@@ -129,9 +128,9 @@ const base = import.meta.env.BASE_URL;
 
   .btn-primary {
     background: var(--tn-blue);
-    border: 1px solid rgb(125 207 255 / 42%);
+    border: 1px solid rgb(137 220 235 / 42%);
     color: var(--tn-bg-dark);
-    box-shadow: 0 14px 28px rgb(122 162 247 / 18%);
+    box-shadow: 0 14px 28px rgb(137 180 250 / 18%);
   }
 
   .btn-primary:hover {
@@ -142,14 +141,14 @@ const base = import.meta.env.BASE_URL;
 
   .btn-secondary {
     color: var(--tn-fg-strong);
-    border: 1px solid rgb(187 154 247 / 44%);
-    background: rgb(187 154 247 / 10%);
+    border: 1px solid rgb(203 166 247 / 44%);
+    background: rgb(203 166 247 / 10%);
   }
 
   .btn-secondary:hover {
     color: var(--tn-purple);
     border-color: var(--tn-purple);
-    background: rgb(187 154 247 / 16%);
+    background: rgb(203 166 247 / 16%);
   }
 
   .quick-command {
@@ -159,9 +158,9 @@ const base = import.meta.env.BASE_URL;
     gap: 0.7rem;
     width: min(100%, 520px);
     padding: 18px 20px;
-    border: 1px solid rgb(86 95 137 / 74%);
+    border: 1px solid var(--tn-border);
     border-radius: 8px;
-    background: rgb(22 22 30 / 72%);
+    background: var(--tn-bg-dark);
     color: var(--tn-fg-dark);
     box-shadow: var(--tn-shadow);
   }
@@ -172,12 +171,35 @@ const base = import.meta.env.BASE_URL;
   }
 
   .quick-command code {
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--tn-green);
+    color: var(--tn-blue);
     font-size: 1.02rem;
     font-weight: 800;
+  }
+
+  .quick-copy {
+    flex: 0 0 auto;
+    min-height: 30px;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid rgb(137 180 250 / 30%);
+    border-radius: 6px;
+    background: rgb(69 71 90 / 60%);
+    color: var(--tn-fg-strong);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.78rem;
+    transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+  }
+
+  .quick-copy:hover,
+  .quick-copy.copied {
+    border-color: var(--tn-cyan);
+    color: var(--tn-cyan);
+    background: rgb(137 180 250 / 12%);
   }
 
   .hero-media {
@@ -185,14 +207,87 @@ const base = import.meta.env.BASE_URL;
     min-width: 0;
   }
 
+  .hero-shot-trigger {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+    border-radius: 8px;
+  }
+
+  .hero-shot-trigger:focus-visible {
+    outline: 2px solid var(--tn-cyan);
+    outline-offset: 4px;
+  }
+
   .hero-media img {
     display: block;
     width: 100%;
     height: auto;
-    border: 1px solid rgb(86 95 137 / 70%);
+    border: 1px solid rgb(69 71 90 / 70%);
     border-radius: 8px;
     background: var(--tn-bg-card);
     box-shadow: var(--tn-shadow);
+    transition: border-color 0.18s ease, transform 0.18s ease;
+  }
+
+  .hero-shot-trigger:hover img {
+    border-color: rgb(137 180 250 / 55%);
+    transform: translateY(-2px);
+  }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4vmin;
+    background: rgb(17 17 27 / 90%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    cursor: zoom-out;
+  }
+
+  .lightbox[hidden] {
+    display: none;
+  }
+
+  .lightbox img {
+    max-width: min(1400px, 96vw);
+    max-height: 92vh;
+    width: auto;
+    height: auto;
+    border: 1px solid var(--tn-border);
+    border-radius: 10px;
+    box-shadow: var(--tn-shadow);
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: max(16px, 2vmin);
+    right: max(16px, 2vmin);
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--tn-border);
+    border-radius: 8px;
+    background: rgb(30 30 46 / 92%);
+    color: var(--tn-fg-strong);
+    font-size: 1.7rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.18s ease, color 0.18s ease;
+  }
+
+  .lightbox-close:hover {
+    border-color: var(--tn-cyan);
+    color: var(--tn-cyan);
   }
 
   @media (max-width: 980px) {
@@ -218,9 +313,9 @@ const base = import.meta.env.BASE_URL;
     }
 
     .hero-icon {
-      width: 74px;
-      height: 74px;
-      border-radius: 16px;
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
     }
 
     .quick-command {
@@ -228,3 +323,43 @@ const base = import.meta.env.BASE_URL;
     }
   }
 </style>
+
+<script>
+  const lightbox = document.getElementById('hero-lightbox');
+  const trigger = document.querySelector('.hero-shot-trigger');
+  const closeBtn = lightbox?.querySelector('.lightbox-close');
+
+  const open = () => {
+    if (!lightbox) return;
+    lightbox.hidden = false;
+    document.body.style.overflow = 'hidden';
+    closeBtn instanceof HTMLElement && closeBtn.focus();
+  };
+
+  const close = () => {
+    if (!lightbox) return;
+    lightbox.hidden = true;
+    document.body.style.overflow = '';
+    trigger instanceof HTMLElement && trigger.focus();
+  };
+
+  trigger?.addEventListener('click', open);
+  lightbox?.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && lightbox && !lightbox.hidden) close();
+  });
+
+  const copyBtn = document.querySelector('.quick-copy');
+  copyBtn?.addEventListener('click', () => {
+    const text = copyBtn.getAttribute('data-copy');
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.textContent = 'Copied';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1600);
+    });
+  });
+</script>

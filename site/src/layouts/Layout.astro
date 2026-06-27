@@ -6,24 +6,62 @@ interface Props {
 
 const {
   title,
-  description = 'ax, short for agent cross, runs Claude Code, Codex CLI, Gemini CLI, and OpenCode agents in isolated git worktrees with a terminal dashboard.',
+  description = 'ax is a CLI that runs Claude Code, Codex CLI, Gemini CLI, and OpenCode agents in parallel git worktrees, with a terminal dashboard to monitor, resume, and inspect every session.',
 } = Astro.props;
 const base = import.meta.env.BASE_URL;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site).toString();
 const ogImageURL = new URL(`${base}og.png`, Astro.site).toString();
+const ogImageAlt = 'ax terminal dashboard managing multiple AI coding agents across parallel git worktrees';
+const keywords =
+  'ax, AI coding agent, AI agent orchestrator, Claude Code, Codex CLI, Gemini CLI, OpenCode, parallel agents, git worktree, terminal dashboard, CLI, developer tools, agent manager, coding agents';
+const repoURL = 'https://github.com/jedipunkz/ax';
 
 const jsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'ax',
-  alternateName: 'agent cross',
-  description,
-  url: canonicalURL,
-  applicationCategory: 'DeveloperApplication',
-  operatingSystem: 'macOS, Linux',
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-  author: { '@type': 'Person', name: 'jedipunkz' },
-  codeRepository: 'https://github.com/jedipunkz/ax',
+  '@graph': [
+    {
+      '@type': 'SoftwareApplication',
+      '@id': `${canonicalURL}#software`,
+      name: 'ax',
+      description,
+      url: canonicalURL,
+      applicationCategory: 'DeveloperApplication',
+      applicationSubCategory: 'CLI',
+      operatingSystem: 'macOS, Linux',
+      image: ogImageURL,
+      screenshot: 'https://jedipunkz.rocks/pix/ax.png',
+      downloadUrl: `${repoURL}/releases`,
+      softwareHelp: repoURL,
+      codeRepository: repoURL,
+      keywords,
+      featureList: [
+        'Run Claude Code, Codex CLI, Gemini CLI, and OpenCode agents from one workflow',
+        'Isolated git worktree and branch per agent session',
+        'Terminal dashboard to monitor running, waiting, successful, failed, and killed agents',
+        'Resume sessions, stream logs, and send input when an agent is waiting',
+        'Automatic cleanup of finished worktrees',
+      ],
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      author: { '@id': `${canonicalURL}#person` },
+      publisher: { '@id': `${canonicalURL}#person` },
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${canonicalURL}#website`,
+      name: 'ax',
+      url: canonicalURL,
+      description,
+      inLanguage: 'en',
+      publisher: { '@id': `${canonicalURL}#person` },
+    },
+    {
+      '@type': 'Person',
+      '@id': `${canonicalURL}#person`,
+      name: 'jedipunkz',
+      url: 'https://github.com/jedipunkz',
+      sameAs: ['https://github.com/jedipunkz'],
+    },
+  ],
 };
 ---
 
@@ -32,10 +70,17 @@ const jsonLd = {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#1a1b26" />
+    <meta name="theme-color" content="#1e1e2e" />
     <meta name="description" content={description} />
-    <meta name="robots" content="index, follow" />
+    <meta name="keywords" content={keywords} />
+    <meta name="author" content="jedipunkz" />
+    <meta name="application-name" content="ax" />
+    <meta name="apple-mobile-web-app-title" content="ax" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <link rel="canonical" href={canonicalURL} />
+    <link rel="preconnect" href="https://jedipunkz.rocks" crossorigin />
     <meta property="og:site_name" content="ax" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -46,10 +91,12 @@ const jsonLd = {
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content={ogImageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageURL} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <link rel="icon" type="image/png" href={`${base}icon.png`} />
     <link rel="apple-touch-icon" href={`${base}icon.png`} />
@@ -59,27 +106,28 @@ const jsonLd = {
     <style is:global>
       :root {
         color-scheme: dark;
-        --tn-bg:        #1a1b26;
-        --tn-bg-dark:   #16161e;
-        --tn-bg-soft:   #1f2335;
-        --tn-bg-hi:     #292e42;
-        --tn-bg-card:   #24283b;
-        --tn-border:    #3b4261;
-        --tn-border-hi: #565f89;
-        --tn-fg:        #c0caf5;
-        --tn-fg-strong: #dbe4ff;
-        --tn-fg-dark:   #a9b1d6;
-        --tn-comment:   #565f89;
-        --tn-blue:      #7aa2f7;
-        --tn-cyan:      #7dcfff;
-        --tn-purple:    #bb9af7;
-        --tn-green:     #9ece6a;
-        --tn-yellow:    #e0af68;
-        --tn-orange:    #ff9e64;
-        --tn-red:       #f7768e;
-        --tn-teal:      #73daca;
+        --tn-bg:        #1e1e2e;
+        --tn-bg-dark:   #11111b;
+        --tn-bg-soft:   #181825;
+        --tn-bg-hi:     #45475a;
+        --tn-bg-card:   #313244;
+        --tn-border:    #313244;
+        --tn-border-hi: #45475a;
+        --tn-fg:        #bac2de;
+        --tn-fg-strong: #cdd6f4;
+        --tn-fg-dark:   #a6adc8;
+        --tn-comment:   #6c7086;
+        --tn-blue:      #89b4fa;
+        --tn-cyan:      #89dceb;
+        --tn-purple:    #cba6f7;
+        --tn-green:     #a6e3a1;
+        --tn-yellow:    #f9e2af;
+        --tn-orange:    #fab387;
+        --tn-red:       #f38ba8;
+        --tn-teal:      #94e2d5;
         --tn-shadow:    0 18px 44px rgb(0 0 0 / 34%);
-        --tn-ring:      0 0 0 1px rgb(122 162 247 / 16%);
+        --tn-ring:      0 0 0 1px rgb(137 180 250 / 16%);
+        --tn-mono:      'SF Mono', ui-monospace, 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
       }
 
       *, *::before, *::after {
@@ -96,7 +144,7 @@ const jsonLd = {
         font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
         min-width: 320px;
         background:
-          linear-gradient(180deg, rgb(31 35 53 / 84%) 0, var(--tn-bg) 360px),
+          linear-gradient(180deg, rgb(24 24 37 / 84%) 0, var(--tn-bg) 360px),
           var(--tn-bg);
         color: var(--tn-fg);
         line-height: 1.6;
@@ -107,6 +155,12 @@ const jsonLd = {
       code, pre, .mono {
         font-family: 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
       }
+
+      /* fish-style shell syntax highlighting tokens */
+      .sh-cmd  { color: var(--tn-blue); }
+      .sh-arg  { color: var(--tn-fg-strong); }
+      .sh-op   { color: var(--tn-teal); }
+      .sh-flag { color: var(--tn-yellow); }
 
       a {
         color: var(--tn-blue);
