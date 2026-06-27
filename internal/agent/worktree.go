@@ -77,7 +77,14 @@ func setupWorktree(agentID, repoRoot, branchHint string) (worktreePath, branchNa
 		branchName = "ax/" + agentID
 	}
 
-	cmd := exec.Command("git", "worktree", "add", "-b", branchName, worktreePath, "HEAD")
+	// checkout.workers=0 enables parallel checkout (one worker per CPU core)
+	// when populating the worktree. On large repositories the working-tree
+	// write is I/O bound and serial by default, so this is the dominant cost
+	// of `git worktree add`; parallelising it overlaps the I/O waits and cuts
+	// wall time substantially. Scoped to this command only (no global config
+	// change); older git (<2.32) silently ignores the unknown key.
+	cmd := exec.Command("git", "-c", "checkout.workers=0",
+		"worktree", "add", "-b", branchName, worktreePath, "HEAD")
 	cmd.Dir = repoRoot
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", "", fmt.Errorf("git worktree add failed: %w\n%s", err, out)
