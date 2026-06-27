@@ -121,8 +121,14 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(paths.AgentDir(id), 0755); err != nil {
+	agentDir := paths.AgentDir(id)
+	if err := os.MkdirAll(agentDir, 0700); err != nil {
 		return fmt.Errorf("could not create agent dir: %w", err)
+	}
+	// MkdirAll leaves existing directory permissions untouched, so enforce
+	// owner-only mode explicitly to cover dirs created by prior versions.
+	if err := os.Chmod(agentDir, 0700); err != nil {
+		return fmt.Errorf("could not secure agent dir: %w", err)
 	}
 	logPath := paths.AgentLog(id)
 
@@ -182,9 +188,15 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	go monitor.runIdleWatcher(done, waitingUserThreshold)
 	go monitor.runCommitWatcher(done, workDir, initialHead)
 
-	logFile, err := os.Create(logPath)
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		return fmt.Errorf("could not create log file: %w", err)
+	}
+	// OpenFile only applies the mode on creation, so chmod existing logs
+	// (e.g. carried over from prior versions) to owner-only as well.
+	if err := os.Chmod(logPath, 0600); err != nil {
+		_ = logFile.Close()
+		return fmt.Errorf("could not secure log file: %w", err)
 	}
 	defer logFile.Close()
 

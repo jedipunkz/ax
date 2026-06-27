@@ -33,7 +33,7 @@ func WriteAgents(path string, agents []AgentState) error {
 		return fmt.Errorf("could not marshal state: %w", err)
 	}
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0644); err != nil {
+	if err := os.WriteFile(tmp, data, 0600); err != nil {
 		return fmt.Errorf("could not write state: %w", err)
 	}
 	if err := os.Rename(tmp, path); err != nil {

@@ -6,9 +6,17 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	"regexp"
 	"sync"
 	"time"
 )
+
+// agentIDPattern matches the canonical generated agent ID format
+// (`ax-<unix-minutes>-<4hex>`) and excludes anything containing path
+// separators or `.`/`..` segments that could be abused to redirect the
+// expected log-path computation.
+var agentIDPattern = regexp.MustCompile(`^ax-[0-9]+-[0-9a-f]+$`)
 
 // RunManager starts the state manager on the given Unix socket path.
 // It blocks until it encounters a fatal error.
@@ -16,6 +24,7 @@ func RunManager(socketPath, stateFilePath string) error {
 	mgr := &manager{
 		agents:         make(map[string]AgentState),
 		stateFilePath:  stateFilePath,
+		dataDir:        filepath.Dir(stateFilePath),
 		attachers:      make(map[string]map[*subscriber]bool),
 		streams:        make(map[string]*outputStream),
 		inputListeners: make(map[string]*subscriber),
@@ -43,6 +52,9 @@ func RunManager(socketPath, stateFilePath string) error {
 		return fmt.Errorf("could not listen on socket: %w", err)
 	}
 	defer ln.Close()
+	if err := os.Chmod(socketPath, 0600); err != nil {
+		return fmt.Errorf("could not secure socket: %w", err)
+	}
 
 	for {
 		conn, err := ln.Accept()
@@ -58,6 +70,7 @@ type manager struct {
 	agents        map[string]AgentState
 	subscribers   []*subscriber
 	stateFilePath string
+	dataDir       string
 
 	// attachers tracks output streaming subscribers per agent ID. A single
 	// subscriber can be in both subscribers (state updates) and attachers
@@ -207,6 +220,9 @@ func (m *manager) handleUpdate(msg Message) {
 	if msg.Agent == nil {
 		return
 	}
+	if !m.validAgentState(*msg.Agent) {
+		return
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -233,6 +249,18 @@ func (m *manager) handleUpdate(msg Message) {
 			m.signalStreamEOFLocked(s)
 		}
 	}
+}
+
+func (m *manager) validAgentState(agent AgentState) bool {
+	if !agentIDPattern.MatchString(agent.ID) {
+		return false
+	}
+	if agent.LogFile == "" || m.dataDir == "" {
+		return true
+	}
+	want := filepath.Clean(filepath.Join(m.dataDir, "agents", agent.ID, "output.log"))
+	got := filepath.Clean(agent.LogFile)
+	return got == want
 }
 
 func (m *manager) handleRemove(msg Message) {
