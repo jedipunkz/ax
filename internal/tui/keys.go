@@ -96,14 +96,14 @@ func (m Model) handleSearchKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []te
 func (m Model) handleListKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
-		if m.view == viewDetail {
+		if m.view != viewList {
 			m.view = viewList
 			return m, nil
 		}
 		return m, []tea.Cmd{tea.Quit}
 
 	case "esc":
-		if m.view == viewDetail {
+		if m.view != viewList {
 			m.view = viewList
 		}
 		return m, nil
@@ -116,6 +116,9 @@ func (m Model) handleListKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []tea.
 
 	case "enter":
 		return m.openDetailView(cmds)
+
+	case "d":
+		return m.openDiffView(cmds)
 
 	case "o":
 		return m.toggleExpired(cmds)
@@ -142,7 +145,7 @@ func (m Model) handleListKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []tea.
 // moveCursor moves the cursor (or scrolls the viewport in detail view)
 // by delta and triggers a metrics refresh for the new selection.
 func (m Model) moveCursor(delta int, cmds []tea.Cmd) (Model, []tea.Cmd) {
-	if m.view == viewDetail {
+	if m.view != viewList {
 		if delta < 0 {
 			m.viewport.ScrollUp(-delta)
 		} else {
@@ -169,7 +172,7 @@ func (m Model) moveCursor(delta int, cmds []tea.Cmd) (Model, []tea.Cmd) {
 }
 
 func (m Model) openDetailView(cmds []tea.Cmd) (Model, []tea.Cmd) {
-	if m.view == viewDetail {
+	if m.view != viewList {
 		m.view = viewList
 		return m, cmds
 	}
@@ -181,6 +184,35 @@ func (m Model) openDetailView(cmds []tea.Cmd) (Model, []tea.Cmd) {
 	ag := groups[m.cursor].Rep
 	m.viewport = viewport.New(viewport.WithWidth(m.width-4), viewport.WithHeight(m.height-13))
 	cmds = append(cmds, loadLog(ag.LogFile))
+	return m, cmds
+}
+
+// openDiffView switches to the live diff view for the currently selected
+// agent. Pressing d again (or esc/q) returns to the list. The diff is
+// reloaded automatically while the agent is running.
+func (m Model) openDiffView(cmds []tea.Cmd) (Model, []tea.Cmd) {
+	if m.view == viewDiff {
+		m.view = viewList
+		return m, cmds
+	}
+	ag, ok := m.selectedAgent()
+	if !ok {
+		return m, cmds
+	}
+	if ag.WorkDir == "" {
+		m.statusMsg = "agent has no working directory"
+		cmds = append(cmds, clearStatusAfter(2*time.Second))
+		return m, cmds
+	}
+	m.view = viewDiff
+	m.diffAgentID = ag.ID
+	m.diffContent = ""
+	m.diffErr = ""
+	m.diffLoaded = false
+	m.diffPolledAt = m.now
+	m.viewport = viewport.New(viewport.WithWidth(m.width-4), viewport.WithHeight(diffViewportHeight(m.height)))
+	m.viewport.SetContent(diffPlaceholder(m))
+	cmds = append(cmds, loadDiff(ag))
 	return m, cmds
 }
 

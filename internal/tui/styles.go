@@ -26,6 +26,11 @@ var (
 	RepoStyle          lipgloss.Style
 	EndedStyle         lipgloss.Style
 	LastOutputStyle    lipgloss.Style
+	DiffAddStyle       lipgloss.Style
+	DiffDelStyle       lipgloss.Style
+	DiffHunkStyle      lipgloss.Style
+	DiffFileStyle      lipgloss.Style
+	DiffMetaStyle      lipgloss.Style
 )
 
 func init() {
@@ -95,6 +100,22 @@ func ApplyTheme(p config.ThemePalette) {
 
 	LastOutputStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(p.LastOutput))
+
+	DiffAddStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.StatusSuccess))
+
+	DiffDelStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.StatusFailed))
+
+	DiffHunkStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.SectionHeader))
+
+	DiffFileStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color(p.Title))
+
+	DiffMetaStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.OverviewLabel))
 }
 
 func fr(s string) string { return FrameStyle.Render(s) }

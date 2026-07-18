@@ -136,6 +136,7 @@ ax dash
 | `j` / `↓` | Move cursor down |
 | `k` / `↑` | Move cursor up |
 | `enter` | Open agent log (detail view) |
+| `d` | Open live diff view of the agent's worktree |
 | `o` | Toggle showing finished agents |
 | `/` | Search agents by ID or name |
 | `y` | Copy `cd <worktree-path>` to clipboard |
@@ -148,7 +149,18 @@ ax dash
 |-----|--------|
 | `j` / `↓` | Scroll log down |
 | `k` / `↑` | Scroll log up |
+| `d` | Open live diff view |
 | `enter` / `esc` / `q` | Back to list |
+
+#### Diff view
+
+Press `d` on an agent to see everything it has changed in its worktree — recorded commits, uncommitted edits, and untracked files — as a colorized unified diff. While the agent is running the diff reloads automatically every 2 seconds, and files are ordered by modification time with the most recently updated file at the top, so you can watch changes land in real time. The scroll position is preserved across refreshes.
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Scroll down |
+| `k` / `↑` | Scroll up |
+| `d` / `esc` / `q` | Back to list |
 
 ### Status indicators
 

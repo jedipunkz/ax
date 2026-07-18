@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 )
 
 // ShowDiff finds an agent by ID or name and displays a colorized git diff
@@ -40,6 +43,158 @@ func ShowDiff(idOrName string) error {
 	}
 
 	return runPager(output)
+}
+
+// maxUntrackedDiffs caps how many untracked files are rendered as new-file
+// diffs so a stray build directory cannot blow up the diff output.
+const maxUntrackedDiffs = 50
+
+// fileDiff is one per-file section of a unified diff, tagged with the
+// file's modification time so sections can be ordered newest-first.
+type fileDiff struct {
+	path  string
+	mtime time.Time
+	body  string
+}
+
+// WorktreeDiff returns the plain-text unified diff of everything the agent
+// changed in its worktree: commits recorded in the agent state plus
+// uncommitted (staged and unstaged) changes, with untracked files rendered
+// as new-file diffs. Per-file sections are ordered by modification time,
+// newest first, so a live view always surfaces the most recently updated
+// file at the top. The output carries no ANSI colors so callers can apply
+// their own styling.
+func WorktreeDiff(workDir string, commits []string) (string, error) {
+	if workDir == "" {
+		return "", fmt.Errorf("agent has no working directory")
+	}
+
+	base := diffBase(workDir, commits)
+	c := exec.Command("git", "diff", base, "--")
+	c.Dir = workDir
+	out, err := c.Output()
+	if err != nil {
+		return "", fmt.Errorf("git diff %s: %w", base, err)
+	}
+
+	sections := splitDiffSections(string(out))
+
+	var truncNote string
+	untracked := untrackedFiles(workDir)
+	for i, f := range untracked {
+		if i >= maxUntrackedDiffs {
+			truncNote = fmt.Sprintf("\n(%d more untracked files not shown)\n", len(untracked)-maxUntrackedDiffs)
+			break
+		}
+		if body := untrackedDiff(workDir, f); body != "" {
+			sections = append(sections, fileDiff{path: f, body: body})
+		}
+	}
+
+	for i := range sections {
+		if sections[i].path == "" {
+			continue
+		}
+		if info, err := os.Stat(filepath.Join(workDir, sections[i].path)); err == nil {
+			sections[i].mtime = info.ModTime()
+		}
+	}
+	sort.SliceStable(sections, func(i, j int) bool {
+		return sections[i].mtime.After(sections[j].mtime)
+	})
+
+	var b strings.Builder
+	for _, s := range sections {
+		b.WriteString(s.body)
+	}
+	b.WriteString(truncNote)
+	return b.String(), nil
+}
+
+// splitDiffSections splits a unified diff into per-file sections on
+// "diff --git" boundaries, extracting the b-side path of each section.
+// Content before the first header (normally none) is kept as a pathless
+// section so nothing is ever dropped.
+func splitDiffSections(diff string) []fileDiff {
+	if diff == "" {
+		return nil
+	}
+	var sections []fileDiff
+	lines := strings.SplitAfter(diff, "\n")
+	var cur strings.Builder
+	curPath := ""
+	flush := func() {
+		if cur.Len() > 0 {
+			sections = append(sections, fileDiff{path: curPath, body: cur.String()})
+			cur.Reset()
+		}
+	}
+	for _, l := range lines {
+		if strings.HasPrefix(l, "diff --git ") {
+			flush()
+			curPath = diffHeaderPath(l)
+		}
+		cur.WriteString(l)
+	}
+	flush()
+	return sections
+}
+
+// diffHeaderPath extracts the b-side path from a "diff --git a/X b/Y"
+// header line. Returns "" for headers it cannot parse (e.g. quoted paths);
+// those sections simply sort last.
+func diffHeaderPath(header string) string {
+	header = strings.TrimSuffix(header, "\n")
+	idx := strings.LastIndex(header, " b/")
+	if idx < 0 {
+		return ""
+	}
+	return header[idx+len(" b/"):]
+}
+
+// diffBase picks the revision the worktree is diffed against: the parent of
+// the first recorded commit when available, otherwise the merge base with
+// the default branch, otherwise HEAD (uncommitted changes only).
+func diffBase(workDir string, commits []string) string {
+	if len(commits) > 0 {
+		parent := commits[0] + "^"
+		c := exec.Command("git", "rev-parse", "--verify", "--quiet", parent)
+		c.Dir = workDir
+		if c.Run() == nil {
+			return parent
+		}
+	}
+	if base, err := findMergeBase(workDir); err == nil {
+		return base
+	}
+	return "HEAD"
+}
+
+// untrackedFiles lists files that are not tracked by git and not ignored.
+func untrackedFiles(workDir string) []string {
+	c := exec.Command("git", "ls-files", "--others", "--exclude-standard")
+	c.Dir = workDir
+	out, err := c.Output()
+	if err != nil {
+		return nil
+	}
+	var files []string
+	for _, l := range strings.Split(string(out), "\n") {
+		if l = strings.TrimSpace(l); l != "" {
+			files = append(files, l)
+		}
+	}
+	return files
+}
+
+// untrackedDiff renders an untracked file as a new-file diff. `git diff
+// --no-index` exits with status 1 when the files differ, which is the
+// expected outcome here, so exit errors are not propagated.
+func untrackedDiff(workDir, file string) string {
+	c := exec.Command("git", "diff", "--no-index", "--", os.DevNull, file)
+	c.Dir = workDir
+	out, _ := c.Output()
+	return string(out)
 }
 
 // showBranchDiff falls back to `git diff <merge-base>..HEAD` when no commits

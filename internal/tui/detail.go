@@ -76,7 +76,7 @@ func detailView(m Model) string {
 
 	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
 	lines = append(lines, divider)
-	help := NormalItemStyle.Render("[esc] back  [K] kill  [↑↓/jk] scroll")
+	help := NormalItemStyle.Render("[esc] back  [d] diff  [K] kill  [↑↓/jk] scroll")
 	lines = append(lines, fr("│ ")+padRight(help, innerWidth)+fr(" │"))
 	lines = append(lines, fr("╰"+strings.Repeat("─", innerWidth+2)+"╯"))
 

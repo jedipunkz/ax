@@ -83,6 +83,36 @@ func (m Model) handleTick(msg tickMsg, cmds []tea.Cmd) (Model, []tea.Cmd) {
 	if cmd := m.pollSelectedMetrics(m.now, false); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
+	if m.view == viewDiff {
+		if cmd := m.pollDiff(m.now); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+	}
+	return m, cmds
+}
+
+// handleDiffLoaded applies a freshly loaded worktree diff to the diff view,
+// preserving the current scroll position so periodic refreshes do not yank
+// the reader away from the hunk they are looking at.
+func (m Model) handleDiffLoaded(msg diffLoadedMsg, cmds []tea.Cmd) (Model, []tea.Cmd) {
+	if m.view != viewDiff || msg.agentID != m.diffAgentID {
+		return m, cmds
+	}
+	if msg.err != "" {
+		m.diffErr = msg.err
+		m.diffLoaded = true
+		return m, cmds
+	}
+	m.diffErr = ""
+	changed := !m.diffLoaded || msg.content != m.diffContent
+	m.diffLoaded = true
+	if !changed {
+		return m, cmds
+	}
+	m.diffContent = msg.content
+	offset := m.viewport.YOffset()
+	m.viewport.SetContent(diffViewportContent(m))
+	m.viewport.SetYOffset(offset)
 	return m, cmds
 }
 
@@ -135,10 +165,14 @@ func (m Model) handleSpinnerTick(msg spinner.TickMsg, cmds []tea.Cmd) (Model, []
 func (m Model) handleWindowSize(msg tea.WindowSizeMsg) Model {
 	m.width = msg.Width
 	m.height = msg.Height
-	if m.view == viewDetail {
+	switch m.view {
+	case viewDetail:
 		m.viewport = viewport.New(viewport.WithWidth(m.width-4), viewport.WithHeight(m.height-13))
 		m.viewport.SetContent(m.logContent)
 		m.viewport.GotoBottom()
+	case viewDiff:
+		m.viewport = viewport.New(viewport.WithWidth(m.width-4), viewport.WithHeight(diffViewportHeight(m.height)))
+		m.viewport.SetContent(diffViewportContent(m))
 	}
 	return m
 }
