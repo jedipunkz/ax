@@ -101,10 +101,14 @@ func (m Model) handleDiffLoaded(msg diffLoadedMsg, cmds []tea.Cmd) (Model, []tea
 	if msg.err != "" {
 		m.diffErr = msg.err
 		m.diffLoaded = true
+		offset := m.viewport.YOffset()
+		m.viewport.SetContent(diffViewportContent(m))
+		m.viewport.SetYOffset(offset)
 		return m, cmds
 	}
+	hadErr := m.diffErr != ""
 	m.diffErr = ""
-	changed := !m.diffLoaded || msg.content != m.diffContent
+	changed := !m.diffLoaded || hadErr || msg.content != m.diffContent
 	m.diffLoaded = true
 	if !changed {
 		return m, cmds

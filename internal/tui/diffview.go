@@ -27,8 +27,12 @@ func diffViewportHeight(h int) int {
 }
 
 // diffPlaceholder returns the text shown in the viewport before the first
-// diff load completes or when the worktree has no changes.
+// diff load completes, when a load failed, or when the worktree has no
+// changes.
 func diffPlaceholder(m Model) string {
+	if m.diffErr != "" {
+		return "(diff failed: " + m.diffErr + ")"
+	}
 	if !m.diffLoaded {
 		return "(loading diff...)"
 	}

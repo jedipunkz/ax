@@ -126,6 +126,58 @@ func TestPollDiffOnlyWhileRunning(t *testing.T) {
 	}
 }
 
+func TestPollDiffFinalReloadAfterFinish(t *testing.T) {
+	m := newModel(&store.Client{}, "", nil, 7)
+	m.width, m.height = 100, 30
+	now := time.Now()
+	m.now = now
+	m.agents = []store.AgentState{{
+		ID:        "ax-1",
+		Status:    store.StatusRunning,
+		WorkDir:   "/tmp/x",
+		StartedAt: now,
+	}}
+	m, _ = m.openDiffView(nil)
+
+	// The agent finishes after the last poll: one final reload is scheduled.
+	finished := now.Add(time.Second)
+	m.agents[0].Status = store.StatusSuccess
+	m.agents[0].FinishedAt = &finished
+	if cmd := m.pollDiff(now.Add(2 * time.Second)); cmd == nil {
+		t.Error("expected one final poll after agent finished")
+	}
+	// The final state was already loaded: no further polls.
+	if cmd := m.pollDiff(now.Add(10 * time.Second)); cmd != nil {
+		t.Error("expected no poll after the final reload")
+	}
+}
+
+func TestDiffLoadErrorShownInViewport(t *testing.T) {
+	m := newModel(&store.Client{}, "", nil, 7)
+	m.width, m.height = 100, 30
+	m.agents = []store.AgentState{{
+		ID:        "ax-1",
+		Status:    store.StatusRunning,
+		WorkDir:   "/tmp/x",
+		StartedAt: time.Now(),
+	}}
+	m, _ = m.openDiffView(nil)
+
+	m, _ = m.handleDiffLoaded(diffLoadedMsg{agentID: "ax-1", err: "boom"}, nil)
+	if m.diffErr != "boom" {
+		t.Fatalf("diffErr = %q, want boom", m.diffErr)
+	}
+	if !strings.Contains(m.viewport.View(), "diff failed: boom") {
+		t.Errorf("viewport should show the load error, got:\n%s", m.viewport.View())
+	}
+
+	// A successful reload clears the error placeholder.
+	m, _ = m.handleDiffLoaded(diffLoadedMsg{agentID: "ax-1", content: sampleDiff}, nil)
+	if m.diffErr != "" {
+		t.Errorf("diffErr should be cleared, got %q", m.diffErr)
+	}
+}
+
 func TestDiffViewportHeight(t *testing.T) {
 	if h := diffViewportHeight(24); h != 24-diffChromeRows {
 		t.Errorf("height for 24 = %d, want %d", h, 24-diffChromeRows)

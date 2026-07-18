@@ -233,11 +233,20 @@ func (m Model) findAgent(id string) (store.AgentState, bool) {
 
 // pollDiff schedules a diff reload while the diff view is open and the
 // target agent is still running, so the view tracks changes in near real
-// time. Finished agents are loaded once and not re-polled.
+// time. When the agent finishes, one final reload is scheduled if the last
+// poll predates FinishedAt, so the view always shows the final worktree
+// state; after that finished agents are not re-polled.
 func (m *Model) pollDiff(now time.Time) tea.Cmd {
 	ag, ok := m.findAgent(m.diffAgentID)
-	if !ok || ag.Status != store.StatusRunning {
+	if !ok {
 		return nil
+	}
+	if ag.Status != store.StatusRunning {
+		if ag.FinishedAt == nil || !m.diffPolledAt.Before(*ag.FinishedAt) {
+			return nil
+		}
+		m.diffPolledAt = now
+		return loadDiff(ag)
 	}
 	if now.Sub(m.diffPolledAt) < diffPollInterval {
 		return nil
