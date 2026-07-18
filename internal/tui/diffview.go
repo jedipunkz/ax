@@ -85,27 +85,24 @@ func diffView(m Model) string {
 	renderFieldLine := func(label, value string) string {
 		styledLabel := OverviewLabelStyle.Render(label)
 		styledValue := NormalItemStyle.Render(truncate(value, max(0, innerWidth-lipgloss.Width(styledLabel))))
-		return fr("│ ") + padRight(styledLabel+styledValue, innerWidth) + fr(" │")
+		return frameRow(styledLabel+styledValue, innerWidth)
 	}
 
 	var lines []string
-	lines = append(lines, fr("╭─ "+header+" "+strings.Repeat("─", max(0, innerWidth-lipgloss.Width(header)-2))+"╮"))
+	lines = append(lines, frameTop(header, innerWidth))
 	lines = append(lines, renderFieldLine("Branch : ", branch))
 	lines = append(lines, renderFieldLine("Dir    : ", ag.WorkDir))
 	lines = append(lines, renderFieldLine("Changes: ", changes))
-
-	title := SectionHeaderStyle.Render("Diff")
-	d := max(0, innerWidth-lipgloss.Width(title)-1)
-	lines = append(lines, fr("├─ ")+title+fr(" "+strings.Repeat("─", d)+"┤"))
+	lines = append(lines, frameSectionHeader(SectionHeaderStyle.Render("Diff"), innerWidth))
 
 	for _, l := range strings.Split(m.viewport.View(), "\n") {
-		lines = append(lines, fr("│ ")+padRight(l, innerWidth)+fr(" │"))
+		lines = append(lines, frameRow(l, innerWidth))
 	}
 
-	lines = append(lines, fr("├"+strings.Repeat("─", innerWidth+2)+"┤"))
+	lines = append(lines, frameDivider(innerWidth))
 	help := NormalItemStyle.Render("[esc] back  [↑↓/jk] scroll")
-	lines = append(lines, fr("│ ")+padRight(help, innerWidth)+fr(" │"))
-	lines = append(lines, fr("╰"+strings.Repeat("─", innerWidth+2)+"╯"))
+	lines = append(lines, frameRow(help, innerWidth))
+	lines = append(lines, frameBottom(innerWidth))
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }

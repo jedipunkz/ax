@@ -17,17 +17,14 @@ func cleanLog(data []byte) string {
 }
 
 func detailView(m Model) string {
-	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-	if len(groups) == 0 || m.cursor >= len(groups) {
+	group, ok := m.selectedGroup()
+	if !ok {
 		return "No agent selected."
 	}
 
-	agent := groups[m.cursor].Rep
+	agent := group.Rep
 	width := clampWidth(m.width)
 	innerWidth := width - 4
-
-	statusStr := formatStatus(agent, m)
-	elapsed := formatElapsed(agent)
 
 	argsStr := strings.Join(agent.Args, " ")
 
@@ -39,19 +36,12 @@ func detailView(m Model) string {
 	renderFieldLine := func(label, value string) string {
 		styledLabel := OverviewLabelStyle.Render(label)
 		styledValue := NormalItemStyle.Render(value)
-		content := styledLabel + styledValue
-		return fr("│ ") + padRight(content, innerWidth) + fr(" │")
-	}
-
-	renderSectionDivider := func(title string) string {
-		styledTitle := SectionHeaderStyle.Render(title)
-		d := max(0, innerWidth-lipgloss.Width(styledTitle)-1)
-		return fr("├─ ") + styledTitle + fr(" "+strings.Repeat("─", d)+"┤")
+		return frameRow(styledLabel+styledValue, innerWidth)
 	}
 
 	var lines []string
-	lines = append(lines, fr("╭─ "+header+" "+strings.Repeat("─", max(0, innerWidth-lipgloss.Width(header)-2))+"╮"))
-	lines = append(lines, renderFieldLine("Status : ", statusStr))
+	lines = append(lines, frameTop(header, innerWidth))
+	lines = append(lines, renderFieldLine("Status : ", formatStatus(agent, m)))
 	if agent.Name != "" {
 		lines = append(lines, renderFieldLine("Name   : ", agent.Name))
 	}
@@ -62,23 +52,20 @@ func detailView(m Model) string {
 	}
 	lines = append(lines, renderFieldLine("Args   : ", truncate(argsStr, innerWidth-9)))
 	lines = append(lines, renderFieldLine("Started: ", agent.StartedAt.Format("2006-01-02 15:04:05")))
-	lines = append(lines, renderFieldLine("Elapsed: ", elapsed))
+	lines = append(lines, renderFieldLine("Elapsed: ", formatElapsed(agent)))
 	if agent.LastOutput != "" {
 		lines = append(lines, renderFieldLine("Last   : ", truncate(agent.LastOutput, innerWidth-9)))
 	}
-	lines = append(lines, renderSectionDivider("Activity Log"))
+	lines = append(lines, frameSectionHeader(SectionHeaderStyle.Render("Activity Log"), innerWidth))
 
-	// Viewport content
-	vpLines := strings.Split(m.viewport.View(), "\n")
-	for _, l := range vpLines {
-		lines = append(lines, fr("│ ")+padRight(l, innerWidth)+fr(" │"))
+	for _, l := range strings.Split(m.viewport.View(), "\n") {
+		lines = append(lines, frameRow(l, innerWidth))
 	}
 
-	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
-	lines = append(lines, divider)
+	lines = append(lines, frameDivider(innerWidth))
 	help := NormalItemStyle.Render("[esc] back  [d] diff  [K] kill  [↑↓/jk] scroll")
-	lines = append(lines, fr("│ ")+padRight(help, innerWidth)+fr(" │"))
-	lines = append(lines, fr("╰"+strings.Repeat("─", innerWidth+2)+"╯"))
+	lines = append(lines, frameRow(help, innerWidth))
+	lines = append(lines, frameBottom(innerWidth))
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }

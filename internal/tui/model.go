@@ -205,6 +205,8 @@ func (m Model) Init() tea.Cmd {
 	)
 }
 
+// selectedGroups returns the groups currently shown in the list view,
+// applying the fuzzy filter while search mode is active.
 func (m Model) selectedGroups() []AgentGroup {
 	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
 	if m.searchMode {
@@ -213,12 +215,23 @@ func (m Model) selectedGroups() []AgentGroup {
 	return groups
 }
 
-func (m Model) selectedAgent() (store.AgentState, bool) {
+// selectedGroup returns the group under the cursor, if any.
+func (m Model) selectedGroup() (AgentGroup, bool) {
 	groups := m.selectedGroups()
 	if len(groups) == 0 || m.cursor >= len(groups) {
+		return AgentGroup{}, false
+	}
+	return groups[m.cursor], true
+}
+
+// selectedAgent returns the representative agent of the group under the
+// cursor, if any.
+func (m Model) selectedAgent() (store.AgentState, bool) {
+	g, ok := m.selectedGroup()
+	if !ok {
 		return store.AgentState{}, false
 	}
-	return groups[m.cursor].Rep, true
+	return g.Rep, true
 }
 
 // findAgent returns the agent with the given ID from the current snapshot.
@@ -343,38 +356,16 @@ func clampScroll(cursor, offset, availRows int) int {
 
 // listAvailableRows returns the number of rows available for agent entries in the list view.
 func (m Model) listAvailableRows() int {
-	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-	if m.searchMode {
-		groups = fuzzyFilterGroups(groups, m.searchQuery)
-	}
-	runCount, sucCount, kilCount := 0, 0, 0
-	for _, g := range groups {
-		switch g.Rep.Status {
-		case store.StatusRunning:
-			runCount++
-		case store.StatusSuccess:
-			sucCount++
-		default:
-			kilCount++
-		}
-	}
+	running, success, killed := groupsByStatus(m.selectedGroups())
 	emptyCount := 0
-	if runCount == 0 {
-		emptyCount++
-	}
-	if sucCount == 0 {
-		emptyCount++
-	}
-	if kilCount == 0 {
-		emptyCount++
+	for _, section := range [][]AgentGroup{running, success, killed} {
+		if len(section) == 0 {
+			emptyCount++
+		}
 	}
 	h := m.height
 	if h < 10 {
 		h = 24
 	}
-	avail := h - 14 - emptyCount
-	if avail < 0 {
-		avail = 0
-	}
-	return avail
+	return max(0, h-14-emptyCount)
 }
