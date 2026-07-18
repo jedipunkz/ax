@@ -19,7 +19,12 @@ type ViewMode int
 const (
 	viewList   ViewMode = iota
 	viewDetail ViewMode = iota
+	viewDiff   ViewMode = iota
 )
+
+// diffPollInterval controls how often the diff view reloads the worktree
+// diff while the target agent is still running.
+const diffPollInterval = 2 * time.Second
 
 // agentUpdateMsg wraps a store.Message received from the socket.
 type agentUpdateMsg struct {
@@ -35,6 +40,13 @@ type logLoadedMsg struct {
 type metricsLoadedMsg struct {
 	agentID string
 	metrics store.Message
+	err     string
+}
+
+// diffLoadedMsg carries the result of an asynchronous worktree diff load.
+type diffLoadedMsg struct {
+	agentID string
+	content string
 	err     string
 }
 
@@ -82,6 +94,11 @@ type Model struct {
 	metrics        map[string]store.Message
 	metricsErr     map[string]string
 	metricsPolled  map[string]time.Time
+	diffAgentID    string
+	diffContent    string // raw (uncolored) diff, used to detect changes
+	diffErr        string
+	diffLoaded     bool
+	diffPolledAt   time.Time
 }
 
 func newModel(client *store.Client, socketPath string, sub chan store.Message, durationDays int) Model {
@@ -151,6 +168,18 @@ func requestMetrics(socketPath, agentID string) tea.Cmd {
 	}
 }
 
+// loadDiff computes the agent's worktree diff off the UI thread and
+// delivers it as a diffLoadedMsg.
+func loadDiff(ag store.AgentState) tea.Cmd {
+	return func() tea.Msg {
+		content, err := agent.WorktreeDiff(ag.WorkDir, ag.Commits)
+		if err != nil {
+			return diffLoadedMsg{agentID: ag.ID, err: err.Error()}
+		}
+		return diffLoadedMsg{agentID: ag.ID, content: content}
+	}
+}
+
 // removeAgentCmd performs the (potentially slow) worktree removal and
 // associated cleanup off the UI thread, returning a removeDoneMsg when done.
 func removeAgentCmd(ag store.AgentState, client *store.Client) tea.Cmd {
@@ -192,6 +221,40 @@ func (m Model) selectedAgent() (store.AgentState, bool) {
 	return groups[m.cursor].Rep, true
 }
 
+// findAgent returns the agent with the given ID from the current snapshot.
+func (m Model) findAgent(id string) (store.AgentState, bool) {
+	for _, a := range m.agents {
+		if a.ID == id {
+			return a, true
+		}
+	}
+	return store.AgentState{}, false
+}
+
+// pollDiff schedules a diff reload while the diff view is open and the
+// target agent is still running, so the view tracks changes in near real
+// time. When the agent finishes, one final reload is scheduled if the last
+// poll predates FinishedAt, so the view always shows the final worktree
+// state; after that finished agents are not re-polled.
+func (m *Model) pollDiff(now time.Time) tea.Cmd {
+	ag, ok := m.findAgent(m.diffAgentID)
+	if !ok {
+		return nil
+	}
+	if ag.Status != store.StatusRunning {
+		if ag.FinishedAt == nil || !m.diffPolledAt.Before(*ag.FinishedAt) {
+			return nil
+		}
+		m.diffPolledAt = now
+		return loadDiff(ag)
+	}
+	if now.Sub(m.diffPolledAt) < diffPollInterval {
+		return nil
+	}
+	m.diffPolledAt = now
+	return loadDiff(ag)
+}
+
 func (m *Model) pollSelectedMetrics(now time.Time, force bool) tea.Cmd {
 	agent, ok := m.selectedAgent()
 	if !ok {
@@ -218,6 +281,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m, cmds = m.handleTick(msg, cmds)
 	case metricsLoadedMsg:
 		m, cmds = m.handleMetricsLoaded(msg, cmds)
+	case diffLoadedMsg:
+		m, cmds = m.handleDiffLoaded(msg, cmds)
 	case removingTickMsg:
 		m, cmds = m.handleRemovingTick(cmds)
 	case removeDoneMsg:
@@ -232,7 +297,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m = m.handleWindowSize(msg)
 	}
 
-	if m.view == viewDetail {
+	if m.view == viewDetail || m.view == viewDiff {
 		var cmd tea.Cmd
 		m.viewport, cmd = m.viewport.Update(msg)
 		cmds = append(cmds, cmd)
@@ -246,6 +311,8 @@ func (m Model) View() tea.View {
 	switch m.view {
 	case viewDetail:
 		content = detailView(m)
+	case viewDiff:
+		content = diffView(m)
 	default:
 		content = listView(m)
 	}
