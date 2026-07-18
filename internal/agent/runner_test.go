@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/jedipunkz/ax/internal/store"
 )
 
 func TestResumePrefixArgs(t *testing.T) {
@@ -101,6 +103,40 @@ func TestLookupAgent(t *testing.T) {
 			t.Errorf("lookupAgent(unknown).ResumeArgs = %v, want nil", got.ResumeArgs)
 		}
 	})
+}
+
+func TestAgentDefResumeCommandReturnsCopy(t *testing.T) {
+	def := AgentDef{ResumeArgs: []string{"resume", "--last"}}
+
+	got := def.ResumeCommand()
+	got[0] = "modified"
+
+	if def.ResumeArgs[0] != "resume" {
+		t.Fatalf("ResumeCommand modified AgentDef.ResumeArgs: %v", def.ResumeArgs)
+	}
+}
+
+func TestSessionConfigInitialState(t *testing.T) {
+	config := sessionConfig{
+		args:           []string{"--model", "fast"},
+		id:             "ax-1234",
+		name:           "feature/refactor",
+		agentType:      "codex",
+		workDir:        "/work/repo",
+		worktreeBranch: "ax/ax-1234",
+		repoName:       "repo",
+	}
+
+	state := config.initialState("/tmp/agent.log")
+	if state.ID != config.id || state.AgentType != config.agentType || state.WorkDir != config.workDir {
+		t.Fatalf("initialState() = %+v, does not reflect config", state)
+	}
+	if state.Status != store.StatusRunning || state.LastOutput != "interactive session" {
+		t.Fatalf("initialState() = %+v, want running interactive state", state)
+	}
+	if !reflect.DeepEqual(state.Args, config.args) || state.LogFile != "/tmp/agent.log" {
+		t.Fatalf("initialState() = %+v, want args and log path from config", state)
+	}
 }
 
 func TestLastMeaningfulLine(t *testing.T) {

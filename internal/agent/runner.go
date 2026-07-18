@@ -22,6 +22,43 @@ import (
 // to be waiting for user input rather than processing.
 const waitingUserThreshold = 2 * time.Second
 
+// sessionConfig contains the immutable inputs required to launch and monitor
+// one agent process. Keeping them together makes both new and resumed
+// sessions use the same execution path without a long, order-sensitive list
+// of function parameters.
+type sessionConfig struct {
+	args           []string
+	socketPath     string
+	id             string
+	name           string
+	agentType      string
+	workDir        string
+	worktreeBranch string
+	repoName       string
+}
+
+func (c sessionConfig) initialState(logPath string) store.AgentState {
+	return store.AgentState{
+		ID:             c.id,
+		Name:           c.name,
+		AgentType:      c.agentType,
+		Args:           append([]string(nil), c.args...),
+		WorkDir:        c.workDir,
+		Status:         store.StatusRunning,
+		StartedAt:      time.Now(),
+		LastOutput:     "interactive session",
+		LogFile:        logPath,
+		WorktreeBranch: c.worktreeBranch,
+		RepoName:       c.repoName,
+	}
+}
+
+func (c sessionConfig) command() *exec.Cmd {
+	cmd := exec.Command(c.agentType, c.args...)
+	cmd.Dir = c.workDir
+	return cmd
+}
+
 // Run starts an interactive agent session and reports agent lifecycle
 // state to the store daemon. agentType is the binary to invoke (e.g. "claude",
 // "codex", "gemini"); an empty string defaults to "claude".
@@ -61,14 +98,23 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 		}
 	}
 
-	return runSession(args, socketPath, id, name, agentType, workDir, worktreeBranch, repoName)
+	return runSession(sessionConfig{
+		args:           stripLeadingDoubleDash(args),
+		socketPath:     socketPath,
+		id:             id,
+		name:           name,
+		agentType:      agentType,
+		workDir:        workDir,
+		worktreeBranch: worktreeBranch,
+		repoName:       repoName,
+	})
 }
 
 // resumePrefixArgs returns the arguments that should be prepended to resume a
 // previous session for the given agent binary. Unknown agents return nil and
 // are relaunched fresh in the existing worktree.
 func resumePrefixArgs(agentType string) []string {
-	return lookupAgent(agentType).ResumeArgs
+	return lookupAgent(agentType).ResumeCommand()
 }
 
 // ResumeByIDOrName finds an existing agent by ID or name and launches it in
@@ -89,7 +135,16 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTy
 		agentType = agentTypeOverride
 	}
 	resumeArgs := buildResumeArgs(agentType, args)
-	return runSession(resumeArgs, socketPath, existing.ID, existing.Name, agentType, existing.WorkDir, existing.WorktreeBranch, existing.RepoName)
+	return runSession(sessionConfig{
+		args:           resumeArgs,
+		socketPath:     socketPath,
+		id:             existing.ID,
+		name:           existing.Name,
+		agentType:      agentType,
+		workDir:        existing.WorkDir,
+		worktreeBranch: existing.WorktreeBranch,
+		repoName:       existing.RepoName,
+	})
 }
 
 // buildResumeArgs assembles the final argv for resuming an agent session.
@@ -116,12 +171,12 @@ func buildResumeArgs(agentType string, userArgs []string) []string {
 // the PTY, the log file, and the lifecycle goroutines (idle watcher,
 // commit watcher, daemon input pump), and produces the terminal state
 // update before returning.
-func runSession(args []string, socketPath, id, name, agentType, workDir, worktreeBranch, repoName string) error {
+func runSession(config sessionConfig) error {
 	paths, err := axfs.New()
 	if err != nil {
 		return err
 	}
-	agentDir := paths.AgentDir(id)
+	agentDir := paths.AgentDir(config.id)
 	if err := os.MkdirAll(agentDir, 0700); err != nil {
 		return fmt.Errorf("could not create agent dir: %w", err)
 	}
@@ -130,37 +185,21 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	if err := os.Chmod(agentDir, 0700); err != nil {
 		return fmt.Errorf("could not secure agent dir: %w", err)
 	}
-	logPath := paths.AgentLog(id)
+	logPath := paths.AgentLog(config.id)
 
 	var client store.Client
-	if err := client.Connect(socketPath); err != nil {
+	if err := client.Connect(config.socketPath); err != nil {
 		return fmt.Errorf("could not connect to store: %w", err)
 	}
 	defer client.Close()
 
-	agentArgs := stripLeadingDoubleDash(args)
-	initialHead := gitHeadCommit(workDir)
-
-	cmd := exec.Command(agentType, agentArgs...)
-	cmd.Dir = workDir
-
-	monitor := newSessionMonitor(&client, store.AgentState{
-		ID:             id,
-		Name:           name,
-		AgentType:      agentType,
-		Args:           agentArgs,
-		WorkDir:        workDir,
-		Status:         store.StatusRunning,
-		StartedAt:      time.Now(),
-		LastOutput:     "interactive session",
-		LogFile:        logPath,
-		WorktreeBranch: worktreeBranch,
-		RepoName:       repoName,
-	})
+	initialHead := gitHeadCommit(config.workDir)
+	cmd := config.command()
+	monitor := newSessionMonitor(&client, config.initialState(logPath))
 
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
-		return fmt.Errorf("could not start %s: %w", agentType, err)
+		return fmt.Errorf("could not start %s: %w", config.agentType, err)
 	}
 	defer ptmx.Close()
 
@@ -180,13 +219,13 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 	if err := client.SendUpdate(initial); err != nil {
 		warnf("could not send initial state: %v", err)
 	}
-	if err := client.RegisterInput(id); err != nil {
+	if err := client.RegisterInput(config.id); err != nil {
 		warnf("could not register input listener: %v", err)
 	}
 
-	go forwardDaemonInput(&client, ptmx, id)
+	go forwardDaemonInput(&client, ptmx, config.id)
 	go monitor.runIdleWatcher(done, waitingUserThreshold)
-	go monitor.runCommitWatcher(done, workDir, initialHead)
+	go monitor.runCommitWatcher(done, config.workDir, initialHead)
 
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
@@ -202,7 +241,7 @@ func runSession(args []string, socketPath, id, name, agentType, workDir, worktre
 
 	forwardPTYOutput(ptmx, logFile, monitor)
 
-	final := monitor.finalise(cmd.Wait(), workDir, initialHead)
+	final := monitor.finalise(cmd.Wait(), config.workDir, initialHead)
 	if err := client.SendUpdate(final); err != nil {
 		warnf("could not send final state: %v", err)
 	}

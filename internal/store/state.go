@@ -84,41 +84,17 @@ func (f *Filter) Match(msg Message) bool {
 	if f == nil {
 		return true
 	}
-	if len(f.AgentIDs) > 0 {
-		id := msg.AgentID
-		if msg.Agent != nil {
-			id = msg.Agent.ID
-		}
-		if id == "" {
-			return false
-		}
-		hit := false
-		for _, want := range f.AgentIDs {
-			if want == id {
-				hit = true
-				break
-			}
-		}
-		if !hit {
-			return false
-		}
+	id := msg.AgentID
+	if msg.Agent != nil {
+		id = msg.Agent.ID
 	}
-	if len(f.Statuses) > 0 {
-		if msg.Agent == nil {
-			return false
-		}
-		hit := false
-		for _, want := range f.Statuses {
-			if want == msg.Agent.Status {
-				hit = true
-				break
-			}
-		}
-		if !hit {
-			return false
-		}
+	if !f.matchesAgentID(id) {
+		return false
 	}
-	return true
+	if msg.Agent == nil {
+		return len(f.Statuses) == 0
+	}
+	return f.matchesStatus(msg.Agent.Status)
 }
 
 // MatchAgent reports whether the given agent passes the filter's AgentID and
@@ -127,29 +103,32 @@ func (f *Filter) MatchAgent(a AgentState) bool {
 	if f == nil {
 		return true
 	}
-	if len(f.AgentIDs) > 0 {
-		hit := false
-		for _, want := range f.AgentIDs {
-			if want == a.ID {
-				hit = true
-				break
-			}
-		}
-		if !hit {
-			return false
+	return f.matchesAgentID(a.ID) && f.matchesStatus(a.Status)
+}
+
+func (f *Filter) matchesAgentID(id string) bool {
+	if len(f.AgentIDs) == 0 {
+		return true
+	}
+	if id == "" {
+		return false
+	}
+	for _, want := range f.AgentIDs {
+		if want == id {
+			return true
 		}
 	}
-	if len(f.Statuses) > 0 {
-		hit := false
-		for _, want := range f.Statuses {
-			if want == a.Status {
-				hit = true
-				break
-			}
-		}
-		if !hit {
-			return false
+	return false
+}
+
+func (f *Filter) matchesStatus(status Status) bool {
+	if len(f.Statuses) == 0 {
+		return true
+	}
+	for _, want := range f.Statuses {
+		if want == status {
+			return true
 		}
 	}
-	return true
+	return false
 }
