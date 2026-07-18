@@ -20,21 +20,20 @@ func recentThreshold(days int) time.Time {
 // When showExpired is true, all finished agents are included regardless of age.
 func visibleAgents(agents []store.AgentState, showExpired bool, days int) []store.AgentState {
 	threshold := recentThreshold(days)
+	recentEnough := func(a store.AgentState) bool {
+		return showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold))
+	}
 	var running, success, killed []store.AgentState
 	for _, a := range agents {
 		switch a.Status {
 		case store.StatusRunning:
 			running = append(running, a)
 		case store.StatusSuccess:
-			if showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
+			if recentEnough(a) {
 				success = append(success, a)
 			}
-		case store.StatusKilled:
-			if showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
-				killed = append(killed, a)
-			}
-		case store.StatusFailed:
-			if showExpired || (a.FinishedAt != nil && a.FinishedAt.After(threshold)) {
+		case store.StatusKilled, store.StatusFailed:
+			if recentEnough(a) {
 				killed = append(killed, a)
 			}
 		}
@@ -146,21 +145,9 @@ func groupedVisibleAgents(agents []store.AgentState, showExpired bool, days int)
 	return result
 }
 
-func listView(m Model) string {
-	width := clampWidth(m.width)
-	height := m.height
-	if height < 10 {
-		height = 24
-	}
-
-	innerWidth := width - 4 // outer frame: "│ " + content(innerWidth) + " │"
-
-	// Build grouped sections.
-	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-	if m.searchMode {
-		groups = fuzzyFilterGroups(groups, m.searchQuery)
-	}
-	var running, success, killed []AgentGroup
+// groupsByStatus splits groups into the three display sections in order.
+// Failed groups are shown in the killed section.
+func groupsByStatus(groups []AgentGroup) (running, success, killed []AgentGroup) {
 	for _, g := range groups {
 		switch g.Rep.Status {
 		case store.StatusRunning:
@@ -171,18 +158,66 @@ func listView(m Model) string {
 			killed = append(killed, g)
 		}
 	}
+	return running, success, killed
+}
 
-	durationLabel := fmt.Sprintf("%dd", m.durationDays)
-	successTitle := "Success (" + durationLabel + ")"
-	killedTitle := "Killed (" + durationLabel + ")"
-	if m.showExpired {
-		successTitle = "Success (all)"
-		killedTitle = "Killed / Failed (all)"
+// Fixed column widths: cursor(2) id(24) sp(1) agent(8) sp(1) repo(12) sp(1) status(9) sp(1) ended(11)
+// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars; name can be longer so give extra room
+const (
+	idColWidth     = 24
+	agentColWidth  = 8
+	repoColWidth   = 12
+	statusColWidth = 9
+	endedColWidth  = 11
+	fixedColTotal  = 2 + idColWidth + 1 + agentColWidth + 1 + repoColWidth + 1 + statusColWidth + 1 + endedColWidth
+)
+
+// lastOutputWidth returns the width available for the trailing Last Output
+// column, or 0 when the terminal is too narrow to show it.
+func lastOutputWidth(innerWidth int) int {
+	remaining := max(0, innerWidth-fixedColTotal-2)
+	if remaining > 8 {
+		return remaining
+	}
+	return 0
+}
+
+// listView renders the main dashboard: a framed list of agent groups split
+// into Running / Success / Killed sections, with an overview of the selected
+// group at the top and a context-sensitive help line at the bottom.
+func listView(m Model) string {
+	width := clampWidth(m.width)
+	height := m.height
+	if height < 10 {
+		height = 24
 	}
 
-	// Title line: current time and agent status counts
+	innerWidth := width - 4 // outer frame: "│ " + content(innerWidth) + " │"
+
+	groups := m.selectedGroups()
+	running, success, killed := groupsByStatus(groups)
+
+	var lines []string
+	lines = append(lines, listTitleBorder(m, innerWidth))
+	lines = append(lines, overviewLines(m, groups, innerWidth)...)
+	lines = append(lines, sectionLines(m, running, success, killed, height, innerWidth)...)
+
+	// Fill remaining height with blank lines (divider + help + bottom = 3 lines)
+	for len(lines) < height-3 {
+		lines = append(lines, frameRow("", innerWidth))
+	}
+
+	lines = append(lines, frameDivider(innerWidth))
+	lines = append(lines, frameRow(NormalItemStyle.Render(listHelpText(m)), innerWidth))
+	lines = append(lines, frameBottom(innerWidth))
+
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
+}
+
+// listTitleBorder renders the top border embedding the clock and the
+// unfiltered agent status counts: ╭─ 2006-01-02 15:04 ──── Running: … ─╮
+func listTitleBorder(m Model, innerWidth int) string {
 	clockStr := m.now.Format("2006-01-02 15:04")
-	// Count all agents (not filtered) for the summary
 	var totalRunning, totalSuccess, totalKilled int
 	for _, a := range m.agents {
 		switch a.Status {
@@ -198,203 +233,165 @@ func listView(m Model) string {
 	clockStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#f7768e"))
 	dashes := max(0, innerWidth-utf8.RuneCountInString(clockStr)-utf8.RuneCountInString(countsStr)-3)
 	titleLine := clockStyle.Render(clockStr) + fr(" "+strings.Repeat("─", dashes)+" ") + countsStr
+	return fr("╭─ ") + titleLine + fr("─╮")
+}
 
-	topBorder := fr("╭─ ") + titleLine + fr("─╮")
+// overviewLines renders the detail overview section for the selected group:
+// Name, Agent, PID(s), Dir, Branch, Args, and Stats.
+func overviewLines(m Model, groups []AgentGroup, innerWidth int) []string {
+	name, agentType, pid, dir, branch, args, stats := "-", "-", "-", "-", "-", "-", "-"
+	if len(groups) > 0 && m.cursor < len(groups) {
+		g := groups[m.cursor]
+		name = g.groupLabel()
+		agentType = g.Rep.AgentTypeName()
+		pid = g.pidString()
+		dir = g.Rep.WorkDir
+		branch = g.Rep.WorktreeBranch
+		if branch == "" {
+			branch = "-"
+		}
+		args = strings.Join(g.Rep.Args, " ")
+		if args == "" {
+			args = "-"
+		}
+		stats = formatMetricsSummary(m, g.Rep)
+	}
+	renderLine := func(label, value string) string {
+		styledLabel := OverviewLabelStyle.Render(label + " ")
+		prefix := "  " // align with cursor column in agent rows
+		maxVal := max(0, innerWidth-len(prefix)-lipgloss.Width(styledLabel))
+		styledValue := NormalItemStyle.Render(truncate(value, maxVal))
+		return frameRow(prefix+styledLabel+styledValue, innerWidth)
+	}
+	return []string{
+		renderLine("Name: ", name),
+		renderLine("Agent:", agentType),
+		renderLine("PID:  ", pid),
+		renderLine("Dir:  ", dir),
+		renderLine("Branch:", branch),
+		renderLine("Args: ", args),
+		renderLine("Stats:", stats),
+	}
+}
 
-	// Helper to render a section divider line: ├─ Title ──────┤
-	renderSectionHeader := func(label string, style lipgloss.Style) string {
-		styledLabel := style.Render(label)
-		labelWidth := lipgloss.Width(styledLabel)
-		d := max(0, innerWidth-labelWidth-1)
-		return fr("├─ ") + styledLabel + fr(" "+strings.Repeat("─", d)+"┤")
+// columnHeaderLine renders the column header row shown under the Running
+// section header.
+func columnHeaderLine(innerWidth int) string {
+	header := "  " +
+		padRight("Name/Id", idColWidth) + " " +
+		padRight("Agent", agentColWidth) + " " +
+		padRight("Repo", repoColWidth) + " " +
+		padRight("Status", statusColWidth) + " " +
+		padRight("Ended", endedColWidth)
+	if lastOutputWidth(innerWidth) > 0 {
+		header += "  " + "Last Output"
+	}
+	return frameRow(OverviewLabelStyle.Render(header), innerWidth)
+}
+
+// agentRowLine renders one agent group as a table row, highlighting it when
+// it is under the cursor.
+func agentRowLine(m Model, group AgentGroup, selected bool, innerWidth int) string {
+	cursor := "  "
+	if selected {
+		cursor = "▶ "
 	}
 
-	var lines []string
-	lines = append(lines, topBorder)
+	endedAt := "           "
+	if group.Rep.FinishedAt != nil {
+		endedAt = group.Rep.FinishedAt.Format("01/02 15:04")
+	}
+	repo := repoName(group.Rep.RepoName, group.Rep.WorkDir)
+	row := cursor +
+		padRight(truncate(group.groupLabel(), idColWidth), idColWidth) + " " +
+		padRight(truncate(group.Rep.AgentTypeName(), agentColWidth), agentColWidth) + " " +
+		padRight(RepoStyle.Render(truncate(repo, repoColWidth)), repoColWidth) + " " +
+		padRight(formatStatus(group.Rep, m), statusColWidth) + " " +
+		EndedStyle.Render(endedAt)
 
-	divider := fr("├" + strings.Repeat("─", innerWidth+2) + "┤")
-
-	// Detail overview section: show selected group's Name, Agent, PID(s), Dir, Branch, Args, Stats.
-	{
-		var name, agentType, pid, dir, branch, args, stats string
-		if len(groups) > 0 && m.cursor < len(groups) {
-			g := groups[m.cursor]
-			name = g.groupLabel()
-			agentType = g.Rep.AgentTypeName()
-			pid = g.pidString()
-			dir = g.Rep.WorkDir
-			branch = g.Rep.WorktreeBranch
-			if branch == "" {
-				branch = "-"
-			}
-			args = strings.Join(g.Rep.Args, " ")
-			if args == "" {
-				args = "-"
-			}
-			stats = formatMetricsSummary(m, g.Rep)
-		} else {
-			name, agentType, pid, dir, branch, args, stats = "-", "-", "-", "-", "-", "-", "-"
-		}
-		renderOverviewLine := func(label, value string) string {
-			styledLabel := OverviewLabelStyle.Render(label + " ")
-			prefix := "  " // align with cursor column in agent rows
-			maxVal := max(0, innerWidth-len(prefix)-lipgloss.Width(styledLabel))
-			styledValue := NormalItemStyle.Render(truncate(value, maxVal))
-			return fr("│ ") + padRight(prefix+styledLabel+styledValue, innerWidth) + fr(" │")
-		}
-		lines = append(lines, renderOverviewLine("Name: ", name))
-		lines = append(lines, renderOverviewLine("Agent:", agentType))
-		lines = append(lines, renderOverviewLine("PID:  ", pid))
-		lines = append(lines, renderOverviewLine("Dir:  ", dir))
-		lines = append(lines, renderOverviewLine("Branch:", branch))
-		lines = append(lines, renderOverviewLine("Args: ", args))
-		lines = append(lines, renderOverviewLine("Stats:", stats))
+	if w := lastOutputWidth(innerWidth); w > 0 && group.Rep.LastOutput != "" {
+		row += "  " + LastOutputStyle.Render(truncate(group.Rep.LastOutput, w))
 	}
 
-	// Fixed column widths: cursor(2) id(24) sp(1) agent(8) sp(1) repo(12) sp(1) status(9) sp(1) ended(11)
-	// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars; name can be longer so give extra room
-	const (
-		idWidth     = 24
-		agentWidth  = 8
-		repoWidth   = 12
-		statusWidth = 9
-		endedWidth  = 11
-		fixedTotal  = 2 + idWidth + 1 + agentWidth + 1 + repoWidth + 1 + statusWidth + 1 + endedWidth
-	)
-
-	// Column header row (rendered under the Running section header)
-	colHeader := "  " +
-		padRight("Name/Id", idWidth) + " " +
-		padRight("Agent", agentWidth) + " " +
-		padRight("Repo", repoWidth) + " " +
-		padRight("Status", statusWidth) + " " +
-		padRight("Ended", endedWidth)
-	if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 {
-		colHeader += "  " + "Last Output"
+	if selected {
+		return SelectedItemStyle.Render(row)
 	}
-	colHeaderLine := fr("│ ") + padRight(OverviewLabelStyle.Render(colHeader), innerWidth) + fr(" │")
+	return NormalItemStyle.Render(row)
+}
 
-	renderRow := func(group AgentGroup, idx int) string {
-		cursor := "  "
-		if idx == m.cursor {
-			cursor = "▶ "
-		}
-
-		label := group.groupLabel()
-		endedAt := "           "
-		if group.Rep.FinishedAt != nil {
-			endedAt = group.Rep.FinishedAt.Format("01/02 15:04")
-		}
-		agentType := group.Rep.AgentTypeName()
-		repo := repoName(group.Rep.RepoName, group.Rep.WorkDir)
-		row := cursor +
-			padRight(truncate(label, idWidth), idWidth) + " " +
-			padRight(truncate(agentType, agentWidth), agentWidth) + " " +
-			padRight(RepoStyle.Render(truncate(repo, repoWidth)), repoWidth) + " " +
-			padRight(formatStatus(group.Rep, m), statusWidth) + " " +
-			EndedStyle.Render(endedAt)
-
-		if remaining := max(0, innerWidth-fixedTotal-2); remaining > 8 && group.Rep.LastOutput != "" {
-			row += "  " + LastOutputStyle.Render(truncate(group.Rep.LastOutput, remaining))
-		}
-
-		if idx == m.cursor {
-			return SelectedItemStyle.Render(row)
-		}
-		return NormalItemStyle.Render(row)
+// sectionWindow returns the visible sub-range [start, start+length) of a
+// section whose entries occupy global indices [base, base+sectionLen) in the
+// flattened list, given the scroll window [offset, windowEnd).
+func sectionWindow(sectionLen, base, offset, windowEnd int) (start, length int) {
+	if sectionLen == 0 {
+		return 0, 0
 	}
+	s := max(0, offset-base)
+	e := min(sectionLen, windowEnd-base)
+	if s >= e {
+		return 0, 0
+	}
+	return s, e - s
+}
+
+// sectionLines renders the three agent sections (Running / Success / Killed),
+// windowed by the current scroll offset so the flat cursor stays visible.
+func sectionLines(m Model, running, success, killed []AgentGroup, height, innerWidth int) []string {
+	successTitle, killedTitle := sectionTitles(m)
 
 	// Compute available rows for agent entries.
 	// Fixed frame lines: topBorder + 7 overview + colHeader + 3 section divider-headers + bottom divider + help + bottomBorder = 15.
 	emptyCount := 0
-	if len(running) == 0 {
-		emptyCount++
-	}
-	if len(success) == 0 {
-		emptyCount++
-	}
-	if len(killed) == 0 {
-		emptyCount++
+	for _, section := range [][]AgentGroup{running, success, killed} {
+		if len(section) == 0 {
+			emptyCount++
+		}
 	}
 	availableRows := max(0, height-15-emptyCount)
 
-	// Compute per-section slice bounds based on scroll offset.
 	// Flat visible list order: running[0..], success[0..], killed[0..]
 	offset := m.scrollOffset
 	windowEnd := offset + availableRows
 
-	// Running: global indices [0, len(running))
-	runSliceStart, runSliceLen := 0, 0
-	if len(running) > 0 {
-		s := max(0, offset)
-		e := min(len(running), windowEnd)
-		if s < e {
-			runSliceStart = s
-			runSliceLen = e - s
+	// renderSection renders a divider-style section header + optional pre-rows
+	// line + group rows. preRow is appended immediately after the section
+	// header (used for the column header under Running).
+	renderSection := func(title string, headerStyle lipgloss.Style, section []AgentGroup, base int, preRow string) []string {
+		lines := []string{frameSectionHeader(headerStyle.Render(title), innerWidth)}
+		if preRow != "" {
+			lines = append(lines, preRow)
 		}
+		if len(section) == 0 {
+			return append(lines, frameRow(NormalItemStyle.Render("  (none)"), innerWidth))
+		}
+		start, length := sectionWindow(len(section), base, offset, windowEnd)
+		for i := start; i < start+length; i++ {
+			selected := base+i == m.cursor
+			lines = append(lines, frameRow(agentRowLine(m, section[i], selected, innerWidth), innerWidth))
+		}
+		return lines
 	}
 
-	// Success: global indices [len(running), len(running)+len(success))
-	sucBase := len(running)
-	sucSliceStart, sucSliceLen := 0, 0
-	if len(success) > 0 {
-		s := max(0, offset-sucBase)
-		e := min(len(success), windowEnd-sucBase)
-		if s < e {
-			sucSliceStart = s
-			sucSliceLen = e - s
-		}
-	}
+	var lines []string
+	lines = append(lines, renderSection("Running", RunningHeaderStyle, running, 0, columnHeaderLine(innerWidth))...)
+	lines = append(lines, renderSection(successTitle, SuccessHeaderStyle, success, len(running), "")...)
+	lines = append(lines, renderSection(killedTitle, KilledHeaderStyle, killed, len(running)+len(success), "")...)
+	return lines
+}
 
-	// Killed: global indices [len(running)+len(success), ...)
-	kilBase := len(running) + len(success)
-	kilSliceStart, kilSliceLen := 0, 0
-	if len(killed) > 0 {
-		s := max(0, offset-kilBase)
-		e := min(len(killed), windowEnd-kilBase)
-		if s < e {
-			kilSliceStart = s
-			kilSliceLen = e - s
-		}
-	}
-
-	// renderSection renders a divider-style section header + optional pre-rows line + group rows.
-	// preRows is an optional line appended immediately after the section header (e.g. column headers).
-	renderSection := func(title string, headerStyle lipgloss.Style, groupSlice []AgentGroup, baseGlobalIdx int, sliceStart int, sliceLen int, preRows string) {
-		lines = append(lines, renderSectionHeader(title, headerStyle))
-		if preRows != "" {
-			lines = append(lines, preRows)
-		}
-		if len(groupSlice) == 0 {
-			lines = append(lines, fr("│ ")+padRight(NormalItemStyle.Render("  (none)"), innerWidth)+fr(" │"))
-			return
-		}
-		end := sliceStart + sliceLen
-		if end > len(groupSlice) {
-			end = len(groupSlice)
-		}
-		for i := sliceStart; i < end; i++ {
-			globalIdx := baseGlobalIdx + i
-			lines = append(lines, fr("│ ")+padRight(renderRow(groupSlice[i], globalIdx), innerWidth)+fr(" │"))
-		}
-	}
-
-	renderSection("Running", RunningHeaderStyle, running, 0, runSliceStart, runSliceLen, colHeaderLine)
-	renderSection(successTitle, SuccessHeaderStyle, success, len(running), sucSliceStart, sucSliceLen, "")
-	renderSection(killedTitle, KilledHeaderStyle, killed, len(running)+len(success), kilSliceStart, kilSliceLen, "")
-
-	// Fill remaining height with blank lines (divider + help + bottom = 3 lines)
-	for len(lines) < height-3 {
-		lines = append(lines, fr("│ ")+padRight("", innerWidth)+fr(" │"))
-	}
-
-	// Help line at bottom
-	lines = append(lines, divider)
-	historyLabel := "[o] history"
+// sectionTitles returns the Success / Killed section titles, reflecting
+// whether expired agents are shown.
+func sectionTitles(m Model) (successTitle, killedTitle string) {
 	if m.showExpired {
-		historyLabel = "[o] hide history"
+		return "Success (all)", "Killed / Failed (all)"
 	}
-	var helpText string
+	durationLabel := fmt.Sprintf("%dd", m.durationDays)
+	return "Success (" + durationLabel + ")", "Killed (" + durationLabel + ")"
+}
+
+// listHelpText returns the bottom help line, which doubles as the display
+// area for the remove confirmation / progress and search prompts.
+func listHelpText(m Model) string {
 	switch {
 	case m.removing:
 		label := m.removingTarget.ID
@@ -405,25 +402,24 @@ func listView(m Model) string {
 		if dots < 1 {
 			dots = 1
 		}
-		helpText = fmt.Sprintf("Removing \"%s\"%s", label, strings.Repeat(".", dots))
+		return fmt.Sprintf("Removing \"%s\"%s", label, strings.Repeat(".", dots))
 	case m.confirmRemove:
 		label := m.confirmTarget.ID
 		if m.confirmTarget.Name != "" {
 			label = m.confirmTarget.Name
 		}
-		helpText = fmt.Sprintf("Remove \"%s\"? [y] yes  [n] no", label)
+		return fmt.Sprintf("Remove \"%s\"? [y] yes  [n] no", label)
 	case m.searchMode:
-		helpText = "search: " + m.searchQuery + "█  [ctrl-n/p] select  [esc] cancel  [enter] confirm"
+		return "search: " + m.searchQuery + "█  [ctrl-n/p] select  [esc] cancel  [enter] confirm"
 	case m.statusMsg != "":
-		helpText = m.statusMsg
+		return m.statusMsg
 	default:
-		helpText = "[jk] select  [enter] detail  [d] diff  [y] yank  [K] kill  [r] remove  [/] search  " + historyLabel + "  [q] quit"
+		historyLabel := "[o] history"
+		if m.showExpired {
+			historyLabel = "[o] hide history"
+		}
+		return "[jk] select  [enter] detail  [d] diff  [y] yank  [K] kill  [r] remove  [/] search  " + historyLabel + "  [q] quit"
 	}
-	help := NormalItemStyle.Render(helpText)
-	lines = append(lines, fr("│ ")+padRight(help, innerWidth)+fr(" │"))
-	lines = append(lines, fr("╰"+strings.Repeat("─", innerWidth+2)+"╯"))
-
-	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
 
 func formatStatus(agent store.AgentState, m Model) string {

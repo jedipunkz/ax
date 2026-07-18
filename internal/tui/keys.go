@@ -65,9 +65,7 @@ func (m Model) handleSearchKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []te
 		m.searchMode = false
 		m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 	case "ctrl+n":
-		allGroups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-		filtered := fuzzyFilterGroups(allGroups, m.searchQuery)
-		if m.cursor < len(filtered)-1 {
+		if filtered := m.selectedGroups(); m.cursor < len(filtered)-1 {
 			m.cursor++
 		}
 		m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
@@ -159,8 +157,7 @@ func (m Model) moveCursor(delta int, cmds []tea.Cmd) (Model, []tea.Cmd) {
 			m.cursor--
 		}
 	} else {
-		groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-		if m.cursor < len(groups)-1 {
+		if groups := m.selectedGroups(); m.cursor < len(groups)-1 {
 			m.cursor++
 		}
 	}
@@ -176,12 +173,11 @@ func (m Model) openDetailView(cmds []tea.Cmd) (Model, []tea.Cmd) {
 		m.view = viewList
 		return m, cmds
 	}
-	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-	if len(groups) == 0 || m.cursor >= len(groups) {
+	ag, ok := m.selectedAgent()
+	if !ok {
 		return m, cmds
 	}
 	m.view = viewDetail
-	ag := groups[m.cursor].Rep
 	m.viewport = viewport.New(viewport.WithWidth(m.width-4), viewport.WithHeight(m.height-13))
 	cmds = append(cmds, loadLog(ag.LogFile))
 	return m, cmds
@@ -218,7 +214,7 @@ func (m Model) openDiffView(cmds []tea.Cmd) (Model, []tea.Cmd) {
 
 func (m Model) toggleExpired(cmds []tea.Cmd) (Model, []tea.Cmd) {
 	m.showExpired = !m.showExpired
-	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
+	groups := m.selectedGroups()
 	if m.cursor >= len(groups) && len(groups) > 0 {
 		m.cursor = len(groups) - 1
 	}
@@ -233,11 +229,11 @@ func (m Model) toggleExpired(cmds []tea.Cmd) (Model, []tea.Cmd) {
 // label with the currently selected group (handles the case where a
 // name was reused across resumed sessions).
 func (m Model) killSelectedGroup(cmds []tea.Cmd) (Model, []tea.Cmd) {
-	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-	if len(groups) == 0 || m.cursor >= len(groups) {
+	group, ok := m.selectedGroup()
+	if !ok {
 		return m, cmds
 	}
-	target := groups[m.cursor].groupLabel()
+	target := group.groupLabel()
 
 	for _, ag := range m.agents {
 		if ag.Status != store.StatusRunning {
@@ -269,12 +265,8 @@ func (m Model) yankCdCommand(cmds []tea.Cmd) (Model, []tea.Cmd) {
 	if m.view != viewList {
 		return m, cmds
 	}
-	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-	if len(groups) == 0 || m.cursor >= len(groups) {
-		return m, cmds
-	}
-	ag := groups[m.cursor].Rep
-	if ag.WorkDir == "" {
+	ag, ok := m.selectedAgent()
+	if !ok || ag.WorkDir == "" {
 		return m, cmds
 	}
 	cdCmd := "cd " + ag.WorkDir
@@ -291,11 +283,10 @@ func (m Model) requestRemove(cmds []tea.Cmd) (Model, []tea.Cmd) {
 	if m.view != viewList {
 		return m, cmds
 	}
-	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-	if len(groups) == 0 || m.cursor >= len(groups) {
+	ag, ok := m.selectedAgent()
+	if !ok {
 		return m, cmds
 	}
-	ag := groups[m.cursor].Rep
 	if !ag.Status.IsTerminal() {
 		m.statusMsg = "cannot remove running agent; stop it first"
 		cmds = append(cmds, clearStatusAfter(2*time.Second))
