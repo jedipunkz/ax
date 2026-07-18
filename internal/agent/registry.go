@@ -11,6 +11,13 @@ type AgentDef struct {
 	ResumeArgs []string
 }
 
+// ResumeCommand returns a copy of the arguments used to resume an agent.
+// Keeping the copy at the registry boundary prevents callers from modifying
+// the shared definitions in knownAgents by appending to the returned slice.
+func (d AgentDef) ResumeCommand() []string {
+	return append([]string(nil), d.ResumeArgs...)
+}
+
 // knownAgents is the registry of supported agent binaries.
 //
 // Each entry documents the agent's own session-continuation interface:

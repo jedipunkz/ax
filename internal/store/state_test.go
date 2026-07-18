@@ -42,3 +42,37 @@ func TestStatusIsTerminal(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterMatchAndMatchAgentAgree(t *testing.T) {
+	filter := &Filter{
+		AgentIDs: []string{"ax-1", "ax-2"},
+		Statuses: []Status{StatusRunning},
+	}
+	cases := []struct {
+		name  string
+		agent AgentState
+		want  bool
+	}{
+		{name: "matching agent", agent: AgentState{ID: "ax-1", Status: StatusRunning}, want: true},
+		{name: "different agent", agent: AgentState{ID: "ax-3", Status: StatusRunning}, want: false},
+		{name: "different status", agent: AgentState{ID: "ax-1", Status: StatusSuccess}, want: false},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := filter.MatchAgent(tt.agent); got != tt.want {
+				t.Errorf("MatchAgent(%+v) = %t, want %t", tt.agent, got, tt.want)
+			}
+			if got := filter.Match(Message{Agent: &tt.agent}); got != tt.want {
+				t.Errorf("Match(%+v) = %t, want %t", tt.agent, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFilterMatchRejectsStatusFilterWithoutAgent(t *testing.T) {
+	filter := &Filter{Statuses: []Status{StatusRunning}}
+	if filter.Match(Message{AgentID: "ax-1"}) {
+		t.Error("Match() accepted a message without an agent for a status filter")
+	}
+}
