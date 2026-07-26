@@ -90,11 +90,10 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 			repoName = filepath.Base(repoRoot)
 			wt, branch, wtErr := setupWorktree(id, repoRoot, name)
 			if wtErr != nil {
-				warnf("could not create worktree: %v", wtErr)
-			} else {
-				workDir = wt
-				worktreeBranch = branch
+				return worktreeSetupError(repoRoot, wtErr)
 			}
+			workDir = wt
+			worktreeBranch = branch
 		}
 	}
 
@@ -108,6 +107,29 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 		worktreeBranch: worktreeBranch,
 		repoName:       repoName,
 	})
+}
+
+// worktreeSetupError explains why the session was aborted instead of falling
+// back to repoRoot. Isolation is the point of starting an agent through ax, and
+// a warning printed here is immediately overwritten by the agent's full-screen
+// UI — so a silent fallback would leave an agent committing directly to the
+// branch the user is sitting on without them ever seeing why.
+//
+// An unborn HEAD is called out separately because it is the common cause: a
+// freshly initialised repository has no commit for the worktree to branch from.
+func worktreeSetupError(repoRoot string, err error) error {
+	if gitHeadCommit(repoRoot) == "" {
+		return fmt.Errorf(
+			"could not create an isolated worktree for %s: the repository has no commits yet\n"+
+				"hint: create an initial commit, then run 'ax agent new' again\nunderlying error: %w",
+			repoRoot, err,
+		)
+	}
+	return fmt.Errorf(
+		"could not create an isolated worktree for %s: %w\n"+
+			"ax will not run an agent directly in your repository; resolve the error above and retry",
+		repoRoot, err,
+	)
 }
 
 // resumePrefixArgs returns the arguments that should be prepended to resume a
