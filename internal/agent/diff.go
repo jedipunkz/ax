@@ -70,7 +70,10 @@ func WorktreeDiff(workDir string, commits []string) (string, error) {
 	}
 
 	base := diffBase(workDir, commits)
-	c := exec.Command("git", "diff", base, "--")
+	// core.quotePath=false keeps non-ASCII paths readable in the "diff --git"
+	// headers, so diffHeaderPath can extract them and the mtime ordering below
+	// applies to them like any other file.
+	c := exec.Command("git", "-c", "core.quotePath=false", "diff", base, "--")
 	c.Dir = workDir
 	out, err := c.Output()
 	if err != nil {
@@ -171,17 +174,25 @@ func diffBase(workDir string, commits []string) string {
 }
 
 // untrackedFiles lists files that are not tracked by git and not ignored.
+//
+// -z is required, not just convenient: without it git C-quotes any path that
+// is not plain ASCII ("\346\227\245..." for a Japanese filename) and the quoted
+// string is not a path any later command can open, so the file would silently
+// vanish from the diff. -z emits raw bytes separated by NUL instead, which also
+// makes names containing spaces or newlines unambiguous.
 func untrackedFiles(workDir string) []string {
-	c := exec.Command("git", "ls-files", "--others", "--exclude-standard")
+	c := exec.Command("git", "ls-files", "-z", "--others", "--exclude-standard")
 	c.Dir = workDir
 	out, err := c.Output()
 	if err != nil {
 		return nil
 	}
 	var files []string
-	for _, l := range strings.Split(string(out), "\n") {
-		if l = strings.TrimSpace(l); l != "" {
-			files = append(files, l)
+	for _, name := range strings.Split(string(out), "\x00") {
+		// No trimming: with -z the bytes are the literal filename, so leading
+		// or trailing whitespace is part of the name.
+		if name != "" {
+			files = append(files, name)
 		}
 	}
 	return files
@@ -191,7 +202,8 @@ func untrackedFiles(workDir string) []string {
 // --no-index` exits with status 1 when the files differ, which is the
 // expected outcome here, so exit errors are not propagated.
 func untrackedDiff(workDir, file string) string {
-	c := exec.Command("git", "diff", "--no-index", "--", os.DevNull, file)
+	c := exec.Command("git", "-c", "core.quotePath=false",
+		"diff", "--no-index", "--", os.DevNull, file)
 	c.Dir = workDir
 	out, _ := c.Output()
 	return string(out)

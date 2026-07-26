@@ -168,7 +168,7 @@ func Load() (*Config, error) {
 			continue
 		}
 		key := strings.TrimSpace(parts[0])
-		val := strings.TrimSpace(parts[1])
+		val := parseScalar(parts[1])
 		switch key {
 		case "theme":
 			cfg.Theme = val
@@ -188,6 +188,27 @@ func Load() (*Config, error) {
 	return cfg, scanner.Err()
 }
 
+// parseScalar normalises one value from the config file.
+//
+// The file is named ax.yaml, so users write YAML: they quote strings and append
+// comments. This is a line parser rather than a YAML parser, and without this
+// step `theme: "catppuccin"` was stored with the quotes attached and then
+// silently fell back to the default theme — a config that looks correct and
+// does nothing. A quoted value is taken verbatim up to its closing quote so a
+// `#` inside it is not mistaken for a comment.
+func parseScalar(raw string) string {
+	v := strings.TrimSpace(raw)
+	if len(v) >= 2 && (v[0] == '"' || v[0] == '\'') {
+		if end := strings.IndexByte(v[1:], v[0]); end >= 0 {
+			return v[1 : 1+end]
+		}
+	}
+	if i := strings.IndexByte(v, '#'); i >= 0 {
+		v = v[:i]
+	}
+	return strings.TrimSpace(v)
+}
+
 // Palette returns the ThemePalette for the configured theme.
 // Falls back to the default theme if the configured one is unknown.
 func (c *Config) Palette() ThemePalette {
@@ -196,4 +217,3 @@ func (c *Config) Palette() ThemePalette {
 	}
 	return themes[DefaultTheme]
 }
-

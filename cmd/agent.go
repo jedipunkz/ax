@@ -58,12 +58,12 @@ var agentCdCmd = &cobra.Command{
 }
 
 var agentRmCmd = &cobra.Command{
-	Use:                "remove -n <id|name>",
+	Use:                "remove [-f] -n <id|name>",
 	Aliases:            []string{"rm"},
-	Short:              "Remove a terminated agent's worktree and state entry",
+	Short:              "Remove a terminated agent's worktree and state entry (-f discards uncommitted changes)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		idOrName, _, err := parseNameFlagRequired(args)
+		idOrName, force, _, err := parseNameAndForceFlags(args)
 		if err != nil {
 			return err
 		}
@@ -71,7 +71,7 @@ var agentRmCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return agent.RemoveAgent(idOrName, socketPath)
+		return agent.RemoveAgent(idOrName, socketPath, force)
 	},
 }
 
@@ -232,6 +232,7 @@ func init() {
 type agentFlagSpec struct {
 	agentType bool // -a / -m / --agent / --agent=
 	follow    bool // -f / --follow
+	force     bool // -f / --force
 }
 
 // agentFlags holds the values extracted by parseAgentFlags.
@@ -239,6 +240,7 @@ type agentFlags struct {
 	name      string
 	agentType string
 	follow    bool
+	force     bool
 	rest      []string
 }
 
@@ -272,6 +274,9 @@ func parseAgentFlags(args []string, spec agentFlagSpec) (agentFlags, error) {
 			i++
 		case spec.follow && (args[i] == "-f" || args[i] == "--follow"):
 			p.follow = true
+			i++
+		case spec.force && (args[i] == "-f" || args[i] == "--force"):
+			p.force = true
 			i++
 		default:
 			p.rest = append(p.rest, args[i])
@@ -315,6 +320,16 @@ func parseNameFlagRequired(args []string) (name string, rest []string, err error
 		err = errNameRequired()
 	}
 	return
+}
+
+// parseNameAndForceFlags extracts -n/--name and -f/--force from args.
+// The name is required.
+func parseNameAndForceFlags(args []string) (name string, force bool, rest []string, err error) {
+	p, _ := parseAgentFlags(args, agentFlagSpec{force: true})
+	if p.name == "" {
+		return "", false, nil, errNameRequired()
+	}
+	return p.name, p.force, p.rest, nil
 }
 
 // parseNameAndFollowFlags extracts -n/--name and -f/--follow from args. The
