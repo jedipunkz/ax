@@ -191,21 +191,22 @@ func loadDiff(ag store.AgentState) tea.Cmd {
 // is not something a single "y" keypress should do.
 func removeAgentCmd(ag store.AgentState, client *store.Client) tea.Cmd {
 	return func() tea.Msg {
-		var firstErr error
-		if paths, err := axfs.New(); err == nil {
-			if err := agent.RemoveAgentArtifacts(paths, ag, false); err != nil {
-				// Abort the whole removal: dropping the state entry would leave
-				// the worktree on disk with nothing in ax pointing at it.
-				if errors.Is(err, agent.ErrWorktreeDirty) {
-					return removeDoneMsg{dirty: true}
-				}
-				firstErr = err
+		paths, err := axfs.New()
+		if err != nil {
+			return removeDoneMsg{err: err}
+		}
+		if err := agent.RemoveAgentArtifacts(paths, ag, false); err != nil {
+			// Abort the whole removal: dropping the state entry would leave
+			// the worktree on disk with nothing in ax pointing at it.
+			if errors.Is(err, agent.ErrWorktreeDirty) {
+				return removeDoneMsg{dirty: true}
 			}
+			return removeDoneMsg{err: err}
 		}
-		if err := client.SendRemove(ag.ID); err != nil && firstErr == nil {
-			firstErr = err
+		if err := client.SendRemove(ag.ID); err != nil {
+			return removeDoneMsg{err: err}
 		}
-		return removeDoneMsg{err: firstErr}
+		return removeDoneMsg{}
 	}
 }
 
