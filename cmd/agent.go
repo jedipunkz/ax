@@ -13,6 +13,7 @@ import (
 
 	"github.com/jedipunkz/ax/internal/agent"
 	"github.com/jedipunkz/ax/internal/axfs"
+	"github.com/jedipunkz/ax/internal/store"
 	"github.com/spf13/cobra"
 )
 
@@ -344,7 +345,7 @@ func ensureDaemon(socketPath string) error {
 	if isSocketAlive(socketPath) {
 		// Restart daemon if binary has been updated since daemon started
 		if isBinaryNewerThanSocket(socketPath) {
-			killDaemon(socketPath)
+			killDaemon()
 			// Fall through to start a new daemon
 		} else {
 			return nil
@@ -400,18 +401,32 @@ func isBinaryNewerThanSocket(socketPath string) bool {
 	return exeInfo.ModTime().After(sockInfo.ModTime())
 }
 
-// killDaemon kills the running daemon process using the PID file and removes the socket.
-func killDaemon(socketPath string) {
-	if paths, err := axfs.New(); err == nil {
-		if data, err := os.ReadFile(paths.PIDFile()); err == nil {
-			if pid, err := strconv.Atoi(strings.TrimSpace(string(data))); err == nil {
-				killPID(pid)
-			}
-		}
+// killDaemon terminates the running daemon via its PID file and waits for the
+// process to actually exit, because the replacement daemon can only take the
+// lock once the kernel has released the old one's.
+//
+// The socket file is deliberately left in place: the replacement removes it
+// after acquiring the lock. Removing it here would open a window in which no
+// socket exists even though no replacement is guaranteed to start.
+func killDaemon() {
+	paths, err := axfs.New()
+	if err != nil {
+		return
 	}
-	_ = os.Remove(socketPath)
-	// Give the old daemon a moment to exit
-	time.Sleep(200 * time.Millisecond)
+	data, err := os.ReadFile(paths.PIDFile())
+	if err != nil {
+		return
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		return
+	}
+	killPID(pid)
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && store.IsPIDAlive(pid) {
+		time.Sleep(20 * time.Millisecond)
+	}
 }
 
 func isSocketAlive(socketPath string) bool {
