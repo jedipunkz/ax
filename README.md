@@ -120,6 +120,14 @@ To remove a terminated agent's worktree, log file, and state entry:
 ax agent remove -n <name|id>   # or: ax agent rm -n <id|name>
 ```
 
+If the agent's worktree still has uncommitted changes or untracked files, the
+removal is refused and nothing is deleted. Commit the work (its branch is kept
+either way) or discard it explicitly:
+
+```bash
+ax agent rm -f -n <name|id>
+```
+
 
 ### Open the dashboard
 

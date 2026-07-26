@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"os"
 	"sort"
 	"time"
@@ -61,8 +62,11 @@ type tickMsg time.Time
 type removingTickMsg struct{}
 
 // removeDoneMsg is sent when the asynchronous worktree removal completes.
+// dirty means nothing was removed because the worktree still holds changes the
+// agent never committed.
 type removeDoneMsg struct {
-	err error
+	err   error
+	dirty bool
 }
 
 // Model is the main bubbletea model for ax status.
@@ -182,11 +186,19 @@ func loadDiff(ag store.AgentState) tea.Cmd {
 
 // removeAgentCmd performs the (potentially slow) worktree removal and
 // associated cleanup off the UI thread, returning a removeDoneMsg when done.
+//
+// The dashboard never forces removal: discarding work the agent never committed
+// is not something a single "y" keypress should do.
 func removeAgentCmd(ag store.AgentState, client *store.Client) tea.Cmd {
 	return func() tea.Msg {
 		var firstErr error
 		if paths, err := axfs.New(); err == nil {
-			if err := agent.RemoveAgentArtifacts(paths, ag); err != nil {
+			if err := agent.RemoveAgentArtifacts(paths, ag, false); err != nil {
+				// Abort the whole removal: dropping the state entry would leave
+				// the worktree on disk with nothing in ax pointing at it.
+				if errors.Is(err, agent.ErrWorktreeDirty) {
+					return removeDoneMsg{dirty: true}
+				}
 				firstErr = err
 			}
 		}

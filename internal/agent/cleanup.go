@@ -2,6 +2,7 @@ package agent
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -93,7 +94,10 @@ func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int,
 			fmt.Fprintf(os.Stderr, "warning: could not stat worktree %s: %v\n", cleanWorkDir, err)
 			continue
 		}
-		if err := RemoveWorktree(cleanWorkDir); err != nil {
+		// Aging cleanup forces removal: these agents finished at least
+		// removeDurationDays ago, and skipping dirty worktrees would let them
+		// accumulate forever with no way for the user to notice or act.
+		if err := RemoveWorktree(cleanWorkDir, true); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: could not remove worktree %s: %v\n", cleanWorkDir, err)
 			continue
 		}
@@ -112,13 +116,44 @@ func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int,
 	return nil
 }
 
+// ErrWorktreeDirty reports that a worktree still holds changes that removing it
+// would destroy: modifications to tracked files, or untracked files. Committed
+// work is not at risk — removing a worktree leaves its branch behind — so this
+// is specifically about work the agent never committed.
+var ErrWorktreeDirty = errors.New("worktree has uncommitted changes")
+
+// WorktreeIsDirty reports whether the worktree at the given path holds tracked
+// modifications or untracked files.
+//
+// A path that is not a readable git worktree counts as clean: there is nothing
+// identifiable to preserve, and callers already restrict removal to paths under
+// ~/.ax/worktrees/.
+func WorktreeIsDirty(worktreePath string) bool {
+	c := exec.Command("git", "status", "--porcelain")
+	c.Dir = worktreePath
+	out, err := c.Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) != ""
+}
+
 // RemoveWorktree removes the git worktree at the given path.
+//
+// When force is false and the worktree still holds uncommitted changes, it
+// returns ErrWorktreeDirty and removes nothing — "git worktree remove --force"
+// discards those changes irrecoverably, so the caller has to say it means it.
+//
 // It first attempts a clean removal via "git worktree remove --force" so that
 // the main repository's worktree admin data is cleaned up properly. If that
 // fails (e.g. the admin entry is already gone after a "git worktree prune"),
 // it falls back to os.RemoveAll silently, which is safe because git will
 // prune the stale admin entry automatically on the next gc or worktree prune.
-func RemoveWorktree(worktreePath string) error {
+func RemoveWorktree(worktreePath string, force bool) error {
+	if !force && WorktreeIsDirty(worktreePath) {
+		return fmt.Errorf("%s: %w", worktreePath, ErrWorktreeDirty)
+	}
+
 	mainRepo, err := resolveMainRepo(worktreePath)
 	if err == nil && mainRepo != "" {
 		cmd := exec.Command("git", "-C", mainRepo, "worktree", "remove", "--force", worktreePath)
