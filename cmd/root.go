@@ -14,6 +14,9 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	rootCmd.SilenceUsage = true
+	// Cobra prints "Error: <err>" itself unless silenced, which would duplicate
+	// the message we print below — noticeably so for multi-line errors.
+	rootCmd.SilenceErrors = true
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

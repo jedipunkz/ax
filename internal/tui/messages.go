@@ -145,7 +145,11 @@ func (m Model) handleRemoveDone(msg removeDoneMsg, cmds []tea.Cmd) (Model, []tea
 	m.removing = false
 	m.removingDots = 0
 	m.removingTarget = store.AgentState{}
-	if msg.err != nil {
+	switch {
+	case msg.dirty:
+		m.statusMsg = "kept: worktree has uncommitted changes — commit them, or discard with 'ax agent rm -f'"
+		cmds = append(cmds, clearStatusAfter(5*time.Second))
+	case msg.err != nil:
 		m.statusMsg = fmt.Sprintf("remove error: %v", msg.err)
 		cmds = append(cmds, clearStatusAfter(3*time.Second))
 	}

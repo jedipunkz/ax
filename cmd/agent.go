@@ -13,6 +13,7 @@ import (
 
 	"github.com/jedipunkz/ax/internal/agent"
 	"github.com/jedipunkz/ax/internal/axfs"
+	"github.com/jedipunkz/ax/internal/store"
 	"github.com/spf13/cobra"
 )
 
@@ -57,12 +58,12 @@ var agentCdCmd = &cobra.Command{
 }
 
 var agentRmCmd = &cobra.Command{
-	Use:                "remove -n <id|name>",
+	Use:                "remove [-f] -n <id|name>",
 	Aliases:            []string{"rm"},
-	Short:              "Remove a terminated agent's worktree and state entry",
+	Short:              "Remove a terminated agent's worktree and state entry (-f discards uncommitted changes)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		idOrName, _, err := parseNameFlagRequired(args)
+		idOrName, force, _, err := parseNameAndForceFlags(args)
 		if err != nil {
 			return err
 		}
@@ -70,7 +71,7 @@ var agentRmCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return agent.RemoveAgent(idOrName, socketPath)
+		return agent.RemoveAgent(idOrName, socketPath, force)
 	},
 }
 
@@ -231,6 +232,7 @@ func init() {
 type agentFlagSpec struct {
 	agentType bool // -a / -m / --agent / --agent=
 	follow    bool // -f / --follow
+	force     bool // -f / --force
 }
 
 // agentFlags holds the values extracted by parseAgentFlags.
@@ -238,6 +240,7 @@ type agentFlags struct {
 	name      string
 	agentType string
 	follow    bool
+	force     bool
 	rest      []string
 }
 
@@ -271,6 +274,9 @@ func parseAgentFlags(args []string, spec agentFlagSpec) (agentFlags, error) {
 			i++
 		case spec.follow && (args[i] == "-f" || args[i] == "--follow"):
 			p.follow = true
+			i++
+		case spec.force && (args[i] == "-f" || args[i] == "--force"):
+			p.force = true
 			i++
 		default:
 			p.rest = append(p.rest, args[i])
@@ -316,6 +322,16 @@ func parseNameFlagRequired(args []string) (name string, rest []string, err error
 	return
 }
 
+// parseNameAndForceFlags extracts -n/--name and -f/--force from args.
+// The name is required.
+func parseNameAndForceFlags(args []string) (name string, force bool, rest []string, err error) {
+	p, _ := parseAgentFlags(args, agentFlagSpec{force: true})
+	if p.name == "" {
+		return "", false, nil, errNameRequired()
+	}
+	return p.name, p.force, p.rest, nil
+}
+
 // parseNameAndFollowFlags extracts -n/--name and -f/--follow from args. The
 // name is required. Unlike the other wrappers, the "--" separator itself is
 // dropped from rest (its tail is kept) so `ax agent logs` can reject any
@@ -344,7 +360,7 @@ func ensureDaemon(socketPath string) error {
 	if isSocketAlive(socketPath) {
 		// Restart daemon if binary has been updated since daemon started
 		if isBinaryNewerThanSocket(socketPath) {
-			killDaemon(socketPath)
+			killDaemon()
 			// Fall through to start a new daemon
 		} else {
 			return nil
@@ -400,18 +416,32 @@ func isBinaryNewerThanSocket(socketPath string) bool {
 	return exeInfo.ModTime().After(sockInfo.ModTime())
 }
 
-// killDaemon kills the running daemon process using the PID file and removes the socket.
-func killDaemon(socketPath string) {
-	if paths, err := axfs.New(); err == nil {
-		if data, err := os.ReadFile(paths.PIDFile()); err == nil {
-			if pid, err := strconv.Atoi(strings.TrimSpace(string(data))); err == nil {
-				killPID(pid)
-			}
-		}
+// killDaemon terminates the running daemon via its PID file and waits for the
+// process to actually exit, because the replacement daemon can only take the
+// lock once the kernel has released the old one's.
+//
+// The socket file is deliberately left in place: the replacement removes it
+// after acquiring the lock. Removing it here would open a window in which no
+// socket exists even though no replacement is guaranteed to start.
+func killDaemon() {
+	paths, err := axfs.New()
+	if err != nil {
+		return
 	}
-	_ = os.Remove(socketPath)
-	// Give the old daemon a moment to exit
-	time.Sleep(200 * time.Millisecond)
+	data, err := os.ReadFile(paths.PIDFile())
+	if err != nil {
+		return
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		return
+	}
+	killPID(pid)
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && store.IsPIDAlive(pid) {
+		time.Sleep(20 * time.Millisecond)
+	}
 }
 
 func isSocketAlive(socketPath string) bool {

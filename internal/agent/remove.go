@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,7 +14,11 @@ import (
 // identified by idOrName. The agent must be in a terminal state.
 // If socketPath is non-empty and the daemon is reachable, state removal is
 // delegated to the daemon; otherwise state.json is updated directly.
-func RemoveAgent(idOrName, socketPath string) error {
+//
+// When force is false, an agent whose worktree still holds uncommitted changes
+// is left completely untouched — including its state entry — so the user can
+// inspect or commit the work first.
+func RemoveAgent(idOrName, socketPath string, force bool) error {
 	paths, err := axfs.New()
 	if err != nil {
 		return err
@@ -33,8 +38,18 @@ func RemoveAgent(idOrName, socketPath string) error {
 		return fmt.Errorf("agent %s is still running; stop it before removing", target.ID)
 	}
 
-	if err := RemoveAgentArtifacts(paths, target); err != nil {
-		// Match prior CLI behavior: artifact failures are surfaced as
+	if err := RemoveAgentArtifacts(paths, target, force); err != nil {
+		// A dirty worktree is the one failure that must abort: dropping the
+		// state entry here would leave the worktree on disk with nothing in
+		// ax pointing at it, which is worse than not removing anything.
+		if errors.Is(err, ErrWorktreeDirty) {
+			return fmt.Errorf(
+				"agent %s has uncommitted changes in %s\n"+
+					"hint: commit or copy them out, or re-run with --force to discard them",
+				target.ID, target.WorkDir,
+			)
+		}
+		// Match prior CLI behavior: other artifact failures are surfaced as
 		// warnings but never block state removal.
 		warnf("%v", err)
 	}
@@ -69,13 +84,20 @@ func RemoveAgent(idOrName, socketPath string) error {
 // errors) so callers can decide whether to surface it; cleanup of the
 // remaining artifacts proceeds regardless.
 //
+// When force is false and the worktree holds uncommitted changes, the worktree
+// is kept and ErrWorktreeDirty is returned. The log file is left alone in that
+// case too, so the agent stays fully intact for a retry.
+//
 // Shared by `ax agent remove` and the dashboard's deletion flow.
-func RemoveAgentArtifacts(paths axfs.Paths, ag store.AgentState) error {
+func RemoveAgentArtifacts(paths axfs.Paths, ag store.AgentState, force bool) error {
 	var firstErr error
 	if ag.WorkDir != "" && IsUnderWorktreesDir(paths.WorktreesDir(), ag.WorkDir) {
 		cleanWorkDir := filepath.Clean(ag.WorkDir)
 		if _, err := os.Stat(cleanWorkDir); err == nil {
-			if err := RemoveWorktree(cleanWorkDir); err != nil {
+			if err := RemoveWorktree(cleanWorkDir, force); err != nil {
+				if errors.Is(err, ErrWorktreeDirty) {
+					return err
+				}
 				firstErr = fmt.Errorf("worktree remove %s: %w", cleanWorkDir, err)
 			}
 		}

@@ -19,6 +19,7 @@ const (
 	socketFile   = "ax.sock"
 	stateFile    = "state.json"
 	pidFile      = "daemon.pid"
+	lockFile     = "daemon.lock"
 	configFile   = "ax.yaml"
 	agentsDir    = "agents"
 	worktreesDir = "worktrees"
@@ -67,6 +68,10 @@ func (p Paths) StateFile() string { return filepath.Join(p.Dir, stateFile) }
 
 // PIDFile returns ~/.ax/daemon.pid.
 func (p Paths) PIDFile() string { return filepath.Join(p.Dir, pidFile) }
+
+// LockFile returns ~/.ax/daemon.lock, the advisory lock that guarantees at
+// most one daemon owns this data directory.
+func (p Paths) LockFile() string { return filepath.Join(p.Dir, lockFile) }
 
 // ConfigFile returns ~/.ax/ax.yaml.
 func (p Paths) ConfigFile() string { return filepath.Join(p.Dir, configFile) }
