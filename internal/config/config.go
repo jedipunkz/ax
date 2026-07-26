@@ -217,4 +217,3 @@ func (c *Config) Palette() ThemePalette {
 	}
 	return themes[DefaultTheme]
 }
-
