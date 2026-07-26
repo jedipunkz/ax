@@ -44,6 +44,11 @@ func sanitizeBranchName(name string) string {
 	s := b.String()
 	// Trim leading/trailing slashes and dots.
 	s = strings.Trim(s, "/.")
+	// git refuses refs beginning with "-", and every git command that receives
+	// the branch name would parse it as a flag. Dropping the dashes keeps a name
+	// like "-foo" usable instead of failing the whole session; a name made only
+	// of dashes becomes empty and the caller falls back to "ax/<agentID>".
+	s = strings.TrimLeft(s, "-")
 	return s
 }
 

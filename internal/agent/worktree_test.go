@@ -42,6 +42,29 @@ func TestWorktreeSetupErrorRefusesToRunInRepo(t *testing.T) {
 	}
 }
 
+func TestSanitizeBranchName(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"keeps a slashed branch name", "feat/Foo Bar", "feat/foo-bar"},
+		{"drops characters illegal in refs", "feat:foo?*bar", "featfoobar"},
+		{"trims surrounding slashes and dots", "/.feat/foo./", "feat/foo"},
+		{"drops a leading dash git would reject", "-foo", "foo"},
+		{"drops repeated leading dashes", "---feat/foo", "feat/foo"},
+		{"keeps inner dashes", "feat/foo-bar", "feat/foo-bar"},
+		{"empty when nothing usable remains", "--", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := sanitizeBranchName(tt.in); got != tt.want {
+				t.Errorf("sanitizeBranchName(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSetupWorktreeFailsOnRepoWithoutCommits(t *testing.T) {
 	// setupWorktree resolves paths from the home directory; point it at a
 	// throwaway one so the test never touches the real ~/.ax.
