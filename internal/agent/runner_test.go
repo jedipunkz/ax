@@ -14,7 +14,7 @@ func TestResumePrefixArgs(t *testing.T) {
 		agentType string
 		want      []string
 	}{
-		{"claude", []string{"--resume"}},
+		{"claude", []string{"--continue"}},
 		{"codex", []string{"resume", "--last"}},
 		{"opencode", []string{"--continue"}},
 		{"gemini", []string{"--resume", "latest"}}, // gemini v0.20.0+
@@ -55,7 +55,7 @@ func TestBuildResumeArgs(t *testing.T) {
 			name:      "claude with global flag after --",
 			agentType: "claude",
 			userArgs:  []string{"--", "--model", "opus"},
-			want:      []string{"--model", "opus", "--resume"},
+			want:      []string{"--model", "opus", "--continue"},
 		},
 		{
 			name:      "gemini preserves multi-token resume prefix",
