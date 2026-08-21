@@ -52,7 +52,7 @@ You can also pass agent-specific options after `--`:
 
 ```bash
 ax agent new -n feat/foo -- --model sonnet --dangerously-skip-permissions
-ax agent new -a codex -n feat/foo -- --approval-mode full-auto
+ax agent new -a codex -n feat/foo -- --sandbox workspace-write --ask-for-approval never
 ```
 
 ### Resume an agent
