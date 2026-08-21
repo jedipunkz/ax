@@ -20,14 +20,17 @@ func (d AgentDef) ResumeCommand() []string {
 
 // knownAgents is the registry of supported agent binaries.
 //
-// Each entry documents the agent's own session-continuation interface:
+// Each entry documents the agent's own session-continuation interface.
+// ax has already identified the session by ID or name before this point, and
+// every agent runs in its own worktree, so each entry resolves to the most
+// recent session in that directory rather than opening the agent's picker:
 //
-//	claude    --resume           (opens interactive session picker)
+//	claude    --continue         (most recent conversation in the cwd)
 //	gemini    --resume latest    (resumes most recent session; v0.20.0+)
-//	codex     resume --last
+//	codex     resume --last      (picker without --last)
 //	opencode  --continue
 var knownAgents = map[string]AgentDef{
-	"claude":   {ResumeArgs: []string{"--resume"}},
+	"claude":   {ResumeArgs: []string{"--continue"}},
 	"gemini":   {ResumeArgs: []string{"--resume", "latest"}},
 	"codex":    {ResumeArgs: []string{"resume", "--last"}},
 	"opencode": {ResumeArgs: []string{"--continue"}},
