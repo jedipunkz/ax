@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // diffChromeRows is the number of fixed frame lines around the diff

@@ -7,15 +7,15 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jedipunkz/ax/internal/axfs"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/agxfs"
+	"github.com/jedipunkz/agx/internal/store"
 	"github.com/spf13/cobra"
 )
 
 // errDaemonLocked reports that another daemon process already owns the data
 // directory. It is not a failure: the incumbent keeps serving on the existing
 // socket, so the newcomer exits quietly.
-var errDaemonLocked = errors.New("another ax daemon owns this data directory")
+var errDaemonLocked = errors.New("another agx daemon owns this data directory")
 
 // daemonLockWait bounds how long a starting daemon waits for a predecessor to
 // release the lock. ensureDaemon kills the old daemon and spawns the new one
@@ -28,7 +28,7 @@ var daemonCmd = &cobra.Command{
 	Short:  "Start the state manager daemon",
 	Hidden: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		paths, err := axfs.New()
+		paths, err := agxfs.New()
 		if err != nil {
 			return err
 		}

@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jedipunkz/ax/internal/store"
-	"github.com/jedipunkz/ax/internal/textutil"
+	"github.com/jedipunkz/agx/internal/store"
+	"github.com/jedipunkz/agx/internal/textutil"
 )
 
 // sessionMonitor owns the mutable state for an in-flight agent session
@@ -195,7 +195,7 @@ func forwardPTYOutput(ptmx io.Reader, logFile io.Writer, monitor *sessionMonitor
 }
 
 // forwardDaemonInput reads "input" messages forwarded by the daemon
-// (from `ax agent input` or future remote senders) and writes them to
+// (from `agx agent input` or future remote senders) and writes them to
 // the PTY. Returns on connection error so the parent's defer chain can
 // run normally.
 func forwardDaemonInput(client *store.Client, w io.Writer, agentID string) {

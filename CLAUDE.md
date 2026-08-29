@@ -31,14 +31,14 @@ After completing any implementation task, automatically perform the following st
 
 ## Data Compatibility
 
-The `~/.ax/` directory is the persistent data store for ax. All changes to its layout or schema must maintain backward compatibility with existing data.
+The `~/.agx/` directory is the persistent data store for agx. All changes to its layout or schema must maintain backward compatibility with existing data.
 
 ### Directory Layout
 
 ```
-~/.ax/
+~/.agx/
 ├── state.json          # JSON array of AgentState; the source of truth for all agents
-├── ax.sock             # Unix domain socket for daemon IPC
+├── agx.sock            # Unix domain socket for daemon IPC
 ├── daemon.pid          # Plain-text daemon PID
 ├── agents/
 │   └── <agent-id>/
@@ -53,7 +53,7 @@ Each element in the JSON array has the following fields:
 
 | Field | Type | JSON key | Notes |
 |---|---|---|---|
-| ID | string | `id` | Format: `ax-<unix-ts>-<4hex>` |
+| ID | string | `id` | Format: `agx-<unix-ts>-<4hex>` |
 | Name | string | `name` | Optional; omitted when empty |
 | AgentType | string | `agent_type` | Optional; agent binary name (e.g. `"claude"`, `"codex"`); defaults to `"claude"` when empty |
 | PID | int | `pid` | OS process ID |
@@ -72,12 +72,12 @@ Each element in the JSON array has the following fields:
 
 ### Compatibility Goal
 
-The bar for compatibility is simple: **if a user restores their `~/.ax/` data, `ax dash` should display their agents correctly.** As long as that holds, the implementation is compatible.
+The bar for compatibility is simple: **if a user restores their `~/.agx/` data, `agx dash` should display their agents correctly.** As long as that holds, the implementation is compatible.
 
 ### Rules
 
 - **Adding new fields to `AgentState` is always fine.** Use `omitempty` so that existing `state.json` files missing the field remain valid.
-- **Removing or renaming a field that `ax dash` depends on for display requires a migration** (see below).
+- **Removing or renaming a field that `agx dash` depends on for display requires a migration** (see below).
 - **Writes are atomic.** The daemon writes `state.json` via a `.tmp` + `os.Rename` pattern. Always preserve this to avoid corrupt reads.
 
 ### Migration

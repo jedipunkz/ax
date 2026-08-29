@@ -2,7 +2,7 @@ package tui
 
 import (
 	"charm.land/lipgloss/v2"
-	"github.com/jedipunkz/ax/internal/config"
+	"github.com/jedipunkz/agx/internal/config"
 )
 
 var (

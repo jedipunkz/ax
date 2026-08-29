@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 func TestStaleAgentResult(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/jedipunkz/ax/internal/textutil"
+	"github.com/jedipunkz/agx/internal/textutil"
 )
 
 // cleanLog strips ANSI codes, normalizes line endings, and keeps only

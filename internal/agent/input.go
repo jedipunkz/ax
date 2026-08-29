@@ -3,7 +3,7 @@ package agent
 import (
 	"fmt"
 
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // SendInput delivers data to the agent identified by idOrName via the daemon.

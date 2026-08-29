@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://jedipunkz.rocks/ax/sitemap-index.xml
+Sitemap: https://jedipunkz.rocks/agx/sitemap-index.xml

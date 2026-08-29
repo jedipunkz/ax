@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jedipunkz/ax/internal/axfs"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/agxfs"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // RemoveAgent removes the worktree, log file, and state entry for the agent
@@ -19,7 +19,7 @@ import (
 // is left completely untouched — including its state entry — so the user can
 // inspect or commit the work first.
 func RemoveAgent(idOrName, socketPath string, force bool) error {
-	paths, err := axfs.New()
+	paths, err := agxfs.New()
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func RemoveAgent(idOrName, socketPath string, force bool) error {
 	if err := RemoveAgentArtifacts(paths, target, force); err != nil {
 		// A dirty worktree is the one failure that must abort: dropping the
 		// state entry here would leave the worktree on disk with nothing in
-		// ax pointing at it, which is worse than not removing anything.
+		// agx pointing at it, which is worse than not removing anything.
 		if errors.Is(err, ErrWorktreeDirty) {
 			return fmt.Errorf(
 				"agent %s has uncommitted changes in %s\n"+
@@ -79,7 +79,7 @@ func RemoveAgent(idOrName, socketPath string, force bool) error {
 }
 
 // RemoveAgentArtifacts deletes the worktree (if it lives under
-// ~/.ax/worktrees/) and the log file/directory for the given agent.
+// ~/.agx/worktrees/) and the log file/directory for the given agent.
 // Returns the first failure (worktree errors take precedence over log
 // errors) so callers can decide whether to surface it; cleanup of the
 // remaining artifacts proceeds regardless.
@@ -88,8 +88,8 @@ func RemoveAgent(idOrName, socketPath string, force bool) error {
 // is kept and ErrWorktreeDirty is returned. The log file is left alone in that
 // case too, so the agent stays fully intact for a retry.
 //
-// Shared by `ax agent remove` and the dashboard's deletion flow.
-func RemoveAgentArtifacts(paths axfs.Paths, ag store.AgentState, force bool) error {
+// Shared by `agx agent remove` and the dashboard's deletion flow.
+func RemoveAgentArtifacts(paths agxfs.Paths, ag store.AgentState, force bool) error {
 	var firstErr error
 	if ag.WorkDir != "" && IsUnderWorktreesDir(paths.WorktreesDir(), ag.WorkDir) {
 		cleanWorkDir := filepath.Clean(ag.WorkDir)

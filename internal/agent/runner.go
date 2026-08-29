@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/creack/pty"
-	"github.com/jedipunkz/ax/internal/axfs"
-	"github.com/jedipunkz/ax/internal/store"
-	"github.com/jedipunkz/ax/internal/textutil"
+	"github.com/jedipunkz/agx/internal/agxfs"
+	"github.com/jedipunkz/agx/internal/store"
+	"github.com/jedipunkz/agx/internal/textutil"
 	"golang.org/x/term"
 )
 
@@ -69,7 +69,7 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 		if existing, err := findAgentByIDOrName(name); err == nil {
 			if existing.Status == store.StatusRunning {
 				return fmt.Errorf(
-					"agent %q is already running\nhint: use 'ax agent resume -n %s' to resume it",
+					"agent %q is already running\nhint: use 'agx agent resume -n %s' to resume it",
 					name, name,
 				)
 			}
@@ -110,7 +110,7 @@ func Run(args []string, socketPath string, name string, agentType string) error 
 }
 
 // worktreeSetupError explains why the session was aborted instead of falling
-// back to repoRoot. Isolation is the point of starting an agent through ax, and
+// back to repoRoot. Isolation is the point of starting an agent through agx, and
 // a warning printed here is immediately overwritten by the agent's full-screen
 // UI — so a silent fallback would leave an agent committing directly to the
 // branch the user is sitting on without them ever seeing why.
@@ -121,13 +121,13 @@ func worktreeSetupError(repoRoot string, err error) error {
 	if gitHeadCommit(repoRoot) == "" {
 		return fmt.Errorf(
 			"could not create an isolated worktree for %s: the repository has no commits yet\n"+
-				"hint: create an initial commit, then run 'ax agent new' again\nunderlying error: %w",
+				"hint: create an initial commit, then run 'agx agent new' again\nunderlying error: %w",
 			repoRoot, err,
 		)
 	}
 	return fmt.Errorf(
 		"could not create an isolated worktree for %s: %w\n"+
-			"ax will not run an agent directly in your repository; resolve the error above and retry",
+			"agx will not run an agent directly in your repository; resolve the error above and retry",
 		repoRoot, err,
 	)
 }
@@ -171,11 +171,11 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTy
 
 // buildResumeArgs assembles the final argv for resuming an agent session.
 //
-// User-supplied args (everything after `--` on the ax CLI) are placed BEFORE
+// User-supplied args (everything after `--` on the agx CLI) are placed BEFORE
 // the agent's resume tokens so they act as agent-level global flags rather
 // than as arguments to the resume subcommand. For example, with codex:
 //
-//	ax agent resume -a codex -n NAME -- -a never
+//	agx agent resume -a codex -n NAME -- -a never
 //	→ codex -a never resume --last        (correct: -a is codex's approval flag)
 //	NOT codex resume --last -- -a never  (wrong: codex parses -a as SESSION_ID)
 //
@@ -194,7 +194,7 @@ func buildResumeArgs(agentType string, userArgs []string) []string {
 // commit watcher, daemon input pump), and produces the terminal state
 // update before returning.
 func runSession(config sessionConfig) error {
-	paths, err := axfs.New()
+	paths, err := agxfs.New()
 	if err != nil {
 		return err
 	}
@@ -330,5 +330,5 @@ func generateID() string {
 	if _, err := rand.Read(b); err != nil {
 		b = []byte{0, 0}
 	}
-	return fmt.Sprintf("ax-%d-%s", ts, hex.EncodeToString(b))
+	return fmt.Sprintf("agx-%d-%s", ts, hex.EncodeToString(b))
 }

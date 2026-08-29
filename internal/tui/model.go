@@ -9,9 +9,9 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"github.com/jedipunkz/ax/internal/agent"
-	"github.com/jedipunkz/ax/internal/axfs"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/agent"
+	"github.com/jedipunkz/agx/internal/agxfs"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // ViewMode represents which view is active.
@@ -69,7 +69,7 @@ type removeDoneMsg struct {
 	dirty bool
 }
 
-// Model is the main bubbletea model for ax status.
+// Model is the main bubbletea model for agx status.
 type Model struct {
 	agents         []store.AgentState
 	cursor         int
@@ -191,13 +191,13 @@ func loadDiff(ag store.AgentState) tea.Cmd {
 // is not something a single "y" keypress should do.
 func removeAgentCmd(ag store.AgentState, client *store.Client) tea.Cmd {
 	return func() tea.Msg {
-		paths, err := axfs.New()
+		paths, err := agxfs.New()
 		if err != nil {
 			return removeDoneMsg{err: err}
 		}
 		if err := agent.RemoveAgentArtifacts(paths, ag, false); err != nil {
 			// Abort the whole removal: dropping the state entry would leave
-			// the worktree on disk with nothing in ax pointing at it.
+			// the worktree on disk with nothing in agx pointing at it.
 			if errors.Is(err, agent.ErrWorktreeDirty) {
 				return removeDoneMsg{dirty: true}
 			}

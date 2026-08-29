@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 
 	"charm.land/lipgloss/v2"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // recentThreshold returns the cutoff time for finished agents based on the configured duration in days.
@@ -162,7 +162,7 @@ func groupsByStatus(groups []AgentGroup) (running, success, killed []AgentGroup)
 }
 
 // Fixed column widths: cursor(2) id(24) sp(1) agent(8) sp(1) repo(12) sp(1) status(9) sp(1) ended(11)
-// ID format: "ax-{unix_minutes}-{4hex}" = 17 chars; name can be longer so give extra room
+// ID format: "agx-{unix_minutes}-{4hex}" = 17 chars; name can be longer so give extra room
 const (
 	idColWidth     = 24
 	agentColWidth  = 8

@@ -8,7 +8,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "ax",
+	Use:   "agx",
 	Short: "Manage multiple Claude Code agents",
 }
 

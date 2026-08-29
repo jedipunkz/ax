@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 func TestFuzzyMatch(t *testing.T) {
@@ -35,7 +35,7 @@ func TestFuzzyFilterGroups(t *testing.T) {
 	groups := []AgentGroup{
 		{Rep: store.AgentState{Name: "alpha"}},
 		{Rep: store.AgentState{Name: "beta"}},
-		{Rep: store.AgentState{ID: "ax-1-abcd"}},
+		{Rep: store.AgentState{ID: "agx-1-abcd"}},
 	}
 
 	if got := fuzzyFilterGroups(groups, ""); len(got) != 3 {
@@ -53,14 +53,14 @@ func TestFuzzyFilterGroups(t *testing.T) {
 }
 
 func TestGroupLabel(t *testing.T) {
-	withName := AgentGroup{Rep: store.AgentState{Name: "myname", ID: "ax-1-aaaa"}}
+	withName := AgentGroup{Rep: store.AgentState{Name: "myname", ID: "agx-1-aaaa"}}
 	if got := withName.groupLabel(); got != "myname" {
 		t.Errorf("groupLabel() with name = %q, want %q", got, "myname")
 	}
 
-	noName := AgentGroup{Rep: store.AgentState{ID: "ax-1-aaaa"}}
-	if got := noName.groupLabel(); got != "ax-1-aaaa" {
-		t.Errorf("groupLabel() without name = %q, want %q", got, "ax-1-aaaa")
+	noName := AgentGroup{Rep: store.AgentState{ID: "agx-1-aaaa"}}
+	if got := noName.groupLabel(); got != "agx-1-aaaa" {
+		t.Errorf("groupLabel() without name = %q, want %q", got, "agx-1-aaaa")
 	}
 }
 

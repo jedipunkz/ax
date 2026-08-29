@@ -7,7 +7,7 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // handleAgentMsg applies a snapshot / update / remove event from the
@@ -147,7 +147,7 @@ func (m Model) handleRemoveDone(msg removeDoneMsg, cmds []tea.Cmd) (Model, []tea
 	m.removingTarget = store.AgentState{}
 	switch {
 	case msg.dirty:
-		m.statusMsg = "kept: worktree has uncommitted changes — commit them, or discard with 'ax agent rm -f'"
+		m.statusMsg = "kept: worktree has uncommitted changes — commit them, or discard with 'agx agent rm -f'"
 		cmds = append(cmds, clearStatusAfter(5*time.Second))
 	case msg.err != nil:
 		m.statusMsg = fmt.Sprintf("remove error: %v", msg.err)

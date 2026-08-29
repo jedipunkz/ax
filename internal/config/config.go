@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jedipunkz/ax/internal/axfs"
+	"github.com/jedipunkz/agx/internal/agxfs"
 )
 
-// Config holds the ax configuration loaded from ~/.ax/ax.yaml.
+// Config holds the agx configuration loaded from ~/.agx/agx.yaml.
 type Config struct {
 	Theme              string
 	DurationDays       int
@@ -138,12 +138,12 @@ var themes = map[string]ThemePalette{
 // DefaultTheme is the theme used when none is specified.
 const DefaultTheme = "tokyonight"
 
-// Load reads ~/.ax/ax.yaml and returns a Config.
+// Load reads ~/.agx/agx.yaml and returns a Config.
 // Missing file or unknown keys are silently ignored; defaults apply.
 func Load() (*Config, error) {
 	cfg := &Config{Theme: DefaultTheme, DurationDays: DefaultDurationDays, RemoveDurationDays: DefaultRemoveDurationDays}
 
-	paths, err := axfs.New()
+	paths, err := agxfs.New()
 	if err != nil {
 		return cfg, nil
 	}
@@ -190,7 +190,7 @@ func Load() (*Config, error) {
 
 // parseScalar normalises one value from the config file.
 //
-// The file is named ax.yaml, so users write YAML: they quote strings and append
+// The file is named agx.yaml, so users write YAML: they quote strings and append
 // comments. This is a line parser rather than a YAML parser, and without this
 // step `theme: "catppuccin"` was stored with the quotes attached and then
 // silently fell back to the default theme — a config that looks correct and

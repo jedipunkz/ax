@@ -6,10 +6,10 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/jedipunkz/ax/internal/agent"
-	"github.com/jedipunkz/ax/internal/axfs"
-	"github.com/jedipunkz/ax/internal/config"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/agent"
+	"github.com/jedipunkz/agx/internal/agxfs"
+	"github.com/jedipunkz/agx/internal/config"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // Run connects to the store daemon, subscribes for updates, and starts the TUI.
@@ -52,7 +52,7 @@ func Run(socketPath string, cfg *config.Config) error {
 
 // runWorktreeCleanup runs worktree cleanup immediately and then every 24 hours.
 func runWorktreeCleanup(socketPath string, removeDurationDays int) {
-	paths, err := axfs.New()
+	paths, err := agxfs.New()
 	if err != nil {
 		return
 	}

@@ -1,7 +1,7 @@
-BINARY_NAME := ax
+BINARY_NAME := agx
 INSTALL_DIR := $(HOME)/.bin
 FISH_COMPLETION_DIR := $(HOME)/.config/fish/completions
-PID_FILE := $(HOME)/.ax/daemon.pid
+PID_FILE := $(HOME)/.agx/daemon.pid
 
 .PHONY: build install install-completions reinstall clean
 
@@ -14,7 +14,7 @@ install: build
 
 install-completions:
 	mkdir -p $(FISH_COMPLETION_DIR)
-	cp completions/ax.fish $(FISH_COMPLETION_DIR)/ax.fish
+	cp completions/agx.fish $(FISH_COMPLETION_DIR)/agx.fish
 
 reinstall: build
 	@if [ -f $(PID_FILE) ]; then \

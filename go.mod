@@ -1,4 +1,4 @@
-module github.com/jedipunkz/ax
+module github.com/jedipunkz/agx
 
 go 1.26
 

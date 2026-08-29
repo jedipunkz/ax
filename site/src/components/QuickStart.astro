@@ -2,32 +2,32 @@
 const steps = [
   {
     label: '1. Start in a repo',
-    cmd: 'cd /path/to/repo && ax agent new',
-    desc: 'ax detects the current git repository and creates an isolated worktree for the new agent.',
+    cmd: 'cd /path/to/repo && agx agent new',
+    desc: 'agx detects the current git repository and creates an isolated worktree for the new agent.',
   },
   {
     label: '2. Pick an agent',
-    cmd: 'ax agent new -a codex -n feat/foo',
+    cmd: 'agx agent new -a codex -n feat/foo',
     desc: 'Claude Code is the default; use -a for Codex, Gemini, or OpenCode and -n to name the branch.',
   },
   {
     label: '3. Watch the work',
-    cmd: 'ax dash',
+    cmd: 'agx dash',
     desc: 'Open the dashboard to inspect status, search sessions, copy worktree paths, and kill stuck agents.',
   },
   {
     label: '4. Follow logs',
-    cmd: 'ax agent logs -f -n <name|id>',
+    cmd: 'agx agent logs -f -n <name|id>',
     desc: 'Stream agent output from any terminal, or omit -f to dump the full stripped log.',
   },
   {
     label: '5. Wait or answer',
-    cmd: 'ax agent wait -n <name|id>',
-    desc: 'Block scripts until a session exits or pauses, then use ax agent input when it is waiting.',
+    cmd: 'agx agent wait -n <name|id>',
+    desc: 'Block scripts until a session exits or pauses, then use agx agent input when it is waiting.',
   },
   {
     label: '6. Resume or clean up',
-    cmd: 'ax agent resume -n feat/foo',
+    cmd: 'agx agent resume -n feat/foo',
     desc: 'Resume previous sessions, cd into their worktrees, list them, or remove finished work when done.',
   },
 ];
@@ -78,8 +78,8 @@ function highlight(cmd: string): string {
     </div>
 
     <p class="state-note">
-      Session state, logs, and worktrees live under <code>~/.ax/</code>.
-      Configure dashboard themes, finished-session retention, and automatic worktree cleanup in <code>~/.ax/ax.yaml</code>.
+      Session state, logs, and worktrees live under <code>~/.agx/</code>.
+      Configure dashboard themes, finished-session retention, and automatic worktree cleanup in <code>~/.agx/agx.yaml</code>.
     </p>
   </div>
 </section>

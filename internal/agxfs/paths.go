@@ -1,10 +1,10 @@
-// Package axfs centralizes filesystem layout under ~/.ax/.
+// Package agxfs centralizes filesystem layout under ~/.agx/.
 //
 // Every file in the project that needs to construct a path under the
-// user's ax data directory should go through this package so the layout
+// user's agx data directory should go through this package so the layout
 // has exactly one definition. Adding a new on-disk artifact means adding
 // one helper here.
-package axfs
+package agxfs
 
 import (
 	"fmt"
@@ -14,19 +14,19 @@ import (
 
 const (
 	// Root is the directory name under the user's home.
-	Root = ".ax"
+	Root = ".agx"
 
-	socketFile   = "ax.sock"
+	socketFile   = "agx.sock"
 	stateFile    = "state.json"
 	pidFile      = "daemon.pid"
 	lockFile     = "daemon.lock"
-	configFile   = "ax.yaml"
+	configFile   = "agx.yaml"
 	agentsDir    = "agents"
 	worktreesDir = "worktrees"
 	outputLog    = "output.log"
 )
 
-// Paths is a snapshot of the ax filesystem layout rooted at a specific
+// Paths is a snapshot of the agx filesystem layout rooted at a specific
 // home directory. Construct one with New (or NewForHome in tests) and
 // pass it around instead of recomputing paths everywhere.
 type Paths struct {
@@ -44,12 +44,12 @@ func New() (Paths, error) {
 }
 
 // NewForHome builds Paths rooted under the given home directory.
-// Tests can use this with t.TempDir() to avoid touching the real ~/.ax.
+// Tests can use this with t.TempDir() to avoid touching the real ~/.agx.
 func NewForHome(home string) Paths {
 	return Paths{Home: home, Dir: filepath.Join(home, Root)}
 }
 
-// EnsureDir creates ~/.ax (and any missing parents).
+// EnsureDir creates ~/.agx (and any missing parents).
 func (p Paths) EnsureDir() error {
 	if err := os.MkdirAll(p.Dir, 0700); err != nil {
 		return fmt.Errorf("could not create %s: %w", p.Dir, err)
@@ -60,36 +60,36 @@ func (p Paths) EnsureDir() error {
 	return nil
 }
 
-// Socket returns ~/.ax/ax.sock.
+// Socket returns ~/.agx/agx.sock.
 func (p Paths) Socket() string { return filepath.Join(p.Dir, socketFile) }
 
-// StateFile returns ~/.ax/state.json.
+// StateFile returns ~/.agx/state.json.
 func (p Paths) StateFile() string { return filepath.Join(p.Dir, stateFile) }
 
-// PIDFile returns ~/.ax/daemon.pid.
+// PIDFile returns ~/.agx/daemon.pid.
 func (p Paths) PIDFile() string { return filepath.Join(p.Dir, pidFile) }
 
-// LockFile returns ~/.ax/daemon.lock, the advisory lock that guarantees at
+// LockFile returns ~/.agx/daemon.lock, the advisory lock that guarantees at
 // most one daemon owns this data directory.
 func (p Paths) LockFile() string { return filepath.Join(p.Dir, lockFile) }
 
-// ConfigFile returns ~/.ax/ax.yaml.
+// ConfigFile returns ~/.agx/agx.yaml.
 func (p Paths) ConfigFile() string { return filepath.Join(p.Dir, configFile) }
 
-// AgentsDir returns ~/.ax/agents.
+// AgentsDir returns ~/.agx/agents.
 func (p Paths) AgentsDir() string { return filepath.Join(p.Dir, agentsDir) }
 
-// AgentDir returns ~/.ax/agents/<id>.
+// AgentDir returns ~/.agx/agents/<id>.
 func (p Paths) AgentDir(id string) string {
 	return filepath.Join(p.AgentsDir(), id)
 }
 
-// AgentLog returns ~/.ax/agents/<id>/output.log.
+// AgentLog returns ~/.agx/agents/<id>/output.log.
 func (p Paths) AgentLog(id string) string {
 	return filepath.Join(p.AgentDir(id), outputLog)
 }
 
-// WorktreesDir returns ~/.ax/worktrees.
+// WorktreesDir returns ~/.agx/worktrees.
 func (p Paths) WorktreesDir() string { return filepath.Join(p.Dir, worktreesDir) }
 
 // WorktreePath returns the canonical worktree path for an agent.
@@ -97,7 +97,7 @@ func (p Paths) WorktreePath(repoName, agentID string) string {
 	return filepath.Join(p.WorktreesDir(), repoName+"-"+agentID)
 }
 
-// Socket returns ~/.ax/ax.sock for the default home — a shortcut for
+// Socket returns ~/.agx/agx.sock for the default home — a shortcut for
 // the very common case of "I just need the socket path".
 func Socket() (string, error) {
 	p, err := New()

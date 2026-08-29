@@ -21,7 +21,7 @@ func (d AgentDef) ResumeCommand() []string {
 // knownAgents is the registry of supported agent binaries.
 //
 // Each entry documents the agent's own session-continuation interface.
-// ax has already identified the session by ID or name before this point, and
+// agx has already identified the session by ID or name before this point, and
 // every agent runs in its own worktree, so each entry resolves to the most
 // recent session in that directory rather than opening the agent's picker:
 //

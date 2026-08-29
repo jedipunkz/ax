@@ -6,15 +6,15 @@ interface Props {
 
 const {
   title,
-  description = 'ax is a CLI that runs Claude Code, Codex CLI, Gemini CLI, and OpenCode agents in parallel git worktrees, with a terminal dashboard to monitor, resume, and inspect every session.',
+  description = 'agx is a CLI that runs Claude Code, Codex CLI, Gemini CLI, and OpenCode agents in parallel git worktrees, with a terminal dashboard to monitor, resume, and inspect every session.',
 } = Astro.props;
 const base = import.meta.env.BASE_URL;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site).toString();
 const ogImageURL = new URL(`${base}og.png`, Astro.site).toString();
-const ogImageAlt = 'ax terminal dashboard managing multiple AI coding agents across parallel git worktrees';
+const ogImageAlt = 'agx terminal dashboard managing multiple AI coding agents across parallel git worktrees';
 const keywords =
-  'ax, AI coding agent, AI agent orchestrator, Claude Code, Codex CLI, Gemini CLI, OpenCode, parallel agents, git worktree, terminal dashboard, CLI, developer tools, agent manager, coding agents';
-const repoURL = 'https://github.com/jedipunkz/ax';
+  'agx, AI coding agent, AI agent orchestrator, Claude Code, Codex CLI, Gemini CLI, OpenCode, parallel agents, git worktree, terminal dashboard, CLI, developer tools, agent manager, coding agents';
+const repoURL = 'https://github.com/jedipunkz/agx';
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -22,7 +22,7 @@ const jsonLd = {
     {
       '@type': 'SoftwareApplication',
       '@id': `${canonicalURL}#software`,
-      name: 'ax',
+      name: 'agx',
       description,
       url: canonicalURL,
       applicationCategory: 'DeveloperApplication',
@@ -48,7 +48,7 @@ const jsonLd = {
     {
       '@type': 'WebSite',
       '@id': `${canonicalURL}#website`,
-      name: 'ax',
+      name: 'agx',
       url: canonicalURL,
       description,
       inLanguage: 'en',
@@ -74,14 +74,14 @@ const jsonLd = {
     <meta name="description" content={description} />
     <meta name="keywords" content={keywords} />
     <meta name="author" content="jedipunkz" />
-    <meta name="application-name" content="ax" />
-    <meta name="apple-mobile-web-app-title" content="ax" />
+    <meta name="application-name" content="agx" />
+    <meta name="apple-mobile-web-app-title" content="agx" />
     <meta name="generator" content={Astro.generator} />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <link rel="canonical" href={canonicalURL} />
     <link rel="preconnect" href="https://jedipunkz.rocks" crossorigin />
-    <meta property="og:site_name" content="ax" />
+    <meta property="og:site_name" content="agx" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />

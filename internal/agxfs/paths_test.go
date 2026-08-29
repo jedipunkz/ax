@@ -1,4 +1,4 @@
-package axfs
+package agxfs
 
 import (
 	"path/filepath"
@@ -9,14 +9,14 @@ func TestPathsLayout(t *testing.T) {
 	p := NewForHome("/home/u")
 
 	want := map[string]string{
-		"Dir":          "/home/u/.ax",
-		"Socket":       "/home/u/.ax/ax.sock",
-		"StateFile":    "/home/u/.ax/state.json",
-		"PIDFile":      "/home/u/.ax/daemon.pid",
-		"LockFile":     "/home/u/.ax/daemon.lock",
-		"ConfigFile":   "/home/u/.ax/ax.yaml",
-		"AgentsDir":    "/home/u/.ax/agents",
-		"WorktreesDir": "/home/u/.ax/worktrees",
+		"Dir":          "/home/u/.agx",
+		"Socket":       "/home/u/.agx/agx.sock",
+		"StateFile":    "/home/u/.agx/state.json",
+		"PIDFile":      "/home/u/.agx/daemon.pid",
+		"LockFile":     "/home/u/.agx/daemon.lock",
+		"ConfigFile":   "/home/u/.agx/agx.yaml",
+		"AgentsDir":    "/home/u/.agx/agents",
+		"WorktreesDir": "/home/u/.agx/worktrees",
 	}
 	got := map[string]string{
 		"Dir":          p.Dir,
@@ -37,13 +37,13 @@ func TestPathsLayout(t *testing.T) {
 
 func TestAgentPaths(t *testing.T) {
 	p := NewForHome("/h")
-	if got := p.AgentDir("ax-123"); got != filepath.Join("/h/.ax/agents/ax-123") {
+	if got := p.AgentDir("agx-123"); got != filepath.Join("/h/.agx/agents/agx-123") {
 		t.Errorf("AgentDir = %q", got)
 	}
-	if got := p.AgentLog("ax-123"); got != filepath.Join("/h/.ax/agents/ax-123/output.log") {
+	if got := p.AgentLog("agx-123"); got != filepath.Join("/h/.agx/agents/agx-123/output.log") {
 		t.Errorf("AgentLog = %q", got)
 	}
-	if got := p.WorktreePath("repo", "ax-123"); got != filepath.Join("/h/.ax/worktrees/repo-ax-123") {
+	if got := p.WorktreePath("repo", "agx-123"); got != filepath.Join("/h/.agx/worktrees/repo-agx-123") {
 		t.Errorf("WorktreePath = %q", got)
 	}
 }

@@ -99,8 +99,8 @@ func TestHandleMetrics(t *testing.T) {
 	startedAt := time.Now().Add(-10 * time.Second)
 	mgr := &manager{
 		agents: map[string]AgentState{
-			"ax-test": {
-				ID:        "ax-test",
+			"agx-test": {
+				ID:        "agx-test",
 				StartedAt: startedAt,
 				LogFile:   logPath,
 				Commits:   []string{"a", "b"},
@@ -109,14 +109,14 @@ func TestHandleMetrics(t *testing.T) {
 	}
 	sub := newSubscriber(nil, nil)
 
-	mgr.handleMetrics(sub, Message{Type: "metrics", AgentID: "ax-test"})
+	mgr.handleMetrics(sub, Message{Type: "metrics", AgentID: "agx-test"})
 
 	got := <-sub.sendCh
 	if got.Type != "metrics_result" {
 		t.Fatalf("response type = %q, want metrics_result", got.Type)
 	}
-	if got.AgentID != "ax-test" {
-		t.Fatalf("agent id = %q, want ax-test", got.AgentID)
+	if got.AgentID != "agx-test" {
+		t.Fatalf("agent id = %q, want agx-test", got.AgentID)
 	}
 	if got.CommitCount != 2 {
 		t.Fatalf("commit count = %d, want 2", got.CommitCount)
