@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 func TestResumePrefixArgs(t *testing.T) {
@@ -119,11 +119,11 @@ func TestAgentDefResumeCommandReturnsCopy(t *testing.T) {
 func TestSessionConfigInitialState(t *testing.T) {
 	config := sessionConfig{
 		args:           []string{"--model", "fast"},
-		id:             "ax-1234",
+		id:             "agx-1234",
 		name:           "feature/refactor",
 		agentType:      "codex",
 		workDir:        "/work/repo",
-		worktreeBranch: "ax/ax-1234",
+		worktreeBranch: "agx/agx-1234",
 		repoName:       "repo",
 	}
 
@@ -182,8 +182,8 @@ func TestLastMeaningfulLine(t *testing.T) {
 
 func TestGenerateID(t *testing.T) {
 	id := generateID()
-	if !strings.HasPrefix(id, "ax-") {
-		t.Errorf("generateID() = %q, want ax- prefix", id)
+	if !strings.HasPrefix(id, "agx-") {
+		t.Errorf("generateID() = %q, want agx- prefix", id)
 	}
 	parts := strings.Split(id, "-")
 	if len(parts) != 3 {

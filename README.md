@@ -1,11 +1,11 @@
-# ax - agent cross
+# agx - agent cross
 
 <p align="center">
-  <img src="site/public/icon.png" alt="ax official icon" width="160" height="160">
+  <img src="site/public/icon.png" alt="agx official icon" width="160" height="160">
 </p>
 
-[![CI](https://github.com/jedipunkz/ax/actions/workflows/ci.yml/badge.svg)](https://github.com/jedipunkz/ax/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/jedipunkz/ax)](https://goreportcard.com/report/github.com/jedipunkz/ax)
+[![CI](https://github.com/jedipunkz/agx/actions/workflows/ci.yml/badge.svg)](https://github.com/jedipunkz/agx/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jedipunkz/agx)](https://goreportcard.com/report/github.com/jedipunkz/agx)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Go version](https://img.shields.io/badge/go-1.25-blue)
 
@@ -18,41 +18,41 @@ Supported agents: [Claude Code](https://claude.ai/code), [Codex CLI](https://git
 ### Homebrew (macOS / Linux)
 
 ```bash
-brew tap jedipunkz/ax && brew install ax
+brew tap jedipunkz/agx && brew install agx
 ```
 
 ## Usage
 
 ### Start an agent
 
-`cd` into your git repository before running `ax agent new`. ax uses the current directory to detect the git repo and automatically creates an isolated worktree for the agent.
+`cd` into your git repository before running `agx agent new`. agx uses the current directory to detect the git repo and automatically creates an isolated worktree for the agent.
 
 ```bash
 cd /path/to/your/repo
-ax agent new
+agx agent new
 ```
 
-By default ax uses Claude Code. Use `-a` to choose a different agent:
+By default agx uses Claude Code. Use `-a` to choose a different agent:
 
 ```bash
-ax agent new -a claude      # Claude Code (default)
-ax agent new -a codex       # OpenAI Codex CLI
-ax agent new -a gemini      # Gemini CLI
-ax agent new -a opencode    # OpenCode
+agx agent new -a claude      # Claude Code (default)
+agx agent new -a codex       # OpenAI Codex CLI
+agx agent new -a gemini      # Gemini CLI
+agx agent new -a opencode    # OpenCode
 ```
 
 You can optionally give the agent a name(branch name):
 
 ```bash
-ax agent new -n feat/foo
-ax agent new -a codex -n feat/foo
+agx agent new -n feat/foo
+agx agent new -a codex -n feat/foo
 ```
 
 You can also pass agent-specific options after `--`:
 
 ```bash
-ax agent new -n feat/foo -- --model sonnet --dangerously-skip-permissions
-ax agent new -a codex -n feat/foo -- --sandbox workspace-write --ask-for-approval never
+agx agent new -n feat/foo -- --model sonnet --dangerously-skip-permissions
+agx agent new -a codex -n feat/foo -- --sandbox workspace-write --ask-for-approval never
 ```
 
 ### Resume an agent
@@ -60,7 +60,7 @@ ax agent new -a codex -n feat/foo -- --sandbox workspace-write --ask-for-approva
 To resume a previous session by ID or name:
 
 ```bash
-ax agent resume -a gemini -n feat/foo
+agx agent resume -a gemini -n feat/foo
 ```
 
 ### Change to an agent's worktree
@@ -68,7 +68,7 @@ ax agent resume -a gemini -n feat/foo
 To open a new shell in the agent's worktree directory:
 
 ```bash
-ax agent cd -n <name|id>
+agx agent cd -n <name|id>
 ```
 
 
@@ -77,13 +77,13 @@ ax agent cd -n <name|id>
 Dump the full output log with ANSI escapes stripped:
 
 ```bash
-ax agent logs -n <name|id>
+agx agent logs -n <name|id>
 ```
 
 Follow new output in real time (the daemon streams it from any terminal). Press Ctrl-C to stop following:
 
 ```bash
-ax agent logs -f -n <name|id>
+agx agent logs -f -n <name|id>
 ```
 
 ### Wait for an agent to finish or pause
@@ -91,7 +91,7 @@ ax agent logs -f -n <name|id>
 Block until the agent reaches a terminal state or pauses at a prompt. Terminal states exit with the agent's own exit code (`130` for killed agents); a paused `waiting` agent exits with `0`. Useful for shell pipelines and follow-up commands:
 
 ```bash
-ax agent wait -n <name|id> && ./deploy.sh
+agx agent wait -n <name|id> && ./deploy.sh
 ```
 
 ### Send input to a waiting agent
@@ -99,7 +99,7 @@ ax agent wait -n <name|id> && ./deploy.sh
 When an agent is paused at a prompt (`waiting` status), you can answer it from any terminal without returning to the runner's session:
 
 ```bash
-ax agent input -n <name|id> "y\n"
+agx agent input -n <name|id> "y\n"
 ```
 
 Input is only accepted while the agent is actually waiting for user input; the daemon rejects requests sent during active processing to avoid interleaving with local keystrokes.
@@ -109,7 +109,7 @@ Input is only accepted while the agent is actually waiting for user input; the d
 To list all agents with their ID, name, repo, ended time, and worktree directory:
 
 ```bash
-ax agent list   # or: ax agent ls
+agx agent list   # or: agx agent ls
 ```
 
 ### Remove an agent
@@ -117,7 +117,7 @@ ax agent list   # or: ax agent ls
 To remove a terminated agent's worktree, log file, and state entry:
 
 ```bash
-ax agent remove -n <name|id>   # or: ax agent rm -n <id|name>
+agx agent remove -n <name|id>   # or: agx agent rm -n <id|name>
 ```
 
 If the agent's worktree still has uncommitted changes or untracked files, the
@@ -125,14 +125,14 @@ removal is refused and nothing is deleted. Commit the work (its branch is kept
 either way) or discard it explicitly:
 
 ```bash
-ax agent rm -f -n <name|id>
+agx agent rm -f -n <name|id>
 ```
 
 
 ### Open the dashboard
 
 ```bash
-ax dash
+agx dash
 ```
 
 ### Key bindings
@@ -185,22 +185,22 @@ Finished agents are visible for the configured duration after exit (default: 7 d
 ## Runtime files
 
 ```
-~/.ax/
-├── ax.yaml               # Configuration (Optional)
-├── ax.sock               # Unix domain socket (daemon IPC)
+~/.agx/
+├── agx.yaml              # Configuration (Optional)
+├── agx.sock              # Unix domain socket (daemon IPC)
 ├── state.json            # Agent state snapshot
 ├── agents/
 │   └── <id>/
 │       └── output.log    # Agent output log for each session
 └── worktrees/
-    └── <repo>-<id>/      # Git worktree per agent (branch: ax/<id>)
+    └── <repo>-<id>/      # Git worktree per agent (branch: agx/<id>)
 ```
 
-When `ax agent` is run inside a git repository, a dedicated worktree is automatically created at `~/.ax/worktrees/<repo>-<id>/` on a new branch `ax/<id>` branched from `HEAD`. The agent runs inside this isolated worktree so each agent's changes stay separate from the main working tree.
+When `agx agent` is run inside a git repository, a dedicated worktree is automatically created at `~/.agx/worktrees/<repo>-<id>/` on a new branch `agx/<id>` branched from `HEAD`. The agent runs inside this isolated worktree so each agent's changes stay separate from the main working tree.
 
 ## Configuration (Optional)
 
-ax can be configured via `~/.ax/ax.yaml`.
+agx can be configured via `~/.agx/agx.yaml`.
 
 ### Color theme
 
@@ -220,13 +220,13 @@ duration_days: 7d
 
 ### Automatic worktree cleanup
 
-When `ax dash` is running, it automatically removes old git worktrees in the background. Set the `remove_duration_days` key to control how many days after an agent finishes before its worktree is deleted. The value must be a positive integer followed by `d` (e.g. `7d`, `30d`, `90d`). Default is `30d`.
+When `agx dash` is running, it automatically removes old git worktrees in the background. Set the `remove_duration_days` key to control how many days after an agent finishes before its worktree is deleted. The value must be a positive integer followed by `d` (e.g. `7d`, `30d`, `90d`). Default is `30d`.
 
 ```yaml
 remove_duration_days: 30d
 ```
 
-Cleanup runs once when the dashboard starts and then every 24 hours. Only worktrees under `~/.ax/worktrees/` belonging to finished agents (success/failed/killed) older than the configured threshold are removed.
+Cleanup runs once when the dashboard starts and then every 24 hours. Only worktrees under `~/.agx/worktrees/` belonging to finished agents (success/failed/killed) older than the configured threshold are removed.
 
 ## License
 

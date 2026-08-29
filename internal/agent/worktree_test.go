@@ -38,7 +38,7 @@ func TestWorktreeSetupErrorRefusesToRunInRepo(t *testing.T) {
 		t.Errorf("worktreeSetupError() = %q, want the underlying git error preserved", err)
 	}
 	if !strings.Contains(err.Error(), "will not run an agent directly in your repository") {
-		t.Errorf("worktreeSetupError() = %q, want it to state that ax refuses to fall back", err)
+		t.Errorf("worktreeSetupError() = %q, want it to state that agx refuses to fall back", err)
 	}
 }
 
@@ -67,7 +67,7 @@ func TestSanitizeBranchName(t *testing.T) {
 
 func TestSetupWorktreeFailsOnRepoWithoutCommits(t *testing.T) {
 	// setupWorktree resolves paths from the home directory; point it at a
-	// throwaway one so the test never touches the real ~/.ax.
+	// throwaway one so the test never touches the real ~/.agx.
 	t.Setenv("HOME", t.TempDir())
 
 	dir := t.TempDir()
@@ -79,7 +79,7 @@ func TestSetupWorktreeFailsOnRepoWithoutCommits(t *testing.T) {
 
 	// Regression guard for the silent fallback: Run must have an error to
 	// propagate here rather than quietly reusing the user's own working tree.
-	if _, _, err := setupWorktree("ax-1-abcd", dir, ""); err == nil {
+	if _, _, err := setupWorktree("agx-1-abcd", dir, ""); err == nil {
 		t.Fatal("setupWorktree() on a repo with no commits = nil error, want failure")
 	}
 }

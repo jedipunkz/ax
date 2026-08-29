@@ -68,7 +68,7 @@ export const GET: APIRoute = async () => {
                             lineHeight: 1,
                             letterSpacing: '-4px',
                           },
-                          children: 'ax',
+                          children: 'agx',
                         },
                       },
                       {
@@ -98,7 +98,7 @@ export const GET: APIRoute = async () => {
                       fontWeight: 400,
                       color: '#6c7086',
                     },
-                    children: 'github.com/jedipunkz/ax',
+                    children: 'github.com/jedipunkz/agx',
                   },
                 },
               ],

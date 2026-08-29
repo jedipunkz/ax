@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // IsUnderWorktreesDir reports whether workDir lives under worktreesDir.
@@ -78,7 +78,7 @@ func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int,
 		if a.WorkDir == "" {
 			continue
 		}
-		// Only remove directories that live under ~/.ax/worktrees/ to avoid
+		// Only remove directories that live under ~/.agx/worktrees/ to avoid
 		// accidentally deleting the user's actual working directories.
 		if !IsUnderWorktreesDir(worktreesDir, a.WorkDir) {
 			continue
@@ -127,7 +127,7 @@ var ErrWorktreeDirty = errors.New("worktree has uncommitted changes")
 //
 // A path that is not a readable git worktree counts as clean: there is nothing
 // identifiable to preserve, and callers already restrict removal to paths under
-// ~/.ax/worktrees/.
+// ~/.agx/worktrees/.
 func WorktreeIsDirty(worktreePath string) bool {
 	c := exec.Command("git", "status", "--porcelain")
 	c.Dir = worktreePath

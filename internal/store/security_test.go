@@ -14,12 +14,12 @@ func TestUnauthenticatedSocketClientCannotInjectArbitraryLogPath(t *testing.T) {
 	// Use a short prefix in the system temp dir instead of t.TempDir(), whose
 	// generated path embeds the long test name and can exceed the platform
 	// Unix-socket path length limit (~104 bytes on macOS).
-	dir, err := os.MkdirTemp("", "ax")
+	dir, err := os.MkdirTemp("", "agx")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
-	socketPath := filepath.Join(dir, "ax.sock")
+	socketPath := filepath.Join(dir, "agx.sock")
 	statePath := filepath.Join(dir, "state.json")
 	victimPath := filepath.Join(dir, "victim.txt")
 	victimContent := "non-secret proof content\n"

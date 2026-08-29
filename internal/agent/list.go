@@ -7,13 +7,13 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/jedipunkz/ax/internal/axfs"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/agxfs"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // ListWorktrees prints all agents with their name/id, repo, ended time, and directory name.
 func ListWorktrees() error {
-	paths, err := axfs.New()
+	paths, err := agxfs.New()
 	if err != nil {
 		return err
 	}

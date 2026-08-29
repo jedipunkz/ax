@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/jedipunkz/ax/internal/config"
-	"github.com/jedipunkz/ax/internal/tui"
+	"github.com/jedipunkz/agx/internal/config"
+	"github.com/jedipunkz/agx/internal/tui"
 	"github.com/spf13/cobra"
 )
 

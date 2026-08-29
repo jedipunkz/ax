@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jedipunkz/ax/internal/store"
-	"github.com/jedipunkz/ax/internal/textutil"
+	"github.com/jedipunkz/agx/internal/store"
+	"github.com/jedipunkz/agx/internal/textutil"
 )
 
 const sampleDiff = `diff --git a/main.go b/main.go
@@ -60,7 +60,7 @@ func TestOpenDiffViewAndLoad(t *testing.T) {
 	m := newModel(&store.Client{}, "", nil, 7)
 	m.width, m.height = 100, 30
 	m.agents = []store.AgentState{{
-		ID:        "ax-1",
+		ID:        "agx-1",
 		Status:    store.StatusRunning,
 		WorkDir:   "/tmp/x",
 		StartedAt: time.Now(),
@@ -70,14 +70,14 @@ func TestOpenDiffViewAndLoad(t *testing.T) {
 	if m2.view != viewDiff {
 		t.Fatalf("view = %v, want viewDiff", m2.view)
 	}
-	if m2.diffAgentID != "ax-1" {
-		t.Errorf("diffAgentID = %q, want ax-1", m2.diffAgentID)
+	if m2.diffAgentID != "agx-1" {
+		t.Errorf("diffAgentID = %q, want agx-1", m2.diffAgentID)
 	}
 	if len(cmds) == 0 {
 		t.Error("expected a loadDiff command to be scheduled")
 	}
 
-	m3, _ := m2.handleDiffLoaded(diffLoadedMsg{agentID: "ax-1", content: sampleDiff}, nil)
+	m3, _ := m2.handleDiffLoaded(diffLoadedMsg{agentID: "agx-1", content: sampleDiff}, nil)
 	if !m3.diffLoaded {
 		t.Error("diffLoaded should be true after load")
 	}
@@ -104,7 +104,7 @@ func TestPollDiffOnlyWhileRunning(t *testing.T) {
 	now := time.Now()
 	m.now = now
 	m.agents = []store.AgentState{{
-		ID:        "ax-1",
+		ID:        "agx-1",
 		Status:    store.StatusRunning,
 		WorkDir:   "/tmp/x",
 		StartedAt: now,
@@ -132,7 +132,7 @@ func TestPollDiffFinalReloadAfterFinish(t *testing.T) {
 	now := time.Now()
 	m.now = now
 	m.agents = []store.AgentState{{
-		ID:        "ax-1",
+		ID:        "agx-1",
 		Status:    store.StatusRunning,
 		WorkDir:   "/tmp/x",
 		StartedAt: now,
@@ -156,14 +156,14 @@ func TestDiffLoadErrorShownInViewport(t *testing.T) {
 	m := newModel(&store.Client{}, "", nil, 7)
 	m.width, m.height = 100, 30
 	m.agents = []store.AgentState{{
-		ID:        "ax-1",
+		ID:        "agx-1",
 		Status:    store.StatusRunning,
 		WorkDir:   "/tmp/x",
 		StartedAt: time.Now(),
 	}}
 	m, _ = m.openDiffView(nil)
 
-	m, _ = m.handleDiffLoaded(diffLoadedMsg{agentID: "ax-1", err: "boom"}, nil)
+	m, _ = m.handleDiffLoaded(diffLoadedMsg{agentID: "agx-1", err: "boom"}, nil)
 	if m.diffErr != "boom" {
 		t.Fatalf("diffErr = %q, want boom", m.diffErr)
 	}
@@ -172,7 +172,7 @@ func TestDiffLoadErrorShownInViewport(t *testing.T) {
 	}
 
 	// A successful reload clears the error placeholder.
-	m, _ = m.handleDiffLoaded(diffLoadedMsg{agentID: "ax-1", content: sampleDiff}, nil)
+	m, _ = m.handleDiffLoaded(diffLoadedMsg{agentID: "agx-1", content: sampleDiff}, nil)
 	if m.diffErr != "" {
 		t.Errorf("diffErr should be cleared, got %q", m.diffErr)
 	}

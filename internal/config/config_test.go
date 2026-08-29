@@ -44,8 +44,8 @@ func TestLoadParsesFile(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
-	axDir := filepath.Join(home, ".ax")
-	if err := os.MkdirAll(axDir, 0o755); err != nil {
+	agxDir := filepath.Join(home, ".agx")
+	if err := os.MkdirAll(agxDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	content := "" +
@@ -54,7 +54,7 @@ func TestLoadParsesFile(t *testing.T) {
 		"duration_days: 14d\n" +
 		"remove_duration_days: 60\n" +
 		"unknown_key: ignored\n"
-	if err := os.WriteFile(filepath.Join(axDir, "ax.yaml"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(agxDir, "agx.yaml"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -135,11 +135,11 @@ func TestLoadAcceptsQuotedAndCommentedValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			home := t.TempDir()
 			t.Setenv("HOME", home)
-			axDir := filepath.Join(home, ".ax")
-			if err := os.MkdirAll(axDir, 0o755); err != nil {
+			agxDir := filepath.Join(home, ".agx")
+			if err := os.MkdirAll(agxDir, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(axDir, "ax.yaml"), []byte(tt.body), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(agxDir, "agx.yaml"), []byte(tt.body), 0o644); err != nil {
 				t.Fatal(err)
 			}
 
@@ -167,13 +167,13 @@ func TestLoadIgnoresInvalidValues(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
-	axDir := filepath.Join(home, ".ax")
-	if err := os.MkdirAll(axDir, 0o755); err != nil {
+	agxDir := filepath.Join(home, ".agx")
+	if err := os.MkdirAll(agxDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	// Non-numeric and non-positive values must be ignored, keeping defaults.
 	content := "duration_days: abc\nremove_duration_days: 0\n"
-	if err := os.WriteFile(filepath.Join(axDir, "ax.yaml"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(agxDir, "agx.yaml"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

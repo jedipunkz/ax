@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jedipunkz/ax/internal/axfs"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/agxfs"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // FindAgent locates an agent in the given slice using the following
@@ -80,7 +80,7 @@ func pickMostRecent(agents []store.AgentState, pred func(store.AgentState) bool)
 // findAgentByIDOrName reads state.json and returns the first match for
 // idOrName using FindAgent's priority order.
 func findAgentByIDOrName(idOrName string) (store.AgentState, error) {
-	paths, err := axfs.New()
+	paths, err := agxfs.New()
 	if err != nil {
 		return store.AgentState{}, err
 	}

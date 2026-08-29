@@ -6,21 +6,21 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jedipunkz/ax/internal/axfs"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/agxfs"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
-// newWorktreeUnder creates a real linked worktree under home/.ax/worktrees so
+// newWorktreeUnder creates a real linked worktree under home/.agx/worktrees so
 // the removal path exercises git, not just os.RemoveAll.
-func newWorktreeUnder(t *testing.T, home string) (paths axfs.Paths, worktree string) {
+func newWorktreeUnder(t *testing.T, home string) (paths agxfs.Paths, worktree string) {
 	t.Helper()
 	repo := initDiffTestRepo(t)
-	paths = axfs.NewForHome(home)
-	worktree = paths.WorktreePath("repo", "ax-1-aaaa")
+	paths = agxfs.NewForHome(home)
+	worktree = paths.WorktreePath("repo", "agx-1-aaaa")
 	if err := os.MkdirAll(paths.WorktreesDir(), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	gitInDir(t, repo, "worktree", "add", "-q", "-b", "ax/test", worktree, "HEAD")
+	gitInDir(t, repo, "worktree", "add", "-q", "-b", "agx/test", worktree, "HEAD")
 	return paths, worktree
 }
 
@@ -68,7 +68,7 @@ func TestRemoveAgentArtifactsKeepsLogWhenWorktreeIsDirty(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	logPath := paths.AgentLog("ax-1-aaaa")
+	logPath := paths.AgentLog("agx-1-aaaa")
 	if err := os.MkdirAll(filepath.Dir(logPath), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestRemoveAgentArtifactsKeepsLogWhenWorktreeIsDirty(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ag := store.AgentState{ID: "ax-1-aaaa", WorkDir: worktree, LogFile: logPath}
+	ag := store.AgentState{ID: "agx-1-aaaa", WorkDir: worktree, LogFile: logPath}
 
 	err := RemoveAgentArtifacts(paths, ag, false)
 	if !errors.Is(err, ErrWorktreeDirty) {

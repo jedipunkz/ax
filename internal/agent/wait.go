@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jedipunkz/ax/internal/axfs"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/agxfs"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 // WaitResult reports how the wait ended. ExitCode is what the caller should
@@ -126,7 +126,7 @@ func staleAgentResult(a store.AgentState) store.AgentState {
 }
 
 func findAgentByExactID(id string) (store.AgentState, error) {
-	paths, err := axfs.New()
+	paths, err := agxfs.New()
 	if err != nil {
 		return store.AgentState{}, err
 	}

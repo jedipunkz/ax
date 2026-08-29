@@ -10,8 +10,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/jedipunkz/ax/internal/store"
-	"github.com/jedipunkz/ax/internal/textutil"
+	"github.com/jedipunkz/agx/internal/store"
+	"github.com/jedipunkz/agx/internal/textutil"
 	"golang.org/x/term"
 )
 
@@ -21,7 +21,7 @@ var signalExitCleanup = struct {
 	fn func()
 }{}
 
-// StreamLogs implements `ax agent logs [-f] -n <id|name>`.
+// StreamLogs implements `agx agent logs [-f] -n <id|name>`.
 //
 // Without follow: dumps the agent's log file with ANSI escapes stripped.
 // With follow: dumps the existing log, then keeps streaming new output from

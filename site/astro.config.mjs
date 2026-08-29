@@ -3,7 +3,7 @@ import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
   site: 'https://jedipunkz.rocks',
-  base: '/ax/',
+  base: '/agx/',
   output: 'static',
   integrations: [sitemap()],
   vite: {

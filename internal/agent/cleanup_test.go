@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/store"
 )
 
 func TestCleanupOldWorktreesClearsRemovedWorktreeState(t *testing.T) {
@@ -31,21 +31,21 @@ func TestCleanupOldWorktreesClearsRemovedWorktreeState(t *testing.T) {
 		{
 			ID:             "old",
 			WorkDir:        oldWorktree,
-			WorktreeBranch: "ax/old",
+			WorktreeBranch: "agx/old",
 			Status:         store.StatusSuccess,
 			FinishedAt:     &oldFinished,
 		},
 		{
 			ID:             "recent",
 			WorkDir:        recentWorktree,
-			WorktreeBranch: "ax/recent",
+			WorktreeBranch: "agx/recent",
 			Status:         store.StatusSuccess,
 			FinishedAt:     &recentFinished,
 		},
 		{
 			ID:             "missing",
 			WorkDir:        missingWorktree,
-			WorktreeBranch: "ax/missing",
+			WorktreeBranch: "agx/missing",
 			Status:         store.StatusSuccess,
 			FinishedAt:     &oldFinished,
 		},
@@ -74,8 +74,8 @@ func TestCleanupOldWorktreesClearsRemovedWorktreeState(t *testing.T) {
 	if got[1].WorkDir != recentWorktree {
 		t.Fatalf("recent WorkDir = %q, want %q", got[1].WorkDir, recentWorktree)
 	}
-	if got[1].WorktreeBranch != "ax/recent" {
-		t.Fatalf("recent WorktreeBranch = %q, want ax/recent", got[1].WorktreeBranch)
+	if got[1].WorktreeBranch != "agx/recent" {
+		t.Fatalf("recent WorktreeBranch = %q, want agx/recent", got[1].WorktreeBranch)
 	}
 	if got[2].WorkDir != "" {
 		t.Fatalf("missing WorkDir = %q, want empty", got[2].WorkDir)

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jedipunkz/ax/internal/axfs"
+	"github.com/jedipunkz/agx/internal/agxfs"
 )
 
 // detectGitRepo returns the repository root if dir is inside a git repository.
@@ -47,17 +47,17 @@ func sanitizeBranchName(name string) string {
 	// git refuses refs beginning with "-", and every git command that receives
 	// the branch name would parse it as a flag. Dropping the dashes keeps a name
 	// like "-foo" usable instead of failing the whole session; a name made only
-	// of dashes becomes empty and the caller falls back to "ax/<agentID>".
+	// of dashes becomes empty and the caller falls back to "agx/<agentID>".
 	s = strings.TrimLeft(s, "-")
 	return s
 }
 
-// setupWorktree creates a git worktree for the given agent under ~/.ax/worktrees/.
+// setupWorktree creates a git worktree for the given agent under ~/.agx/worktrees/.
 // branchHint, if non-empty, is used as the branch name (after sanitization);
-// otherwise the branch defaults to "ax/<agentID>".
+// otherwise the branch defaults to "agx/<agentID>".
 // Returns the worktree path and branch name on success.
 func setupWorktree(agentID, repoRoot, branchHint string) (worktreePath, branchName string, err error) {
-	paths, err := axfs.New()
+	paths, err := agxfs.New()
 	if err != nil {
 		return "", "", err
 	}
@@ -70,7 +70,7 @@ func setupWorktree(agentID, repoRoot, branchHint string) (worktreePath, branchNa
 		}
 	}
 	if branchName == "" {
-		branchName = "ax/" + agentID
+		branchName = "agx/" + agentID
 	}
 
 	if err := os.MkdirAll(filepath.Dir(worktreePath), 0755); err != nil {
@@ -79,7 +79,7 @@ func setupWorktree(agentID, repoRoot, branchHint string) (worktreePath, branchNa
 
 	// If the desired branch already exists, fall back to a unique branch name.
 	if branchExists(repoRoot, branchName) {
-		branchName = "ax/" + agentID
+		branchName = "agx/" + agentID
 	}
 
 	// checkout.workers=0 enables parallel checkout (one worker per CPU core)

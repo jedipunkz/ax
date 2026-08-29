@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jedipunkz/ax/internal/agent"
-	"github.com/jedipunkz/ax/internal/axfs"
-	"github.com/jedipunkz/ax/internal/store"
+	"github.com/jedipunkz/agx/internal/agent"
+	"github.com/jedipunkz/agx/internal/agxfs"
+	"github.com/jedipunkz/agx/internal/store"
 	"github.com/spf13/cobra"
 )
 
@@ -334,7 +334,7 @@ func parseNameAndForceFlags(args []string) (name string, force bool, rest []stri
 
 // parseNameAndFollowFlags extracts -n/--name and -f/--follow from args. The
 // name is required. Unlike the other wrappers, the "--" separator itself is
-// dropped from rest (its tail is kept) so `ax agent logs` can reject any
+// dropped from rest (its tail is kept) so `agx agent logs` can reject any
 // leftover arguments without tripping over the separator.
 func parseNameAndFollowFlags(args []string) (name string, follow bool, rest []string, err error) {
 	p, _ := parseAgentFlags(args, agentFlagSpec{follow: true})
@@ -352,7 +352,7 @@ func parseNameAndFollowFlags(args []string) (name string, follow bool, rest []st
 }
 
 func getSocketPath() (string, error) {
-	return axfs.Socket()
+	return agxfs.Socket()
 }
 
 func ensureDaemon(socketPath string) error {
@@ -424,7 +424,7 @@ func isBinaryNewerThanSocket(socketPath string) bool {
 // after acquiring the lock. Removing it here would open a window in which no
 // socket exists even though no replacement is guaranteed to start.
 func killDaemon() {
-	paths, err := axfs.New()
+	paths, err := agxfs.New()
 	if err != nil {
 		return
 	}

@@ -73,7 +73,7 @@ jobs:
           for platform in "${platforms[@]}"; do
             os="${platform%/*}"
             arch="${platform#*/}"
-            output="dist/ax_${tag}_${os}_${arch}"
+            output="dist/agx_${tag}_${os}_${arch}"
             [ "$os" = "windows" ] && output="${output}.exe"
             GOOS="$os" GOARCH="$arch" go build -trimpath -ldflags="-s -w -X main.version=${tag}" -o "$output" .
           done
@@ -106,10 +106,10 @@ jobs:
     needs: release
 
     steps:
-      - name: Checkout homebrew-ax
+      - name: Checkout homebrew-agx
         uses: actions/checkout@main
         with:
-          repository: jedipunkz/homebrew-ax
+          repository: jedipunkz/homebrew-agx
           token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
       - name: Download checksums
@@ -117,7 +117,7 @@ jobs:
           TAG: ${{ needs.release.outputs.tag }}
         run: |
           TAG="${{ needs.release.outputs.tag }}"
-          curl -sL "https://github.com/jedipunkz/ax/releases/download/${TAG}/checksums.txt" -o checksums.txt
+          curl -sL "https://github.com/jedipunkz/agx/releases/download/${TAG}/checksums.txt" -o checksums.txt
           cat checksums.txt
 
       - name: Update formula
@@ -125,24 +125,24 @@ jobs:
           TAG="${{ needs.release.outputs.tag }}"
           VERSION="${TAG#v}"
 
-          SHA_DARWIN_AMD64=$(grep "ax_${TAG}_darwin_amd64$" checksums.txt | awk '{print $1}')
-          SHA_DARWIN_ARM64=$(grep "ax_${TAG}_darwin_arm64$" checksums.txt | awk '{print $1}')
-          SHA_LINUX_AMD64=$(grep "ax_${TAG}_linux_amd64$" checksums.txt | awk '{print $1}')
-          SHA_LINUX_ARM64=$(grep "ax_${TAG}_linux_arm64$" checksums.txt | awk '{print $1}')
+          SHA_DARWIN_AMD64=$(grep "agx_${TAG}_darwin_amd64$" checksums.txt | awk '{print $1}')
+          SHA_DARWIN_ARM64=$(grep "agx_${TAG}_darwin_arm64$" checksums.txt | awk '{print $1}')
+          SHA_LINUX_AMD64=$(grep "agx_${TAG}_linux_amd64$" checksums.txt | awk '{print $1}')
+          SHA_LINUX_ARM64=$(grep "agx_${TAG}_linux_arm64$" checksums.txt | awk '{print $1}')
 
-          sed -i "s/version \".*\"/version \"${VERSION}\"/" Formula/ax.rb
-          sed -i "/darwin_amd64/{n;s/sha256 \".*\"/sha256 \"${SHA_DARWIN_AMD64}\"/}" Formula/ax.rb
-          sed -i "/darwin_arm64/{n;s/sha256 \".*\"/sha256 \"${SHA_DARWIN_ARM64}\"/}" Formula/ax.rb
-          sed -i "/linux_amd64/{n;s/sha256 \".*\"/sha256 \"${SHA_LINUX_AMD64}\"/}" Formula/ax.rb
-          sed -i "/linux_arm64/{n;s/sha256 \".*\"/sha256 \"${SHA_LINUX_ARM64}\"/}" Formula/ax.rb
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" Formula/agx.rb
+          sed -i "/darwin_amd64/{n;s/sha256 \".*\"/sha256 \"${SHA_DARWIN_AMD64}\"/}" Formula/agx.rb
+          sed -i "/darwin_arm64/{n;s/sha256 \".*\"/sha256 \"${SHA_DARWIN_ARM64}\"/}" Formula/agx.rb
+          sed -i "/linux_amd64/{n;s/sha256 \".*\"/sha256 \"${SHA_LINUX_AMD64}\"/}" Formula/agx.rb
+          sed -i "/linux_arm64/{n;s/sha256 \".*\"/sha256 \"${SHA_LINUX_ARM64}\"/}" Formula/agx.rb
 
-          cat Formula/ax.rb
+          cat Formula/agx.rb
 
       - name: Commit and push
         run: |
           TAG="${{ needs.release.outputs.tag }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/ax.rb
-          git commit -m "Update ax formula to ${TAG}"
+          git add Formula/agx.rb
+          git commit -m "Update agx formula to ${TAG}"
           git push
