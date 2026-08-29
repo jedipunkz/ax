@@ -2,9 +2,14 @@ package cmd
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/jedipunkz/agx/internal/agxfs"
 )
 
 func TestAcquireDaemonLockIsExclusive(t *testing.T) {
@@ -65,4 +70,33 @@ func TestWaitForDaemonLockSucceedsAfterRelease(t *testing.T) {
 		t.Fatalf("waitForDaemonLock: %v", err)
 	}
 	_ = lock.Close()
+}
+
+func TestDaemonStartErrorNamesTheLockHolder(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	paths := agxfs.NewForHome(home)
+	if err := paths.EnsureDir(); err != nil {
+		t.Fatalf("EnsureDir: %v", err)
+	}
+
+	// No lock holder: the caller only learns the daemon timed out.
+	if err := daemonStartError(time.Second); !strings.Contains(err.Error(), "did not start") {
+		t.Fatalf("daemonStartError without holder = %v, want a timeout message", err)
+	}
+
+	held, err := acquireDaemonLock(paths.LockFile())
+	if err != nil {
+		t.Fatalf("acquireDaemonLock: %v", err)
+	}
+	defer func() { _ = held.Close() }()
+	pid := os.Getpid()
+	if err := os.WriteFile(paths.PIDFile(), []byte(strconv.Itoa(pid)), 0600); err != nil {
+		t.Fatalf("write pid file: %v", err)
+	}
+
+	err = daemonStartError(time.Second)
+	if !strings.Contains(err.Error(), strconv.Itoa(pid)) {
+		t.Fatalf("daemonStartError = %v, want it to name the holding pid %d", err, pid)
+	}
 }
