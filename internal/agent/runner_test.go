@@ -9,7 +9,7 @@ import (
 	"github.com/jedipunkz/agx/internal/store"
 )
 
-func TestResumePrefixArgs(t *testing.T) {
+func TestResumeCommand(t *testing.T) {
 	tests := []struct {
 		agentType string
 		want      []string
@@ -24,9 +24,9 @@ func TestResumePrefixArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.agentType, func(t *testing.T) {
-			got := resumePrefixArgs(tt.agentType)
+			got := lookupAgent(tt.agentType).ResumeCommand()
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("resumePrefixArgs(%q) = %v, want %v", tt.agentType, got, tt.want)
+				t.Errorf("ResumeCommand(%q) = %v, want %v", tt.agentType, got, tt.want)
 			}
 		})
 	}
@@ -136,47 +136,6 @@ func TestSessionConfigInitialState(t *testing.T) {
 	}
 	if !reflect.DeepEqual(state.Args, config.args) || state.LogFile != "/tmp/agent.log" {
 		t.Fatalf("initialState() = %+v, want args and log path from config", state)
-	}
-}
-
-func TestLastMeaningfulLine(t *testing.T) {
-	tests := []struct {
-		name  string
-		chunk string
-		want  string
-	}{
-		{
-			name:  "returns last readable line",
-			chunk: "first line\nsecond line\n",
-			want:  "second line",
-		},
-		{
-			name:  "skips trailing noise lines",
-			chunk: "real content\n>>>\n--\n",
-			want:  "real content",
-		},
-		{
-			name:  "strips ANSI escapes",
-			chunk: "\x1b[32mgreen output\x1b[0m\n",
-			want:  "green output",
-		},
-		{
-			name:  "normalizes carriage returns",
-			chunk: "line one\r\nline two\r",
-			want:  "line two",
-		},
-		{
-			name:  "empty when nothing meaningful",
-			chunk: ">>>\n--\n   \n",
-			want:  "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := lastMeaningfulLine([]byte(tt.chunk)); got != tt.want {
-				t.Errorf("lastMeaningfulLine() = %q, want %q", got, tt.want)
-			}
-		})
 	}
 }
 

@@ -14,7 +14,6 @@ import (
 	"github.com/creack/pty"
 	"github.com/jedipunkz/agx/internal/agxfs"
 	"github.com/jedipunkz/agx/internal/store"
-	"github.com/jedipunkz/agx/internal/textutil"
 	"golang.org/x/term"
 )
 
@@ -132,13 +131,6 @@ func worktreeSetupError(repoRoot string, err error) error {
 	)
 }
 
-// resumePrefixArgs returns the arguments that should be prepended to resume a
-// previous session for the given agent binary. Unknown agents return nil and
-// are relaunched fresh in the existing worktree.
-func resumePrefixArgs(agentType string) []string {
-	return lookupAgent(agentType).ResumeCommand()
-}
-
 // ResumeByIDOrName finds an existing agent by ID or name and launches it in
 // its worktree using the appropriate resume arguments for the agent type.
 // agentTypeOverride, when non-empty, replaces the agent type stored in state.
@@ -182,7 +174,9 @@ func ResumeByIDOrName(args []string, socketPath string, idOrName string, agentTy
 // The leading "--" separator that cobra forwards is stripped before merging.
 func buildResumeArgs(agentType string, userArgs []string) []string {
 	userArgs = stripLeadingDoubleDash(userArgs)
-	prefix := resumePrefixArgs(agentType)
+	// Unknown agents contribute no prefix and are relaunched fresh in the
+	// existing worktree.
+	prefix := lookupAgent(agentType).ResumeCommand()
 	out := make([]string, 0, len(userArgs)+len(prefix))
 	out = append(out, userArgs...)
 	out = append(out, prefix...)
@@ -313,11 +307,6 @@ func gitNewCommits(workDir, before string) []string {
 		return nil
 	}
 	return strings.Split(raw, "\n")
-}
-
-// lastMeaningfulLine extracts the last readable text line from a raw PTY output chunk.
-func lastMeaningfulLine(chunk []byte) string {
-	return textutil.LastMeaningfulLine(chunk)
 }
 
 func generateID() string {
