@@ -54,10 +54,10 @@ func formatElapsed(agent store.AgentState) string {
 }
 
 func formatMetricsSummary(m Model, agent store.AgentState) string {
-	if err := m.metricsErr[agent.ID]; err != "" {
+	if err := m.metrics.errs[agent.ID]; err != "" {
 		return "metrics error: " + err
 	}
-	metrics, ok := m.metrics[agent.ID]
+	metrics, ok := m.metrics.byAgent[agent.ID]
 	if !ok {
 		return "loading..."
 	}

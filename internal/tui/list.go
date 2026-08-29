@@ -245,18 +245,18 @@ func sectionTitles(m Model) (successTitle, killedTitle string) {
 // area for the remove confirmation / progress and search prompts.
 func listHelpText(m Model) string {
 	switch {
-	case m.removing:
-		label := m.removingTarget.Label()
-		dots := m.removingDots
+	case m.removal.inProgress:
+		label := m.removal.target.Label()
+		dots := m.removal.dots
 		if dots < 1 {
 			dots = 1
 		}
 		return fmt.Sprintf("Removing \"%s\"%s", label, strings.Repeat(".", dots))
-	case m.confirmRemove:
-		label := m.confirmTarget.Label()
+	case m.removal.confirming:
+		label := m.removal.confirmTarget.Label()
 		return fmt.Sprintf("Remove \"%s\"? [y] yes  [n] no", label)
-	case m.searchMode:
-		return "search: " + m.searchQuery + "█  [ctrl-n/p] select  [esc] cancel  [enter] confirm"
+	case m.search.active:
+		return "search: " + m.search.query + "█  [ctrl-n/p] select  [esc] cancel  [enter] confirm"
 	case m.statusMsg != "":
 		return m.statusMsg
 	default:

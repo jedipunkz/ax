@@ -70,24 +70,24 @@ func TestOpenDiffViewAndLoad(t *testing.T) {
 	if m2.view != viewDiff {
 		t.Fatalf("view = %v, want viewDiff", m2.view)
 	}
-	if m2.diffAgentID != "agx-1" {
-		t.Errorf("diffAgentID = %q, want agx-1", m2.diffAgentID)
+	if m2.diff.agentID != "agx-1" {
+		t.Errorf("diff.agentID = %q, want agx-1", m2.diff.agentID)
 	}
 	if len(cmds) == 0 {
 		t.Error("expected a loadDiff command to be scheduled")
 	}
 
 	m3, _ := m2.handleDiffLoaded(diffLoadedMsg{agentID: "agx-1", content: sampleDiff}, nil)
-	if !m3.diffLoaded {
-		t.Error("diffLoaded should be true after load")
+	if !m3.diff.loaded {
+		t.Error("diff.loaded should be true after load")
 	}
-	if m3.diffContent != sampleDiff {
-		t.Errorf("diffContent not stored, got %q", m3.diffContent)
+	if m3.diff.content != sampleDiff {
+		t.Errorf("diff.content not stored, got %q", m3.diff.content)
 	}
 
 	// A result for a different agent must be ignored.
 	m4, _ := m3.handleDiffLoaded(diffLoadedMsg{agentID: "other", content: "x"}, nil)
-	if m4.diffContent != sampleDiff {
+	if m4.diff.content != sampleDiff {
 		t.Error("diff result for another agent should be ignored")
 	}
 
@@ -164,8 +164,8 @@ func TestDiffLoadErrorShownInViewport(t *testing.T) {
 	m, _ = m.openDiffView(nil)
 
 	m, _ = m.handleDiffLoaded(diffLoadedMsg{agentID: "agx-1", err: "boom"}, nil)
-	if m.diffErr != "boom" {
-		t.Fatalf("diffErr = %q, want boom", m.diffErr)
+	if m.diff.err != "boom" {
+		t.Fatalf("diff.err = %q, want boom", m.diff.err)
 	}
 	if !strings.Contains(m.viewport.View(), "diff failed: boom") {
 		t.Errorf("viewport should show the load error, got:\n%s", m.viewport.View())
@@ -173,8 +173,8 @@ func TestDiffLoadErrorShownInViewport(t *testing.T) {
 
 	// A successful reload clears the error placeholder.
 	m, _ = m.handleDiffLoaded(diffLoadedMsg{agentID: "agx-1", content: sampleDiff}, nil)
-	if m.diffErr != "" {
-		t.Errorf("diffErr should be cleared, got %q", m.diffErr)
+	if m.diff.err != "" {
+		t.Errorf("diff.err should be cleared, got %q", m.diff.err)
 	}
 }
 
