@@ -41,6 +41,16 @@ func (a AgentState) AgentTypeName() string {
 	return a.AgentType
 }
 
+// Label returns the human-facing identifier for the agent: its Name when one
+// was given, otherwise its ID. Every view that names an agent uses this, so
+// the fallback lives in one place.
+func (a AgentState) Label() string {
+	if a.Name != "" {
+		return a.Name
+	}
+	return a.ID
+}
+
 // IsTerminal returns true if the status is a terminal (non-running) state.
 func (s Status) IsTerminal() bool {
 	return s == StatusKilled || s == StatusSuccess || s == StatusFailed

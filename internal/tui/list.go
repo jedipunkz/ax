@@ -49,10 +49,7 @@ type AgentGroup struct {
 
 // groupLabel returns the display label for this group.
 func (g AgentGroup) groupLabel() string {
-	if g.Rep.Name != "" {
-		return g.Rep.Name
-	}
-	return g.Rep.ID
+	return g.Rep.Label()
 }
 
 // pidString returns comma-separated PIDs.
@@ -124,10 +121,7 @@ func groupedVisibleAgents(agents []store.AgentState, showExpired bool, days int)
 	var order []string
 	for _, a := range visible {
 		a := a
-		key := a.ID
-		if a.Name != "" {
-			key = a.Name
-		}
+		key := a.Label()
 		if g, ok := groupMap[key]; ok {
 			g.PIDs = append(g.PIDs, a.PID)
 			if isBetterRep(a, g.Rep) {
@@ -394,20 +388,14 @@ func sectionTitles(m Model) (successTitle, killedTitle string) {
 func listHelpText(m Model) string {
 	switch {
 	case m.removing:
-		label := m.removingTarget.ID
-		if m.removingTarget.Name != "" {
-			label = m.removingTarget.Name
-		}
+		label := m.removingTarget.Label()
 		dots := m.removingDots
 		if dots < 1 {
 			dots = 1
 		}
 		return fmt.Sprintf("Removing \"%s\"%s", label, strings.Repeat(".", dots))
 	case m.confirmRemove:
-		label := m.confirmTarget.ID
-		if m.confirmTarget.Name != "" {
-			label = m.confirmTarget.Name
-		}
+		label := m.confirmTarget.Label()
 		return fmt.Sprintf("Remove \"%s\"? [y] yes  [n] no", label)
 	case m.searchMode:
 		return "search: " + m.searchQuery + "█  [ctrl-n/p] select  [esc] cancel  [enter] confirm"

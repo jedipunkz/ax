@@ -239,11 +239,7 @@ func (m Model) killSelectedGroup(cmds []tea.Cmd) (Model, []tea.Cmd) {
 		if ag.Status != store.StatusRunning {
 			continue
 		}
-		label := ag.ID
-		if ag.Name != "" {
-			label = ag.Name
-		}
-		if label != target || ag.PID <= 0 {
+		if ag.Label() != target || ag.PID <= 0 {
 			continue
 		}
 		killProcess(ag.PID)
