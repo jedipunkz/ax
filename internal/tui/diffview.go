@@ -30,10 +30,10 @@ func diffViewportHeight(h int) int {
 // diff load completes, when a load failed, or when the worktree has no
 // changes.
 func diffPlaceholder(m Model) string {
-	if m.diffErr != "" {
-		return "(diff failed: " + m.diffErr + ")"
+	if m.diff.err != "" {
+		return "(diff failed: " + m.diff.err + ")"
 	}
-	if !m.diffLoaded {
+	if !m.diff.loaded {
 		return "(loading diff...)"
 	}
 	return "(no changes yet)"
@@ -42,15 +42,15 @@ func diffPlaceholder(m Model) string {
 // diffViewportContent returns the colorized diff, or a placeholder when
 // there is nothing to show.
 func diffViewportContent(m Model) string {
-	if m.diffContent == "" {
+	if m.diff.content == "" {
 		return diffPlaceholder(m)
 	}
-	return colorizeDiff(m.diffContent)
+	return colorizeDiff(m.diff.content)
 }
 
 // diffView renders the live worktree diff view for the selected agent.
 func diffView(m Model) string {
-	ag, ok := m.findAgent(m.diffAgentID)
+	ag, ok := m.findAgent(m.diff.agentID)
 	if !ok {
 		return "No agent selected."
 	}
@@ -70,12 +70,12 @@ func diffView(m Model) string {
 
 	var changes string
 	switch {
-	case m.diffErr != "":
-		changes = "error: " + m.diffErr
-	case !m.diffLoaded:
+	case m.diff.err != "":
+		changes = "error: " + m.diff.err
+	case !m.diff.loaded:
 		changes = "loading..."
 	default:
-		added, deleted, files := diffStat(m.diffContent)
+		added, deleted, files := diffStat(m.diff.content)
 		changes = fmt.Sprintf("%d files  +%d -%d", files, added, deleted)
 		if ag.Status == store.StatusRunning {
 			changes += fmt.Sprintf("  (auto-refresh %ds)", int(diffPollInterval.Seconds()))

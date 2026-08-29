@@ -290,11 +290,7 @@ func gitHeadCommit(workDir string) string {
 	if workDir == "" {
 		return ""
 	}
-	out, err := exec.Command("git", "-C", workDir, "rev-parse", "HEAD").Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
+	return gitOut(workDir, "rev-parse", "HEAD")
 }
 
 // gitNewCommits returns the full SHAs of commits reachable from HEAD but not
@@ -304,15 +300,7 @@ func gitNewCommits(workDir, before string) []string {
 	if workDir == "" || before == "" {
 		return nil
 	}
-	out, err := exec.Command(
-		"git", "-C", workDir,
-		"log", "--format=%H", "--reverse",
-		before+"..HEAD",
-	).Output()
-	if err != nil {
-		return nil
-	}
-	raw := strings.TrimSpace(string(out))
+	raw := gitOut(workDir, "log", "--format=%H", "--reverse", before+"..HEAD")
 	if raw == "" {
 		return nil
 	}

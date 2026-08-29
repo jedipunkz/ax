@@ -3,7 +3,6 @@ package agent
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -12,20 +11,13 @@ import (
 
 // detectGitRepo returns the repository root if dir is inside a git repository.
 func detectGitRepo(dir string) (repoRoot string, ok bool) {
-	out, err := exec.Command("git", "-C", dir, "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		return "", false
-	}
-	return strings.TrimSpace(string(out)), true
+	root := gitOut(dir, "rev-parse", "--show-toplevel")
+	return root, root != ""
 }
 
 // branchExists reports whether a branch with the given name exists in the repo.
 func branchExists(repoRoot, branchName string) bool {
-	out, err := exec.Command("git", "-C", repoRoot, "branch", "--list", branchName).Output()
-	if err != nil {
-		return false
-	}
-	return strings.TrimSpace(string(out)) != ""
+	return gitOut(repoRoot, "branch", "--list", branchName) != ""
 }
 
 // sanitizeBranchName converts a human-readable name into a valid git branch name.
@@ -88,9 +80,8 @@ func setupWorktree(agentID, repoRoot, branchHint string) (worktreePath, branchNa
 	// of `git worktree add`; parallelising it overlaps the I/O waits and cuts
 	// wall time substantially. Scoped to this command only (no global config
 	// change); older git (<2.32) silently ignores the unknown key.
-	cmd := exec.Command("git", "-c", "checkout.workers=0",
+	cmd := gitCmd(repoRoot, "-c", "checkout.workers=0",
 		"worktree", "add", "-b", branchName, worktreePath, "HEAD")
-	cmd.Dir = repoRoot
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", "", fmt.Errorf("git worktree add failed: %w\n%s", err, out)
 	}

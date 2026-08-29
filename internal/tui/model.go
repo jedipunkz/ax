@@ -69,40 +69,66 @@ type removeDoneMsg struct {
 	dirty bool
 }
 
-// Model is the main bubbletea model for agx status.
+// searchState holds the incremental fuzzy-filter prompt.
+type searchState struct {
+	active bool   // the prompt is open and the list is filtered
+	query  string // what the user has typed so far
+}
+
+// removalState tracks the two-phase agent removal: a confirmation prompt,
+// then the asynchronous worktree deletion with its progress indicator.
+type removalState struct {
+	confirming    bool             // confirmation prompt is showing
+	confirmTarget store.AgentState // agent the prompt refers to
+	inProgress    bool             // deletion goroutine is running
+	target        store.AgentState // agent being deleted
+	dots          int              // 1..3, animates "Removing…"
+}
+
+// diffState holds everything the diff view needs about the agent it is
+// currently showing.
+type diffState struct {
+	agentID  string
+	content  string // raw (uncolored) diff, used to detect changes
+	err      string
+	loaded   bool
+	polledAt time.Time
+}
+
+// metricsCache holds per-agent metrics fetched from the daemon, keyed by
+// agent ID, alongside the last error and poll time for each.
+type metricsCache struct {
+	byAgent map[string]store.Message
+	errs    map[string]string
+	polled  map[string]time.Time
+}
+
+// Model is the main bubbletea model for agx status. Transient interaction
+// state is grouped into the structs above so the flat fields below stay the
+// dashboard's own: the agent snapshot, the cursor, and the terminal.
 type Model struct {
-	agents         []store.AgentState
-	cursor         int
-	scrollOffset   int
-	view           ViewMode
-	client         *store.Client
-	socketPath     string
-	sub            chan store.Message
-	spinner        spinner.Model
-	viewport       viewport.Model
-	width          int
-	height         int
-	logContent     string
-	showExpired    bool
-	statusMsg      string
-	searchMode     bool
-	searchQuery    string
-	workDir        string
-	confirmRemove  bool
-	confirmTarget  store.AgentState
-	removing       bool
-	removingTarget store.AgentState
-	removingDots   int
-	now            time.Time
-	durationDays   int
-	metrics        map[string]store.Message
-	metricsErr     map[string]string
-	metricsPolled  map[string]time.Time
-	diffAgentID    string
-	diffContent    string // raw (uncolored) diff, used to detect changes
-	diffErr        string
-	diffLoaded     bool
-	diffPolledAt   time.Time
+	agents       []store.AgentState
+	cursor       int
+	scrollOffset int
+	view         ViewMode
+	client       *store.Client
+	socketPath   string
+	sub          chan store.Message
+	spinner      spinner.Model
+	viewport     viewport.Model
+	width        int
+	height       int
+	logContent   string
+	showExpired  bool
+	statusMsg    string
+	workDir      string
+	now          time.Time
+	durationDays int
+
+	search  searchState
+	removal removalState
+	diff    diffState
+	metrics metricsCache
 }
 
 func newModel(client *store.Client, socketPath string, sub chan store.Message, durationDays int) Model {
@@ -112,18 +138,20 @@ func newModel(client *store.Client, socketPath string, sub chan store.Message, d
 	workDir, _ := os.Getwd()
 
 	return Model{
-		agents:        []store.AgentState{},
-		client:        client,
-		socketPath:    socketPath,
-		sub:           sub,
-		spinner:       sp,
-		view:          viewList,
-		workDir:       workDir,
-		now:           time.Now(),
-		durationDays:  durationDays,
-		metrics:       map[string]store.Message{},
-		metricsErr:    map[string]string{},
-		metricsPolled: map[string]time.Time{},
+		agents:       []store.AgentState{},
+		client:       client,
+		socketPath:   socketPath,
+		sub:          sub,
+		spinner:      sp,
+		view:         viewList,
+		workDir:      workDir,
+		now:          time.Now(),
+		durationDays: durationDays,
+		metrics: metricsCache{
+			byAgent: map[string]store.Message{},
+			errs:    map[string]string{},
+			polled:  map[string]time.Time{},
+		},
 	}
 }
 
@@ -222,8 +250,8 @@ func (m Model) Init() tea.Cmd {
 // applying the fuzzy filter while search mode is active.
 func (m Model) selectedGroups() []AgentGroup {
 	groups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-	if m.searchMode {
-		groups = fuzzyFilterGroups(groups, m.searchQuery)
+	if m.search.active {
+		groups = fuzzyFilterGroups(groups, m.search.query)
 	}
 	return groups
 }
@@ -263,21 +291,21 @@ func (m Model) findAgent(id string) (store.AgentState, bool) {
 // poll predates FinishedAt, so the view always shows the final worktree
 // state; after that finished agents are not re-polled.
 func (m *Model) pollDiff(now time.Time) tea.Cmd {
-	ag, ok := m.findAgent(m.diffAgentID)
+	ag, ok := m.findAgent(m.diff.agentID)
 	if !ok {
 		return nil
 	}
 	if ag.Status != store.StatusRunning {
-		if ag.FinishedAt == nil || !m.diffPolledAt.Before(*ag.FinishedAt) {
+		if ag.FinishedAt == nil || !m.diff.polledAt.Before(*ag.FinishedAt) {
 			return nil
 		}
-		m.diffPolledAt = now
+		m.diff.polledAt = now
 		return loadDiff(ag)
 	}
-	if now.Sub(m.diffPolledAt) < diffPollInterval {
+	if now.Sub(m.diff.polledAt) < diffPollInterval {
 		return nil
 	}
-	m.diffPolledAt = now
+	m.diff.polledAt = now
 	return loadDiff(ag)
 }
 
@@ -287,11 +315,11 @@ func (m *Model) pollSelectedMetrics(now time.Time, force bool) tea.Cmd {
 		return nil
 	}
 	if !force {
-		if last, ok := m.metricsPolled[agent.ID]; ok && now.Sub(last) < 5*time.Second {
+		if last, ok := m.metrics.polled[agent.ID]; ok && now.Sub(last) < 5*time.Second {
 			return nil
 		}
 	}
-	m.metricsPolled[agent.ID] = now
+	m.metrics.polled[agent.ID] = now
 	return requestMetrics(m.socketPath, agent.ID)
 }
 

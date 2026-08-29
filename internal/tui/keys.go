@@ -15,13 +15,13 @@ import (
 // While a removal is in progress, all keys are ignored to avoid races
 // between the user and the (potentially slow) deletion goroutine.
 func (m Model) handleKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []tea.Cmd) {
-	if m.removing {
+	if m.removal.inProgress {
 		return m, cmds
 	}
-	if m.confirmRemove {
+	if m.removal.confirming {
 		return m.handleConfirmRemoveKey(msg, cmds)
 	}
-	if m.searchMode {
+	if m.search.active {
 		return m.handleSearchKey(msg, cmds)
 	}
 	return m.handleListKey(msg, cmds)
@@ -30,14 +30,14 @@ func (m Model) handleKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []tea.Cmd)
 func (m Model) handleConfirmRemoveKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []tea.Cmd) {
 	switch msg.String() {
 	case "y", "enter":
-		ag := m.confirmTarget
-		m.confirmRemove = false
-		m.removing = true
-		m.removingTarget = ag
-		m.removingDots = 1
+		ag := m.removal.confirmTarget
+		m.removal.confirming = false
+		m.removal.inProgress = true
+		m.removal.target = ag
+		m.removal.dots = 1
 		cmds = append(cmds, removeAgentCmd(ag, m.client), removingTickCmd())
 	case "n", "esc", "q":
-		m.confirmRemove = false
+		m.removal.confirming = false
 	}
 	return m, cmds
 }
@@ -45,14 +45,14 @@ func (m Model) handleConfirmRemoveKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Mode
 func (m Model) handleSearchKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []tea.Cmd) {
 	switch msg.String() {
 	case "esc":
-		m.searchMode = false
-		m.searchQuery = ""
+		m.search.active = false
+		m.search.query = ""
 		m.cursor = 0
 		m.scrollOffset = 0
 	case "enter":
 		// Map filtered cursor back to full groups cursor before exiting search mode.
 		allGroups := groupedVisibleAgents(m.agents, m.showExpired, m.durationDays)
-		filtered := fuzzyFilterGroups(allGroups, m.searchQuery)
+		filtered := fuzzyFilterGroups(allGroups, m.search.query)
 		if len(filtered) > 0 && m.cursor < len(filtered) {
 			selectedID := filtered[m.cursor].Rep.ID
 			for i, g := range allGroups {
@@ -62,7 +62,7 @@ func (m Model) handleSearchKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []te
 				}
 			}
 		}
-		m.searchMode = false
+		m.search.active = false
 		m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 	case "ctrl+n":
 		if filtered := m.selectedGroups(); m.cursor < len(filtered)-1 {
@@ -75,15 +75,15 @@ func (m Model) handleSearchKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []te
 		}
 		m.scrollOffset = clampScroll(m.cursor, m.scrollOffset, m.listAvailableRows())
 	case "backspace", "ctrl+h":
-		if len(m.searchQuery) > 0 {
-			runes := []rune(m.searchQuery)
-			m.searchQuery = string(runes[:len(runes)-1])
+		if len(m.search.query) > 0 {
+			runes := []rune(m.search.query)
+			m.search.query = string(runes[:len(runes)-1])
 			m.cursor = 0
 			m.scrollOffset = 0
 		}
 	default:
 		if msg.Text != "" {
-			m.searchQuery += msg.Text
+			m.search.query += msg.Text
 			m.cursor = 0
 			m.scrollOffset = 0
 		}
@@ -123,8 +123,8 @@ func (m Model) handleListKey(msg tea.KeyPressMsg, cmds []tea.Cmd) (Model, []tea.
 
 	case "/":
 		if m.view == viewList {
-			m.searchMode = true
-			m.searchQuery = ""
+			m.search.active = true
+			m.search.query = ""
 		}
 		return m, cmds
 
@@ -201,11 +201,11 @@ func (m Model) openDiffView(cmds []tea.Cmd) (Model, []tea.Cmd) {
 		return m, cmds
 	}
 	m.view = viewDiff
-	m.diffAgentID = ag.ID
-	m.diffContent = ""
-	m.diffErr = ""
-	m.diffLoaded = false
-	m.diffPolledAt = m.now
+	m.diff.agentID = ag.ID
+	m.diff.content = ""
+	m.diff.err = ""
+	m.diff.loaded = false
+	m.diff.polledAt = m.now
 	m.viewport = viewport.New(viewport.WithWidth(m.width-4), viewport.WithHeight(diffViewportHeight(m.height)))
 	m.viewport.SetContent(diffPlaceholder(m))
 	cmds = append(cmds, loadDiff(ag))
@@ -239,11 +239,7 @@ func (m Model) killSelectedGroup(cmds []tea.Cmd) (Model, []tea.Cmd) {
 		if ag.Status != store.StatusRunning {
 			continue
 		}
-		label := ag.ID
-		if ag.Name != "" {
-			label = ag.Name
-		}
-		if label != target || ag.PID <= 0 {
+		if ag.Label() != target || ag.PID <= 0 {
 			continue
 		}
 		killProcess(ag.PID)
@@ -292,8 +288,8 @@ func (m Model) requestRemove(cmds []tea.Cmd) (Model, []tea.Cmd) {
 		cmds = append(cmds, clearStatusAfter(2*time.Second))
 		return m, cmds
 	}
-	m.confirmRemove = true
-	m.confirmTarget = ag
+	m.removal.confirming = true
+	m.removal.confirmTarget = ag
 	return m, cmds
 }
 

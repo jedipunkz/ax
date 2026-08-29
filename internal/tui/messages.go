@@ -72,9 +72,9 @@ func (m *Model) removeAgent(agentID string) {
 			break
 		}
 	}
-	delete(m.metrics, agentID)
-	delete(m.metricsErr, agentID)
-	delete(m.metricsPolled, agentID)
+	delete(m.metrics.byAgent, agentID)
+	delete(m.metrics.errs, agentID)
+	delete(m.metrics.polled, agentID)
 }
 
 func (m Model) handleTick(msg tickMsg, cmds []tea.Cmd) (Model, []tea.Cmd) {
@@ -95,25 +95,25 @@ func (m Model) handleTick(msg tickMsg, cmds []tea.Cmd) (Model, []tea.Cmd) {
 // preserving the current scroll position so periodic refreshes do not yank
 // the reader away from the hunk they are looking at.
 func (m Model) handleDiffLoaded(msg diffLoadedMsg, cmds []tea.Cmd) (Model, []tea.Cmd) {
-	if m.view != viewDiff || msg.agentID != m.diffAgentID {
+	if m.view != viewDiff || msg.agentID != m.diff.agentID {
 		return m, cmds
 	}
 	if msg.err != "" {
-		m.diffErr = msg.err
-		m.diffLoaded = true
+		m.diff.err = msg.err
+		m.diff.loaded = true
 		offset := m.viewport.YOffset()
 		m.viewport.SetContent(diffViewportContent(m))
 		m.viewport.SetYOffset(offset)
 		return m, cmds
 	}
-	hadErr := m.diffErr != ""
-	m.diffErr = ""
-	changed := !m.diffLoaded || hadErr || msg.content != m.diffContent
-	m.diffLoaded = true
+	hadErr := m.diff.err != ""
+	m.diff.err = ""
+	changed := !m.diff.loaded || hadErr || msg.content != m.diff.content
+	m.diff.loaded = true
 	if !changed {
 		return m, cmds
 	}
-	m.diffContent = msg.content
+	m.diff.content = msg.content
 	offset := m.viewport.YOffset()
 	m.viewport.SetContent(diffViewportContent(m))
 	m.viewport.SetYOffset(offset)
@@ -125,26 +125,26 @@ func (m Model) handleMetricsLoaded(msg metricsLoadedMsg, cmds []tea.Cmd) (Model,
 		return m, cmds
 	}
 	if msg.err != "" {
-		m.metricsErr[msg.agentID] = msg.err
+		m.metrics.errs[msg.agentID] = msg.err
 		return m, cmds
 	}
-	m.metrics[msg.agentID] = msg.metrics
-	delete(m.metricsErr, msg.agentID)
+	m.metrics.byAgent[msg.agentID] = msg.metrics
+	delete(m.metrics.errs, msg.agentID)
 	return m, cmds
 }
 
 func (m Model) handleRemovingTick(cmds []tea.Cmd) (Model, []tea.Cmd) {
-	if m.removing {
-		m.removingDots = (m.removingDots % 3) + 1
+	if m.removal.inProgress {
+		m.removal.dots = (m.removal.dots % 3) + 1
 		cmds = append(cmds, removingTickCmd())
 	}
 	return m, cmds
 }
 
 func (m Model) handleRemoveDone(msg removeDoneMsg, cmds []tea.Cmd) (Model, []tea.Cmd) {
-	m.removing = false
-	m.removingDots = 0
-	m.removingTarget = store.AgentState{}
+	m.removal.inProgress = false
+	m.removal.dots = 0
+	m.removal.target = store.AgentState{}
 	switch {
 	case msg.dirty:
 		m.statusMsg = "kept: worktree has uncommitted changes — commit them, or discard with 'agx agent rm -f'"
