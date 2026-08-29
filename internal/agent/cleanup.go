@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -34,17 +33,12 @@ func IsUnderWorktreesDir(worktreesDir, workDir string) bool {
 // state file is *not* rewritten directly. When update is nil the
 // function persists the updated state file itself.
 func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int, update func(store.AgentState) error) error {
-	data, err := os.ReadFile(statePath)
+	agents, err := store.ReadAgents(statePath)
 	if os.IsNotExist(err) {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("could not read state: %w", err)
-	}
-
-	var agents []store.AgentState
-	if err := json.Unmarshal(data, &agents); err != nil {
-		return fmt.Errorf("could not parse state: %w", err)
 	}
 
 	cutoff := time.Now().AddDate(0, 0, -removeDurationDays)
@@ -107,7 +101,7 @@ func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int,
 	}
 
 	if changed && update == nil {
-		if err := writeAgents(statePath, agents); err != nil {
+		if err := store.WriteAgents(statePath, agents); err != nil {
 			return err
 		}
 	}

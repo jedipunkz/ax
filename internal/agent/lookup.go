@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/jedipunkz/agx/internal/agxfs"
@@ -77,16 +79,34 @@ func pickMostRecent(agents []store.AgentState, pred func(store.AgentState) bool)
 	return agents[bestIdx], bestIdx, true
 }
 
+// errNoAgents reports that no state file has been written yet, i.e. no agent
+// has ever been started.
+var errNoAgents = errors.New("no agents found")
+
+// loadState resolves the agx paths and reads the persisted agent state.
+// A state file that does not exist yet yields errNoAgents rather than an
+// I/O error, so callers can distinguish it from a real failure.
+func loadState() (agxfs.Paths, []store.AgentState, error) {
+	paths, err := agxfs.New()
+	if err != nil {
+		return agxfs.Paths{}, nil, err
+	}
+	agents, err := store.ReadAgents(paths.StateFile())
+	if os.IsNotExist(err) {
+		return paths, nil, errNoAgents
+	}
+	if err != nil {
+		return paths, nil, fmt.Errorf("could not read state file: %w", err)
+	}
+	return paths, agents, nil
+}
+
 // findAgentByIDOrName reads state.json and returns the first match for
 // idOrName using FindAgent's priority order.
 func findAgentByIDOrName(idOrName string) (store.AgentState, error) {
-	paths, err := agxfs.New()
+	_, agents, err := loadState()
 	if err != nil {
 		return store.AgentState{}, err
-	}
-	agents, err := store.ReadAgents(paths.StateFile())
-	if err != nil {
-		return store.AgentState{}, fmt.Errorf("could not read state file: %w", err)
 	}
 	state, idx := FindAgent(agents, idOrName)
 	if idx < 0 {
