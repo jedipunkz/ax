@@ -290,7 +290,7 @@ func gitHeadCommit(workDir string) string {
 	if workDir == "" {
 		return ""
 	}
-	out, err := exec.Command("git", "-C", workDir, "rev-parse", "HEAD").Output()
+	out, err := gitOutput(workDir, "rev-parse", "HEAD")
 	if err != nil {
 		return ""
 	}
@@ -304,11 +304,7 @@ func gitNewCommits(workDir, before string) []string {
 	if workDir == "" || before == "" {
 		return nil
 	}
-	out, err := exec.Command(
-		"git", "-C", workDir,
-		"log", "--format=%H", "--reverse",
-		before+"..HEAD",
-	).Output()
+	out, err := gitOutput(workDir, "log", "--format=%H", "--reverse", before+"..HEAD")
 	if err != nil {
 		return nil
 	}
