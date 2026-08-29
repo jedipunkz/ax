@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -355,6 +356,11 @@ func getSocketPath() (string, error) {
 	return agxfs.Socket()
 }
 
+// daemonStartWait bounds how long a client waits for a freshly forked daemon
+// to open its socket. It must exceed daemonLockWait so a daemon still waiting
+// its turn on the lock gets the chance to take over.
+const daemonStartWait = 5 * time.Second
+
 func ensureDaemon(socketPath string) error {
 	// Check if socket exists and is connectable
 	if isSocketAlive(socketPath) {
@@ -382,9 +388,9 @@ func ensureDaemon(socketPath string) error {
 		return fmt.Errorf("could not start daemon: %w", err)
 	}
 
-	// Wait up to 3 seconds for socket to appear using exponential backoff.
+	// Wait for the socket to appear using exponential backoff.
 	wait := 10 * time.Millisecond
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(daemonStartWait)
 	for time.Now().Before(deadline) {
 		if isSocketAlive(socketPath) {
 			return nil
@@ -395,7 +401,33 @@ func ensureDaemon(socketPath string) error {
 		}
 	}
 
-	return fmt.Errorf("daemon did not start within 3 seconds")
+	return daemonStartError(daemonStartWait)
+}
+
+// daemonStartError explains why the socket never appeared. The usual cause is
+// a leftover daemon — an older binary, or one from a previous install — still
+// holding the data-directory lock: the new daemon stands down silently, so a
+// bare timeout tells the user nothing they can act on.
+func daemonStartError(waited time.Duration) error {
+	timeout := fmt.Errorf("daemon did not start within %s", waited)
+	paths, err := agxfs.New()
+	if err != nil {
+		return timeout
+	}
+	lock, lockErr := acquireDaemonLock(paths.LockFile())
+	if lockErr == nil {
+		_ = lock.Close()
+		return timeout
+	}
+	if !errors.Is(lockErr, errDaemonLocked) {
+		return fmt.Errorf("%w: %w", timeout, lockErr)
+	}
+	if data, readErr := os.ReadFile(paths.PIDFile()); readErr == nil {
+		if pid, convErr := strconv.Atoi(strings.TrimSpace(string(data))); convErr == nil && store.IsPIDAlive(pid) {
+			return fmt.Errorf("another daemon (pid %d) already owns %s; stop it with `kill %d` and retry", pid, paths.Dir, pid)
+		}
+	}
+	return fmt.Errorf("another daemon already owns %s; stop it and retry", paths.Dir)
 }
 
 // isBinaryNewerThanSocket returns true if the current executable was modified
