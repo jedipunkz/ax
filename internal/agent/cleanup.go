@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -129,13 +128,7 @@ var ErrWorktreeDirty = errors.New("worktree has uncommitted changes")
 // identifiable to preserve, and callers already restrict removal to paths under
 // ~/.agx/worktrees/.
 func WorktreeIsDirty(worktreePath string) bool {
-	c := exec.Command("git", "status", "--porcelain")
-	c.Dir = worktreePath
-	out, err := c.Output()
-	if err != nil {
-		return false
-	}
-	return strings.TrimSpace(string(out)) != ""
+	return gitOut(worktreePath, "status", "--porcelain") != ""
 }
 
 // RemoveWorktree removes the git worktree at the given path.
@@ -156,8 +149,7 @@ func RemoveWorktree(worktreePath string, force bool) error {
 
 	mainRepo, err := resolveMainRepo(worktreePath)
 	if err == nil && mainRepo != "" {
-		cmd := exec.Command("git", "-C", mainRepo, "worktree", "remove", "--force", worktreePath)
-		if err := cmd.Run(); err == nil {
+		if err := gitCmd(mainRepo, "worktree", "remove", "--force", worktreePath).Run(); err == nil {
 			return nil
 		}
 		// git worktree remove failed (e.g. admin entry already pruned); fall through.
