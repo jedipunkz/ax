@@ -1,9 +1,5 @@
 # agx - agent cross
 
-<p align="center">
-  <img src="site/public/icon.png" alt="agx official icon" width="160" height="160">
-</p>
-
 [![CI](https://github.com/jedipunkz/agx/actions/workflows/ci.yml/badge.svg)](https://github.com/jedipunkz/agx/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jedipunkz/agx)](https://goreportcard.com/report/github.com/jedipunkz/agx)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
