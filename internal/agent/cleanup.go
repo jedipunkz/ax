@@ -1,11 +1,9 @@
 package agent
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -35,17 +33,12 @@ func IsUnderWorktreesDir(worktreesDir, workDir string) bool {
 // state file is *not* rewritten directly. When update is nil the
 // function persists the updated state file itself.
 func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int, update func(store.AgentState) error) error {
-	data, err := os.ReadFile(statePath)
+	agents, err := store.ReadAgents(statePath)
 	if os.IsNotExist(err) {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("could not read state: %w", err)
-	}
-
-	var agents []store.AgentState
-	if err := json.Unmarshal(data, &agents); err != nil {
-		return fmt.Errorf("could not parse state: %w", err)
 	}
 
 	cutoff := time.Now().AddDate(0, 0, -removeDurationDays)
@@ -108,7 +101,7 @@ func CleanupOldWorktrees(statePath, worktreesDir string, removeDurationDays int,
 	}
 
 	if changed && update == nil {
-		if err := writeAgents(statePath, agents); err != nil {
+		if err := store.WriteAgents(statePath, agents); err != nil {
 			return err
 		}
 	}
@@ -129,9 +122,7 @@ var ErrWorktreeDirty = errors.New("worktree has uncommitted changes")
 // identifiable to preserve, and callers already restrict removal to paths under
 // ~/.agx/worktrees/.
 func WorktreeIsDirty(worktreePath string) bool {
-	c := exec.Command("git", "status", "--porcelain")
-	c.Dir = worktreePath
-	out, err := c.Output()
+	out, err := gitOutput(worktreePath, "status", "--porcelain")
 	if err != nil {
 		return false
 	}
@@ -156,8 +147,7 @@ func RemoveWorktree(worktreePath string, force bool) error {
 
 	mainRepo, err := resolveMainRepo(worktreePath)
 	if err == nil && mainRepo != "" {
-		cmd := exec.Command("git", "-C", mainRepo, "worktree", "remove", "--force", worktreePath)
-		if err := cmd.Run(); err == nil {
+		if err := gitRun(mainRepo, "worktree", "remove", "--force", worktreePath); err == nil {
 			return nil
 		}
 		// git worktree remove failed (e.g. admin entry already pruned); fall through.

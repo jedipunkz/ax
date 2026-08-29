@@ -27,13 +27,9 @@ var agentNewCmd = &cobra.Command{
 	Short:              "Start a new agent session (e.g. -a claude, -a codex, -a gemini, -a opencode)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		socketPath, err := getSocketPath()
+		socketPath, err := daemonSocket()
 		if err != nil {
 			return err
-		}
-
-		if err := ensureDaemon(socketPath); err != nil {
-			return fmt.Errorf("could not start daemon: %w", err)
 		}
 
 		agentType, name, rest, err := parseAgentTypeAndNameFlag(args)
@@ -67,7 +63,9 @@ var agentRmCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		socketPath, err := getSocketPath()
+		// No ensureDaemon: RemoveAgent falls back to editing state.json directly
+		// when the daemon is not already running.
+		socketPath, err := agxfs.Socket()
 		if err != nil {
 			return err
 		}
@@ -89,13 +87,9 @@ var agentResumeCmd = &cobra.Command{
 	Short:              "Resume a previous agent session by ID or name (-a overrides stored agent type)",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		socketPath, err := getSocketPath()
+		socketPath, err := daemonSocket()
 		if err != nil {
 			return err
-		}
-
-		if err := ensureDaemon(socketPath); err != nil {
-			return fmt.Errorf("could not start daemon: %w", err)
 		}
 
 		// agentType is "" when not explicitly provided; ResumeByIDOrName falls
@@ -105,7 +99,7 @@ var agentResumeCmd = &cobra.Command{
 			return err
 		}
 		if idOrName == "" {
-			return fmt.Errorf("requires -n/--name to specify the agent ID or name")
+			return errNameRequired()
 		}
 		return agent.ResumeByIDOrName(rest, socketPath, idOrName, agentType)
 	},
@@ -136,14 +130,13 @@ var agentLogsCmd = &cobra.Command{
 		if len(rest) > 0 {
 			return fmt.Errorf("unexpected arguments: %v", rest)
 		}
-		socketPath, err := getSocketPath()
+		// Only following needs a live daemon; a one-shot read comes from the log file.
+		socketPath, err := agxfs.Socket()
+		if follow {
+			socketPath, err = daemonSocket()
+		}
 		if err != nil {
 			return err
-		}
-		if follow {
-			if err := ensureDaemon(socketPath); err != nil {
-				return fmt.Errorf("could not start daemon: %w", err)
-			}
 		}
 		return agent.StreamLogs(socketPath, idOrName, follow)
 	},
@@ -158,12 +151,9 @@ var agentWaitCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		socketPath, err := getSocketPath()
+		socketPath, err := daemonSocket()
 		if err != nil {
 			return err
-		}
-		if err := ensureDaemon(socketPath); err != nil {
-			return fmt.Errorf("could not start daemon: %w", err)
 		}
 		result, err := agent.Wait(socketPath, idOrName)
 		if err != nil {
@@ -198,12 +188,9 @@ var agentInputCmd = &cobra.Command{
 		if data == "" {
 			return fmt.Errorf("no input data provided")
 		}
-		socketPath, err := getSocketPath()
+		socketPath, err := daemonSocket()
 		if err != nil {
 			return err
-		}
-		if err := ensureDaemon(socketPath); err != nil {
-			return fmt.Errorf("could not start daemon: %w", err)
 		}
 		return agent.SendInput(socketPath, idOrName, data)
 	},
@@ -351,8 +338,17 @@ func parseNameAndFollowFlags(args []string) (name string, follow bool, rest []st
 	return p.name, p.follow, rest, nil
 }
 
-func getSocketPath() (string, error) {
-	return agxfs.Socket()
+// daemonSocket returns the daemon socket path, starting the daemon first when
+// it is not already running.
+func daemonSocket() (string, error) {
+	socketPath, err := agxfs.Socket()
+	if err != nil {
+		return "", err
+	}
+	if err := ensureDaemon(socketPath); err != nil {
+		return "", fmt.Errorf("could not start daemon: %w", err)
+	}
+	return socketPath, nil
 }
 
 func ensureDaemon(socketPath string) error {

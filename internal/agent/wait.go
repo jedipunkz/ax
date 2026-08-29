@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jedipunkz/agx/internal/agxfs"
 	"github.com/jedipunkz/agx/internal/store"
 )
 
@@ -126,13 +125,9 @@ func staleAgentResult(a store.AgentState) store.AgentState {
 }
 
 func findAgentByExactID(id string) (store.AgentState, error) {
-	paths, err := agxfs.New()
+	_, agents, err := loadState()
 	if err != nil {
 		return store.AgentState{}, err
-	}
-	agents, err := store.ReadAgents(paths.StateFile())
-	if err != nil {
-		return store.AgentState{}, fmt.Errorf("could not read state file: %w", err)
 	}
 	for _, a := range agents {
 		if a.ID == id {

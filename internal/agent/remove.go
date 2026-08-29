@@ -19,13 +19,7 @@ import (
 // is left completely untouched — including its state entry — so the user can
 // inspect or commit the work first.
 func RemoveAgent(idOrName, socketPath string, force bool) error {
-	paths, err := agxfs.New()
-	if err != nil {
-		return err
-	}
-	stateFile := paths.StateFile()
-
-	agents, err := readAgents(stateFile)
+	paths, agents, err := loadState()
 	if err != nil {
 		return err
 	}
@@ -70,7 +64,7 @@ func RemoveAgent(idOrName, socketPath string, force bool) error {
 
 	// Daemon not reachable (or send failed) — update state.json directly.
 	updated := append(agents[:idx], agents[idx+1:]...)
-	if err := writeAgents(stateFile, updated); err != nil {
+	if err := store.WriteAgents(paths.StateFile(), updated); err != nil {
 		return err
 	}
 
@@ -109,23 +103,4 @@ func RemoveAgentArtifacts(paths agxfs.Paths, ag store.AgentState, force bool) er
 		_ = os.Remove(filepath.Dir(ag.LogFile))
 	}
 	return firstErr
-}
-
-// readAgents wraps store.ReadAgents with the package's "no agents found"
-// error for missing files. Other I/O failures bubble up unchanged.
-func readAgents(stateFile string) ([]store.AgentState, error) {
-	agents, err := store.ReadAgents(stateFile)
-	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("no agents found")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("could not read state file: %w", err)
-	}
-	return agents, nil
-}
-
-// writeAgents is a thin alias kept so the package's read/write helpers
-// remain a matched pair at the call sites.
-func writeAgents(stateFile string, agents []store.AgentState) error {
-	return store.WriteAgents(stateFile, agents)
 }

@@ -1,34 +1,23 @@
 package agent
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"text/tabwriter"
 	"time"
-
-	"github.com/jedipunkz/agx/internal/agxfs"
-	"github.com/jedipunkz/agx/internal/store"
 )
 
 // ListWorktrees prints all agents with their name/id, repo, ended time, and directory name.
 func ListWorktrees() error {
-	paths, err := agxfs.New()
+	paths, agents, err := loadState()
+	if errors.Is(err, errNoAgents) || (err == nil && len(agents) == 0) {
+		fmt.Println("no agents found")
+		return nil
+	}
 	if err != nil {
 		return err
-	}
-	agents, err := store.ReadAgents(paths.StateFile())
-	if os.IsNotExist(err) {
-		fmt.Println("no agents found")
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("could not read state file: %w", err)
-	}
-
-	if len(agents) == 0 {
-		fmt.Println("no agents found")
-		return nil
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)

@@ -33,10 +33,7 @@ func ShowDiff(idOrName string) error {
 		gitArgs = []string{"diff", "--color=always", first + "^", last}
 	}
 
-	gitCmd := exec.Command("git", gitArgs...)
-	gitCmd.Dir = ag.WorkDir
-
-	output, err := gitCmd.Output()
+	output, err := gitOutput(ag.WorkDir, gitArgs...)
 	if err != nil {
 		// For root commits, `first^` fails; fall back to showing each commit.
 		return showCommitsIndividually(ag.WorkDir, ag.Commits)
@@ -73,9 +70,7 @@ func WorktreeDiff(workDir string, commits []string) (string, error) {
 	// core.quotePath=false keeps non-ASCII paths readable in the "diff --git"
 	// headers, so diffHeaderPath can extract them and the mtime ordering below
 	// applies to them like any other file.
-	c := exec.Command("git", "-c", "core.quotePath=false", "diff", base, "--")
-	c.Dir = workDir
-	out, err := c.Output()
+	out, err := gitOutput(workDir, "-c", "core.quotePath=false", "diff", base, "--")
 	if err != nil {
 		return "", fmt.Errorf("git diff %s: %w", base, err)
 	}
@@ -161,9 +156,7 @@ func diffHeaderPath(header string) string {
 func diffBase(workDir string, commits []string) string {
 	if len(commits) > 0 {
 		parent := commits[0] + "^"
-		c := exec.Command("git", "rev-parse", "--verify", "--quiet", parent)
-		c.Dir = workDir
-		if c.Run() == nil {
+		if gitRun(workDir, "rev-parse", "--verify", "--quiet", parent) == nil {
 			return parent
 		}
 	}
@@ -181,9 +174,7 @@ func diffBase(workDir string, commits []string) string {
 // vanish from the diff. -z emits raw bytes separated by NUL instead, which also
 // makes names containing spaces or newlines unambiguous.
 func untrackedFiles(workDir string) []string {
-	c := exec.Command("git", "ls-files", "-z", "--others", "--exclude-standard")
-	c.Dir = workDir
-	out, err := c.Output()
+	out, err := gitOutput(workDir, "ls-files", "-z", "--others", "--exclude-standard")
 	if err != nil {
 		return nil
 	}
@@ -202,10 +193,8 @@ func untrackedFiles(workDir string) []string {
 // --no-index` exits with status 1 when the files differ, which is the
 // expected outcome here, so exit errors are not propagated.
 func untrackedDiff(workDir, file string) string {
-	c := exec.Command("git", "-c", "core.quotePath=false",
+	out, _ := gitOutput(workDir, "-c", "core.quotePath=false",
 		"diff", "--no-index", "--", os.DevNull, file)
-	c.Dir = workDir
-	out, _ := c.Output()
 	return string(out)
 }
 
@@ -215,17 +204,13 @@ func showBranchDiff(workDir string) error {
 	base, err := findMergeBase(workDir)
 	if err != nil {
 		// Last resort: show uncommitted working-tree changes.
-		c := exec.Command("git", "diff", "--color=always")
-		c.Dir = workDir
-		out, err2 := c.Output()
+		out, err2 := gitOutput(workDir, "diff", "--color=always")
 		if err2 != nil {
 			return fmt.Errorf("could not compute diff: %w", err2)
 		}
 		return runPager(out)
 	}
-	c := exec.Command("git", "diff", "--color=always", base, "HEAD")
-	c.Dir = workDir
-	out, err := c.Output()
+	out, err := gitOutput(workDir, "diff", "--color=always", base, "HEAD")
 	if err != nil {
 		return fmt.Errorf("git diff %s HEAD: %w", base, err)
 	}
@@ -234,9 +219,7 @@ func showBranchDiff(workDir string) error {
 
 func findMergeBase(workDir string) (string, error) {
 	for _, ref := range []string{"origin/main", "origin/master", "main", "master"} {
-		c := exec.Command("git", "merge-base", "HEAD", ref)
-		c.Dir = workDir
-		out, err := c.Output()
+		out, err := gitOutput(workDir, "merge-base", "HEAD", ref)
 		if err == nil {
 			base := strings.TrimSpace(string(out))
 			if base != "" {
@@ -250,9 +233,7 @@ func findMergeBase(workDir string) (string, error) {
 func showCommitsIndividually(workDir string, commits []string) error {
 	var combined []byte
 	for _, commit := range commits {
-		c := exec.Command("git", "show", "--color=always", commit)
-		c.Dir = workDir
-		out, err := c.Output()
+		out, err := gitOutput(workDir, "show", "--color=always", commit)
 		if err != nil {
 			return fmt.Errorf("git show %s: %w", commit, err)
 		}
